@@ -1,0 +1,454 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap');
+
+/* =========================
+   VARIABLES
+========================= */
+:root {
+  --green: #1f402a;
+  --green-light: #355843;
+  --orange: #c97833;
+  --cream: #f7f2ea;
+  --white: #ffffff;
+  --text: #1f1f1f;
+  --gray: #6b7280;
+}
+
+/* =========================
+   RESET
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--text);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+}
+
+/* =========================
+   LAYOUT GLOBAL
+========================= */
+
+.container {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 32px;
+  
+}
+
+.container-features {
+  margin-top: 0px !important;
+  padding: 0px 32px;
+}
+
+section {
+  padding: 10px 0;
+}
+
+/* =========================
+   TIPOGRAFÍA
+========================= */
+h1 {
+  font-size: 3rem;
+  line-height: 1;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  color: var(--green);
+}
+
+h2 {
+  font-size: 2.4rem;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+p {
+  color: var(--gray);
+  line-height: 1.6;
+}
+
+/* =========================
+   BOTONES
+========================= */
+.btn {
+  border: none;
+  cursor: pointer;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--cream);
+  color: var(--green);
+  border: 2px solid var(--green);
+}
+
+/* =========================
+   HEADER
+========================= */
+.header {
+  background: var(--cream);
+  position: relative;
+}
+
+.header-inner {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  color: var(--green);
+}
+
+.logo-img {
+  height: 80px;
+  width: auto;
+}
+
+/* NAV DESKTOP */
+.nav {
+  display: flex;
+  gap: 30px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 500;
+  position: relative;
+  padding-bottom: 6px;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--green);
+}
+
+/* línea animada */
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0%;
+  background: var(--orange);
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+.nav-link.active {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+.nav-link.active::after {
+  width: 100%;
+}
+
+/* MOBILE MENU */
+.menu-btn {
+  display: none;
+  font-size: 26px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.mobile-nav {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  padding: 20px 32px;
+  gap: 16px;
+  border-top: 1px solid #eee;
+}
+
+.mobile-link {
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.mobile-link.active {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+/* RESPONSIVE HEADER */
+@media (max-width: 768px) {
+  .nav {
+    display: none;
+  }
+
+  .menu-btn {
+    display: block;
+  }
+}
+
+/* =========================
+   FEATURES BOX
+========================= */
+.features-box {
+  background: var(--green);
+  border-radius: 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  overflow: hidden;
+  margin-top: 0px;
+}
+
+/* item */
+.feature-item {
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--cream);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* separadores */
+.feature-item:not(:last-child) {
+  border-right: 1px solid rgba(247, 242, 234, 0.35);
+}
+
+/* contenido */
+.feature-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.feature-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.feature-desc {
+  font-size: 0.9rem;
+  color: rgba(247, 242, 234, 0.8);
+  line-height: 1.4;
+}
+
+/* responsive features */
+@media (max-width: 768px) {
+  .features-box {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-item {
+    border-right: none;
+    border-bottom: 1px solid rgba(247, 242, 234, 0.35);
+  }
+
+  .feature-item:last-child {
+    border-bottom: none;
+  }
+}
+
+/* =========================
+   PRODUCTS GRID
+========================= */
+.grid-products {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.product-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+/* responsive products */
+@media (max-width: 1000px) {
+  .grid-products {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .grid-products {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+  }
+}
+
+ /* Otros */
+ .hero-grid {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  align-items: center;
+  width: 100%;
+}
+
+/* texto */
+.hero-text p {
+  margin-top: 20px;
+  max-width: 500px;
+}
+
+/* botones */
+.hero-buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 30px;
+}
+
+/* imagen grande */
+.hero-image img {
+  width: 100%;
+  object-fit: cover;
+  transform: translateY(9px);
+}
+
+.hero {
+  width: 100%;
+  padding-bottom: 0;
+
+}
+
+.hero .container {
+  padding-left: 32px;
+  padding-right: 0;
+}
+
+.section {
+  margin-top: 40px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.section-header h2 {
+  font-size: 42px;
+  color: #1f3d2b;
+}
+
+.section-header a {
+  text-decoration: none;
+  color: #1f3d2b;
+  font-weight: 600;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+.canastas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.product-card,
+.canasta-card {
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid #ece6df;
+  transition: 0.3s;
+  width: 200px;
+}
+
+.product-card:hover,
+.canasta-card:hover {
+  transform: translateY(-4px);
+}
+
+.product-image {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  background-color: oklch(88.704% 0.03978 64.752);
+}
+
+.canasta-image {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+}
+
+.product-content,
+.canasta-content {
+  padding: 18px;
+}
+
+.product-content h3,
+.canasta-content h3 {
+  margin-bottom: 10px;
+  color: #1f3d2b;
+}
+
+.price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f3d2b;
+}
+
+.price span {
+  font-size: 14px;
+  color: #777;
+}
+
+.add-btn {
+  width: 100%;
+  margin-top: 16px;
+  border: none;
+  background: #173a28;
+  color: white;
+  border-radius: 10px;
+  padding: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.outline-btn {
+  width: 100%;
+  margin-top: 20px;
+  background: white;
+  border: 2px solid #d8d1c9;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
