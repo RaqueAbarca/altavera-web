@@ -213,7 +213,7 @@ p {
 ========================= */
 .features-box {
   background: var(--green);
-  border-radius: 24px;
+  border-radius: 15px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   overflow: hidden;
@@ -225,7 +225,7 @@ p {
   padding: 30px 20px;
   text-align: center;
   color: var(--cream);
-
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -233,8 +233,15 @@ p {
 }
 
 /* separadores */
-.feature-item:not(:last-child) {
-  border-right: 1px solid rgba(247, 242, 234, 0.35);
+.feature-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 100px;
+  background-color: rgba(247, 242, 234, 0.35);
 }
 
 /* contenido */
@@ -251,7 +258,7 @@ p {
 
 .feature-desc {
   font-size: 0.9rem;
-  color: rgba(247, 242, 234, 0.8);
+  color: var(--cream);
   line-height: 1.4;
 }
 
@@ -451,4 +458,167 @@ p {
   padding: 14px;
   cursor: pointer;
   font-weight: 600;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer {
+  position: relative;
+
+  background: #163423;
+
+  color: #f7f2ea;
+
+  margin-top: 80px;
+
+  overflow: hidden;
+}
+
+.footer-content {
+  display: grid;
+
+  grid-template-columns:
+    1.5fr
+    1fr
+    1fr
+    1fr;
+
+  gap: 70px;
+
+  padding-top: 60px;
+  padding-bottom: 50px;
+}
+
+.footer-brand {
+  max-width: 280px;
+}
+
+.footer-logo {
+  width: 180px;
+  margin-bottom: 20px;
+}
+
+.footer-brand p {
+  color: rgba(255,255,255,.75);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.socials {
+  display: flex;
+  gap: 18px;
+
+  margin-top: 25px;
+
+  font-size: 24px;
+}
+
+.footer-column h4 {
+  color: white;
+
+  font-size: 16px;
+
+  margin-bottom: 20px;
+}
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-column a {
+  text-decoration: none;
+
+  color: rgba(255,255,255,.75);
+
+  margin-bottom: 12px;
+
+  font-size: 14px;
+
+  transition: .2s;
+}
+
+.footer-column a:hover {
+  color: white;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,.08);
+
+  text-align: center;
+
+  padding: 18px;
+
+  color: rgba(255,255,255,.6);
+
+  font-size: 13px;
+}
+
+/* planta decorativa */
+
+.footer-plant {
+  position: absolute;
+
+  right: 70px;
+  bottom: 40px;
+
+  width: 120px;
+  height: 180px;
+
+  opacity: .12;
+
+  border: 2px solid white;
+
+  border-radius: 60px;
+}
+
+/* forma naranja */
+
+.footer-orange {
+  position: absolute;
+
+  right: -60px;
+  bottom: -60px;
+
+  width: 220px;
+  height: 220px;
+
+  background: #c97833;
+
+  border-radius: 50%;
+}
+
+/* responsive */
+
+@media (max-width: 900px) {
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .footer-plant,
+  .footer-orange {
+    display: none;
+  }
+
+}
+
+/* ICONOS SVG */
+.feature-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 20px;
+}
+
+
+.feature-icon img {
+  width: 55px;
+  height: 55px;
+  object-fit: contain;
 }

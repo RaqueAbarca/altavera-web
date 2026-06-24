@@ -12,8 +12,8 @@ export default function Home() {
       <Features />
       <ProductsSection />
       {/*<CanastasSection />*/}
-      <WhySection />
-      <CTAWhatsApp />
+      {/*<WhySection />*/}
+      {/*<CTAWhatsApp />*/}
     </>
   );
 }
