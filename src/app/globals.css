@@ -87,6 +87,7 @@ p {
   border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
+  text-decoration: none;
 }
 
 .btn-primary {
@@ -621,4 +622,34 @@ p {
   width: 55px;
   height: 55px;
   object-fit: contain;
+}
+
+.featured-products {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+
+  .featured-products {
+    display: flex;
+    overflow-x: auto;
+    gap: 16px;
+    padding-bottom: 10px;
+
+    scroll-snap-type: x mandatory;
+  }
+
+  .featured-products::-webkit-scrollbar {
+    display: none;
+  }
+
+  .featured-products .product-card {
+    min-width: 260px;
+    flex-shrink: 0;
+
+    scroll-snap-align: start;
+  }
+
 }

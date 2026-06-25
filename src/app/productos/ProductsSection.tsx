@@ -1,4 +1,4 @@
-import ProductCard from "../ui/ProductCard";
+import ProductCard from "../../components/ui/ProductCard";
 import { products } from "@/data/products";
 
 
@@ -7,7 +7,6 @@ export default function ProductsSection() {
     <section className="container section">
       <div className="section-header">
         <h2>Nuestros productos</h2>
-        <a href="#">Ver todos los productos →</a>
       </div>
 
       <div className="products-grid">
