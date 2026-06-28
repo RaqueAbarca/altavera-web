@@ -321,7 +321,6 @@ h2 {
     justify-content:center;
   }
 
-
   /* LOGO CENTRADO */
   .logo{
     position:absolute;
@@ -329,35 +328,15 @@ h2 {
     transform:translateX(-50%);
   }
 
-
   .logo-img{
     height:60px;
   }
-
 
   /* ocultar desktop */
   .nav,
   .whatsapp-btn{
     display:none;
   }
-
-
-
-  /* BOTON MENU IZQUIERDA */
-  .menu-btn{
-    display:flex;
-
-    position:absolute;
-
-    left:18px;
-    top:50%;
-
-    transform:translateY(-50%);
-
-    z-index:10;
-  }
-
-
 
   /* SOLO CARRITO DERECHA */
   .header-actions{
@@ -368,7 +347,6 @@ h2 {
     top:50%;
 
     transform:translateY(-50%);
-
   }
 }
 
@@ -1812,6 +1790,61 @@ h1 {
   /* esconder whatsapp */
   .whatsapp-btn{
     display:none;
+  }
+
+}
+
+/* =========================
+   MOBILE MENU DROPDOWN FIX
+========================= */
+
+.mobile-nav {
+  position:relative;
+  z-index:999;
+
+  display:flex;
+  flex-direction:column;
+
+  gap:30px;
+  padding:25px;
+
+  background:var(--white);
+
+  border-top:1px solid #ececec;
+
+  box-shadow:0 10px 25px rgba(0,0,0,.05);
+}
+
+
+@media(max-width:768px){
+
+  .mobile-nav{
+    width:100%;
+    margin-top:0;
+    animation:menuOpen .5s ease;
+  }
+
+
+  .mobile-link{
+    width:100%;
+    color: var(--text);
+    text-decoration: none;
+    display:block;
+
+  }
+}
+
+
+@keyframes menuOpen {
+
+  from {
+    opacity:0;
+    transform:translateY(-10px);
+  }
+
+  to {
+    opacity:1;
+    transform:translateY(0);
   }
 
 }
