@@ -38,7 +38,6 @@ export default function ProductCard({
           onClick={onAdd}
         >
           Agregar
-          <span>🛒</span>
         </button>
 
       </div>

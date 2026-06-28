@@ -27,6 +27,7 @@ export default function FeaturedProducts() {
       const { data, error } = await supabase
         .from("products")
         .select("*")
+        .eq("featured", true)
         .limit(6);
 
       if (error) {
@@ -51,8 +52,6 @@ export default function FeaturedProducts() {
     loadProducts();
   }, []);
 
-  const featuredProducts = products.slice(0, 6);
-
   return (
     <section className="container section">
 
@@ -66,7 +65,7 @@ export default function FeaturedProducts() {
 
       <div className="featured-products">
 
-        {featuredProducts.map((product) => (
+        {products.map((product) => (
 
           <ProductCard
             key={product.id}
