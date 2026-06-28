@@ -15,7 +15,7 @@ export default function Footer() {
         <div className="footer-brand">
 
           <img
-            src="/logo-footer.png"
+            src="/logo.svg"
             alt="Altavera"
             className="footer-logo"
           />
