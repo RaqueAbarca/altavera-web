@@ -60,7 +60,7 @@ export default function FeaturedProducts() {
         <h2>Nuestros productos</h2>
 
         <Link href="/productos">
-          Ver todos los productos →
+          Ver todos →
         </Link>
       </div>
 

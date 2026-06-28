@@ -1,6 +1,6 @@
 export default function Features() {
   return (
-    <section className="container-features" style={{ marginTop: 40 }}>
+    <section className="container-features">
       <div className="features-box">
 
         <div className="feature-item">
