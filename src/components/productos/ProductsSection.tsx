@@ -1,6 +1,7 @@
 "use client";
 
 import ProductCard from "../ui/ProductCard";
+import { useCart } from "@/hooks/useCart";
 
 type Product = {
   id: number;
@@ -21,6 +22,9 @@ export default function ProductsSection({
   products,
   selectedCategory,
 }: Props) {
+
+  const { addToCart } = useCart();
+
   const filteredProducts =
     selectedCategory === "Todos"
       ? products
@@ -35,6 +39,17 @@ export default function ProductsSection({
           name={product.name}
           price={`₡${product.price}`}
           unit={product.unit}
+          onAdd={() =>
+            addToCart({
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              category: product.category,
+              price: product.price,
+              unit: product.unit,
+              image: product.image_url,
+            })
+          }
         />
       ))}
     </div>

@@ -3,6 +3,7 @@ type ProductCardProps = {
   name: string;
   price: string;
   unit: string;
+  onAdd: () => void;
 };
 
 export default function ProductCard({
@@ -10,6 +11,7 @@ export default function ProductCard({
   name,
   price,
   unit,
+  onAdd,
 }: ProductCardProps) {
   return (
     <div className="product-card">
@@ -22,7 +24,10 @@ export default function ProductCard({
           {price} <span>/ {unit}</span>
         </p>
 
-        <button className="add-btn">
+        <button
+          className="add-btn"
+          onClick={onAdd}
+        >
           Agregar
           <span>🛒</span>
         </button>

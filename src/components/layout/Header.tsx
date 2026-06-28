@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useCart } from "@/hooks/useCart";
 import {
   Menu,
   X,
@@ -15,9 +16,12 @@ export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Temporal.
-  // Luego este valor vendrá del carrito real: const { cartCount } = useCart();
-  const cartCount = 3;
+  const { cart } = useCart();
+
+  const cartCount = cart.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
 
   const links = [
     { name: "Inicio", href: "/" },
@@ -74,18 +78,19 @@ export default function Header() {
           </a>
 
           {/* Carrito */}
-          <button
+          <Link
+            href="/carrito"
             className="cart-button"
             aria-label="Mi carrito"
           >
-            <ShoppingCart size={24} />
+            <ShoppingCart size={30} />
 
             {cartCount > 0 && (
               <span className="cart-badge">
                 {cartCount}
               </span>
             )}
-          </button>
+          </Link>
 
           {/* Menú móvil */}
           <button
@@ -93,7 +98,7 @@ export default function Header() {
             onClick={() => setOpen(!open)}
             aria-label="Abrir menú"
           >
-            {open ? <X size={26} /> : <Menu size={26} />}
+            {open ? <X size={30} /> : <Menu size={32} />}
           </button>
 
         </div>
