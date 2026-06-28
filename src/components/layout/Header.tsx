@@ -4,10 +4,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import {
+  Menu,
+  X,
+  ShoppingCart,
+  MessageCircle,
+} from "lucide-react";
 
 export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // Temporal.
+  // Luego este valor vendrá del carrito real: const { cartCount } = useCart();
+  const cartCount = 3;
 
   const links = [
     { name: "Inicio", href: "/" },
@@ -19,20 +29,20 @@ export default function Header() {
   return (
     <header className="header">
       <div className="container header-inner">
-        
-        {/* LOGO */}
+
+        {/* Logo */}
         <Link href="/" className="logo">
-            <Image
+          <Image
             src="/logo.png"
             alt="Altavera"
             width={140}
             height={40}
             className="logo-img"
             priority
-            />
+          />
         </Link>
 
-        {/* Desktop nav */}
+        {/* Navegación escritorio */}
         <nav className="nav">
           {links.map((link) => {
             const active = pathname === link.href;
@@ -49,17 +59,52 @@ export default function Header() {
           })}
         </nav>
 
-        <button className="btn btn-primary">Mi carrito</button>
+        {/* Acciones */}
+        <div className="header-actions">
 
-        {/* Mobile button */}
-        <button className="menu-btn" onClick={() => setOpen(!open)}>
-          ☰
-        </button>
+          {/* WhatsApp */}
+          <a
+            href="https://wa.me/50600000000"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary whatsapp-btn"
+          >
+            <MessageCircle size={18} />
+            <span>WhatsApp</span>
+          </a>
+
+          {/* Carrito */}
+          <button
+            className="cart-button"
+            aria-label="Mi carrito"
+          >
+            <ShoppingCart size={24} />
+
+            {cartCount > 0 && (
+              <span className="cart-badge">
+                {cartCount}
+              </span>
+            )}
+          </button>
+
+          {/* Menú móvil */}
+          <button
+            className="menu-btn"
+            onClick={() => setOpen(!open)}
+            aria-label="Abrir menú"
+          >
+            {open ? <X size={26} /> : <Menu size={26} />}
+          </button>
+
+        </div>
+
       </div>
 
-      {/* Mobile menu */}
+      {/* Menú móvil */}
+
       {open && (
         <nav className="mobile-nav">
+
           {links.map((link) => {
             const active = pathname === link.href;
 
@@ -74,8 +119,10 @@ export default function Header() {
               </Link>
             );
           })}
+
         </nav>
       )}
+
     </header>
   );
 }

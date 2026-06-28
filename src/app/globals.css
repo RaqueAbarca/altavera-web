@@ -104,29 +104,19 @@ p {
 /* =========================
    HEADER
 ========================= */
+
 .header {
   background: var(--cream);
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 999;
 }
 
 .header-inner {
-  height: 80px;
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.header-productos {
-  padding: 20px 10;
-}
-
-.header-productos p {
-  padding: 20px 0 0;
-}
-
-.header-productos :link{
-  text-decoration: none;
-  color: var(--gray);
 }
 
 .logo {
@@ -138,10 +128,14 @@ p {
   width: auto;
 }
 
-/* NAV DESKTOP */
+/* =========================
+   NAV
+========================= */
+
 .nav {
   display: flex;
-  gap: 30px;
+  align-items: center;
+  gap: 34px;
 }
 
 .nav-link {
@@ -149,27 +143,26 @@ p {
   color: var(--text);
   font-weight: 500;
   position: relative;
-  padding-bottom: 6px;
-  transition: color 0.2s;
+  transition: .25s;
 }
 
 .nav-link:hover {
   color: var(--green);
 }
 
-/* línea animada */
 .nav-link::after {
   content: "";
   position: absolute;
   left: 0;
-  bottom: 0;
+  bottom: -8px;
+  width: 0;
   height: 2px;
-  width: 0%;
   background: var(--orange);
-  transition: width 0.3s ease;
+  transition: .25s;
 }
 
-.nav-link:hover::after {
+.nav-link:hover::after,
+.nav-link.active::after {
   width: 100%;
 }
 
@@ -178,50 +171,174 @@ p {
   font-weight: 700;
 }
 
-.nav-link.active::after {
-  width: 100%;
+/* =========================
+   ACTIONS
+========================= */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-/* MOBILE MENU */
+.whatsapp-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-button {
+  width: 48px;
+  height: 48px;
+
+  border: none;
+
+  background: white;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  position: relative;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  transition: .25s;
+}
+
+.cart-button:hover {
+  background: #f0ece7;
+}
+
+.cart-badge {
+  position: absolute;
+
+  top: -6px;
+  right: -6px;
+
+  width: 22px;
+  height: 22px;
+
+  border-radius: 50%;
+
+  background: var(--orange);
+
+  color: white;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* =========================
+   MOBILE MENU
+========================= */
+
 .menu-btn {
   display: none;
-  font-size: 26px;
-  background: none;
+
+  width: 46px;
+  height: 46px;
+
   border: none;
+
+  border-radius: 12px;
+
+  background: white;
+
   cursor: pointer;
+
+  color: var(--green);
+
+  justify-content: center;
+  align-items: center;
 }
 
 .mobile-nav {
   display: flex;
   flex-direction: column;
+
+  gap: 10px;
+
+  padding: 20px;
+
   background: white;
-  padding: 20px 32px;
-  gap: 16px;
-  border-top: 1px solid #eee;
+
+  border-top: 1px solid #ececec;
+
+  box-shadow: 0 10px 25px rgba(0,0,0,.05);
 }
 
 .mobile-link {
   text-decoration: none;
+
   color: var(--text);
-  font-weight: 500;
+
+  padding: 14px 18px;
+
+  border-radius: 10px;
+
+  transition: .2s;
+}
+
+.mobile-link:hover {
+  background: #f7f2ea;
 }
 
 .mobile-link.active {
+  background: #f3e5d4;
   color: var(--orange);
   font-weight: 700;
 }
 
-/* RESPONSIVE HEADER */
+/* =========================
+   RESPONSIVE
+========================= */
+
 @media (max-width: 768px) {
+
+  .header-inner {
+
+    height: 74px;
+
+  }
+
+  .logo-img {
+
+    height: 60px;
+
+  }
+
   .nav {
+
     display: none;
+
+  }
+
+  .whatsapp-btn {
+
+    display: none;
+
   }
 
   .menu-btn {
-    display: block;
-  }
-}
 
+    display: flex;
+
+  }
+
+  .container {
+
+    padding: 0 18px;
+
+  }
+
+}
 /* =========================
    FEATURES BOX
 ========================= */
@@ -469,61 +586,52 @@ p {
 
 .footer {
   position: relative;
-
-  background: #163423;
-
-  color: #f7f2ea;
-
   margin-top: 80px;
-
   overflow: hidden;
+  background: var(--green);
+  color: var(--cream);
 }
 
 .footer-content {
   display: grid;
-
-  grid-template-columns:
-    1.5fr
-    1fr
-    1fr
-    1fr;
-
-  gap: 70px;
-
-  padding-top: 60px;
-  padding-bottom: 50px;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 40px;
+  padding: 50px 50px 10px;
 }
 
 .footer-brand {
-  max-width: 280px;
+  max-width: 300px;
 }
 
 .footer-logo {
   width: 180px;
-  margin-bottom: 20px;
+  height: auto;
+
+  margin-bottom: 22px;
 }
 
 .footer-brand p {
   color: rgba(255,255,255,.75);
-  font-size: 14px;
+
   line-height: 1.8;
 }
 
 .socials {
   display: flex;
-  gap: 18px;
+  gap: 16px;
 
-  margin-top: 25px;
-
-  font-size: 24px;
+  margin-top: 24px;
 }
 
-.footer-column h4 {
-  color: white;
+.socials svg {
+  cursor: pointer;
 
-  font-size: 16px;
+  transition: .25s;
+}
 
-  margin-bottom: 20px;
+.socials svg:hover {
+  color: var(--orange);
+  transform: translateY(-2px);
 }
 
 .footer-column {
@@ -531,35 +639,42 @@ p {
   flex-direction: column;
 }
 
+.footer-column h4 {
+  color: white;
+
+  margin-bottom: 18px;
+
+  font-size: 17px;
+}
+
 .footer-column a {
   text-decoration: none;
 
-  color: rgba(255,255,255,.75);
+  color: var(--cream);
 
   margin-bottom: 12px;
-
-  font-size: 14px;
 
   transition: .2s;
 }
 
 .footer-column a:hover {
-  color: white;
+  color: var(--cream);
+  transform: translateX(4px);
 }
 
 .footer-bottom {
-  border-top: 1px solid rgba(255,255,255,.08);
+  border-top: 1px solid var(--green);
 
   text-align: center;
 
-  padding: 18px;
+  padding: 22px;
 
-  color: rgba(255,255,255,.6);
+  color: rgba(255,255,255,.55);
 
-  font-size: 13px;
+  font-size: 14px;
 }
 
-/* planta decorativa */
+/* Decoración */
 
 .footer-plant {
   position: absolute;
@@ -570,14 +685,12 @@ p {
   width: 120px;
   height: 180px;
 
-  opacity: .12;
-
   border: 2px solid white;
 
   border-radius: 60px;
-}
 
-/* forma naranja */
+  opacity: .12;
+}
 
 .footer-orange {
   position: absolute;
@@ -588,23 +701,73 @@ p {
   width: 220px;
   height: 220px;
 
-  background: #c97833;
+  background: var(--orange);
 
   border-radius: 50%;
 }
 
-/* responsive */
+/* =========================
+   RESPONSIVE
+========================= */
 
 @media (max-width: 900px) {
 
   .footer-content {
+
     grid-template-columns: 1fr;
+
     gap: 40px;
+
+    text-align: center;
+
+    justify-items: center;
+  }
+
+  .footer-brand {
+
+    max-width: 420px;
+
+  }
+
+  .footer-column {
+
+    align-items: center;
+
+  }
+
+  .socials {
+
+    justify-content: center;
+
   }
 
   .footer-plant,
   .footer-orange {
+
     display: none;
+
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  .footer {
+
+    margin-top: 60px;
+
+  }
+
+  .footer-content {
+
+    padding: 50px 0 0px;
+
+  }
+
+  .footer-logo {
+
+    width: 150px;
+
   }
 
 }
