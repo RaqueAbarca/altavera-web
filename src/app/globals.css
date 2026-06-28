@@ -600,8 +600,7 @@ h2 {
 ========================= */
 
 
-.products-grid,
-.canastas-grid {
+.products-grid{
 
   display:grid;
 
@@ -612,8 +611,7 @@ h2 {
 }
 
 
-.product-card,
-.canasta-card {
+.product-card{
 
   background:white;
 
@@ -630,8 +628,7 @@ h2 {
 }
 
 
-.product-card:hover,
-.canasta-card:hover {
+.product-card:hover{
 
   transform:translateY(-4px);
 
@@ -654,38 +651,17 @@ h2 {
 
 }
 
-
-.canasta-image {
-
- width:100%;
-
- height:320px;
-
- object-fit:cover;
-
-}
-
-
-
-
 /* CONTENIDO */
 
 
-.product-content,
-.canasta-content {
-
+.product-content{
  padding:18px;
-
 }
 
 
-.product-content h3,
-.canasta-content h3 {
-
+.product-content h3{
  margin-bottom:10px;
-
  color:var(--green);
-
 }
 
 
@@ -785,8 +761,7 @@ h2 {
 @media(max-width:1000px){
 
 
-.products-grid,
-.canastas-grid {
+.products-grid{
 
  grid-template-columns:repeat(2,1fr);
 
@@ -807,8 +782,7 @@ h2 {
 @media(max-width:768px){
 
 
-.products-grid,
-.canastas-grid {
+.products-grid{
 
  grid-template-columns:1fr;
 

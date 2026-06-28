@@ -1,3 +1,5 @@
+"use client";
+
 type ProductCardProps = {
   image: string;
   name: string;
@@ -15,13 +17,20 @@ export default function ProductCard({
 }: ProductCardProps) {
   return (
     <div className="product-card">
-      <img src={image} alt={name} className="product-image" />
+
+      <img
+        src={image}
+        alt={name}
+        className="product-image"
+      />
 
       <div className="product-content">
+
         <h3>{name}</h3>
 
         <p className="price">
-          {price} <span>/ {unit}</span>
+          ₡{price.toLocaleString("es-CR")}
+          <span> / {unit}</span>
         </p>
 
         <button
@@ -31,7 +40,9 @@ export default function ProductCard({
           Agregar
           <span>🛒</span>
         </button>
+
       </div>
+
     </div>
   );
 }

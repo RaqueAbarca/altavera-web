@@ -37,7 +37,7 @@ export default function ProductsSection({
           key={product.id}
           image={product.image_url}
           name={product.name}
-          price={`₡${product.price}`}
+          price={product.price}
           unit={product.unit}
           onAdd={() =>
             addToCart({

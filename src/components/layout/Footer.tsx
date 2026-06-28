@@ -43,7 +43,6 @@ export default function Footer() {
 
           <a href="#">Inicio</a>
           <a href="#">Productos</a>
-          <a href="#">Canastas</a>
           <a href="#">Nosotros</a>
           <a href="#">Contacto</a>
           <a href="#">Política de privacidad</a>
