@@ -1,7 +1,7 @@
 type ProductCardProps = {
   image: string;
   name: string;
-  price: string;
+  price: number;
   unit: string;
   onAdd: () => void;
 };

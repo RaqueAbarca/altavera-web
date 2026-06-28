@@ -2,7 +2,7 @@ type CanastaCardProps = {
   image: string;
   name: string;
   description: string;
-  price: string;
+  price: number;
 };
 
 export default function CanastaCard({
