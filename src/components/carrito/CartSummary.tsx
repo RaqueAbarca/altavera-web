@@ -1,37 +1,69 @@
 "use client";
 
+import Link from "next/link";
 import { useCart } from "@/hooks/useCart";
 
 export default function CartSummary() {
-
   const {
-    totalItems,
+    cart,
     totalPrice,
   } = useCart();
 
   return (
-
     <aside className="cart-summary">
 
-      <h2>Resumen</h2>
+      <h2>Resumen del pedido</h2>
 
-      <div className="summary-row">
-        <span>Productos</span>
-        <strong>{totalItems}</strong>
+      <div className="summary-products">
+
+        {cart.map((item) => (
+
+          <div
+            key={item.id}
+            className="summary-item"
+          >
+
+            <div className="summary-info">
+
+              <span className="summary-name">
+                {item.name}
+              </span>
+
+              <span className="summary-details">
+                {item.quantity} × ₡{item.price.toLocaleString("es-CR")}
+              </span>
+
+            </div>
+
+            <strong className="summary-price">
+              ₡{(item.price * item.quantity).toLocaleString("es-CR")}
+            </strong>
+
+          </div>
+
+        ))}
+
       </div>
 
-      <div className="summary-row">
-        <span>Total</span>
+      <hr className="summary-divider" />
+
+      <div className="summary-row summary-total">
+
+        <span>Subtotal</span>
+
         <strong>
-          ₡{totalPrice.toLocaleString()}
+          ₡{totalPrice.toLocaleString("es-CR")}
         </strong>
+
       </div>
 
-      <button className="checkout-btn">
-        Continuar compra
-      </button>
+      <Link
+        href="/checkout"
+        className="checkout-btn"
+        >
+        Continuar con la compra
+      </Link>
 
     </aside>
-
   );
 }

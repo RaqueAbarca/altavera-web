@@ -1,0 +1,178 @@
+.checkout-page{
+  padding:40px 0;
+}
+
+
+.back-link{
+  display:inline-block;
+  margin-bottom:20px;
+}
+
+
+.checkout-options{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:25px;
+  margin-top:40px;
+}
+
+
+.checkout-card{
+  background:white;
+  padding:30px;
+  border-radius:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+
+.checkout-card button{
+  margin-top:20px;
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  cursor:pointer;
+}
+
+
+@media(max-width:768px){
+
+  .checkout-options{
+    grid-template-columns:1fr;
+  }
+
+}
+
+.guest-form{
+  max-width:600px;
+  background:white;
+  padding:30px;
+  border-radius:20px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+
+.guest-form label{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  font-weight:600;
+}
+
+
+.guest-form input,
+.guest-form textarea{
+
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  font-size:1rem;
+
+}
+
+
+.guest-form textarea{
+  min-height:120px;
+  resize:none;
+}
+
+.map-wrapper{
+  margin-top:15px;
+  overflow:hidden;
+  border-radius:24px;
+  box-shadow:0 15px 40px rgba(0,0,0,.12);
+}
+
+
+.checkout-map{
+  height:380px;
+  width:100%;
+}
+
+
+.locate-btn{
+
+  position:absolute;
+  z-index:1000;
+
+  bottom:20px;
+  left:20px;
+
+  background:white;
+  border:none;
+
+  padding:12px 18px;
+
+  border-radius:999px;
+
+  box-shadow:0 5px 20px rgba(0,0,0,.2);
+
+  cursor:pointer;
+
+  font-weight:600;
+}
+
+
+.map-loading{
+
+height:350px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+background:#f4f4f4;
+
+border-radius:24px;
+
+}
+
+.map-title{
+
+background:white;
+
+padding:14px 18px;
+
+font-weight:700;
+
+border-radius:20px 20px 0 0;
+
+box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+
+.map-wrapper{
+  margin-top:20px;
+  border-radius:24px;
+  overflow:hidden;
+  box-shadow:0 15px 40px rgba(0,0,0,.12);
+}
+
+
+.checkout-map{
+  height:420px;
+  width:100%;
+}
+
+
+/* controles del mapa */
+
+.leaflet-control-zoom{
+  border:none !important;
+  box-shadow:0 5px 20px rgba(0,0,0,.15);
+}
+
+
+.leaflet-control-zoom a{
+
+  border-radius:12px !important;
+
+}
+
+
+/* quitar bordes raros */
+.leaflet-bar{
+  border:none !important;
+}

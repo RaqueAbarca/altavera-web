@@ -301,3 +301,54 @@ font-size:20px;
 }
 
 }
+
+/* ===== RESUMEN ===== */
+
+.summary-products{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  margin:20px 0;
+}
+
+.summary-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:15px;
+}
+
+.summary-info{
+  display:flex;
+  flex-direction:column;
+}
+
+.summary-name{
+  font-weight:600;
+  color:#222;
+}
+
+.summary-details{
+  font-size:.9rem;
+  color:#777;
+  margin-top:4px;
+}
+
+.summary-price{
+  white-space:nowrap;
+  font-weight:700;
+}
+
+.summary-divider{
+  border:none;
+  border-top:1px solid #e5e5e5;
+  margin:22px 0;
+}
+
+.summary-total{
+  font-size:1.05rem;
+}
+
+.summary-total strong{
+  color:#0B7A3E;
+}

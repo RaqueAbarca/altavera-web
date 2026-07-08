@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import ProductsSection from "@/components/productos/ProductsSection";
 import ProductFilters from "@/components/productos/productFilters";
-import { getSupabase } from "@/lib/supabase";
-const supabase = getSupabase();
+import { supabase } from "@/lib/supabase";
 
 type Product = {
   id: number;

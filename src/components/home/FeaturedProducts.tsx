@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductCard from "../ui/ProductCard";
-import { getSupabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { useCart } from "@/hooks/useCart";
 import { Product } from "@/types/product";
-
-const supabase = getSupabase();
 
 type SupabaseProduct = {
   id: number;
