@@ -188,7 +188,7 @@ export default function PedidoPage({
 
 
           <strong>
-            8888-8888
+            8652-6792
           </strong>
 
 

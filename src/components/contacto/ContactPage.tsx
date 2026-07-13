@@ -31,7 +31,7 @@ export default function ContactPage() {
               <FaWhatsapp />
               <div>
                 <strong>Escríbenos por WhatsApp</strong>
-                <p>7000 1234</p>
+                <p>8652 6792</p>
               </div>
             </div>
 
@@ -39,7 +39,7 @@ export default function ContactPage() {
               <FaPhoneAlt />
               <div>
                 <strong>Llámanos</strong>
-                <p>7000 1234</p>
+                <p>8652 6792</p>
               </div>
             </div>
 

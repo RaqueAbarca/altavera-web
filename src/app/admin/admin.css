@@ -1,0 +1,188 @@
+.admin-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 30px;
+}
+
+.admin-container h1 {
+  font-size: 32px;
+  margin-bottom: 25px;
+}
+
+
+/* LISTA DE COMPRAS */
+
+.shopping-list {
+  background: #f8faf8;
+  border: 1px solid #dce8dc;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 35px;
+}
+
+.shopping-list h2 {
+  margin-bottom: 15px;
+  font-size: 24px;
+}
+
+.shopping-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.shopping-list li {
+  background: white;
+  padding: 12px 15px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+
+/* PEDIDOS */
+
+.order-card {
+  background: white;
+  border-radius: 18px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+  border: 1px solid #eee;
+}
+
+
+.order-card h2 {
+  margin-top: 0;
+  font-size: 22px;
+}
+
+
+.order-info {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+
+.order-products {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 15px;
+}
+
+
+.order-products ul {
+  padding-left: 20px;
+}
+
+
+.order-products li {
+  margin-bottom: 8px;
+}
+
+
+.order-total {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+
+.order-status {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #e7f5e7;
+  color: #27632a;
+  font-size: 14px;
+}
+
+
+
+/* RESPONSIVE */
+
+@media(max-width:768px){
+
+  .admin-container {
+    padding: 15px;
+  }
+
+
+  .admin-container h1 {
+    font-size: 26px;
+  }
+
+
+  .order-card {
+    padding: 18px;
+  }
+
+
+  .shopping-list li {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+}
+
+.shopping-list {
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 25px rgba(0,0,0,.08);
+}
+
+.shopping-list h2 {
+  margin-bottom: 20px;
+}
+
+.shopping-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.shopping-items li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.product-name {
+  font-weight: 600;
+}
+
+.product-quantity {
+  font-weight: bold;
+}
+
+.order-actions {
+  display:flex;
+  gap:10px;
+  margin-top:20px;
+}
+
+
+.order-actions button {
+
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  background:#222;
+  color:white;
+
+}
+
+
+.order-actions button:hover {
+
+  opacity:.8;
+
+}
