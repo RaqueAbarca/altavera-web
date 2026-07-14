@@ -3,18 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/useCart";
+import { supabase } from "@/lib/supabase"; // 👈 Importamos supabase
 import {
   Menu,
   X,
   ShoppingCart,
   MessageCircle,
+  User, // 👈 Importamos icono de usuario
 } from "lucide-react";
 
 export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<any>(null); // 👈 Estado para guardar el usuario logueado
 
   const { cart } = useCart();
 
@@ -23,12 +26,30 @@ export default function Header() {
     0
   );
 
+  // Escuchar el estado de autenticación de Supabase
+  useEffect(() => {
+    // 1. Obtener sesión actual
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // 2. Suscribirse a cambios (Login, Logout, Registro)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const links = [
     { name: "Inicio", href: "/" },
     { name: "Productos", href: "/productos" },
     { name: "Nosotros", href: "/nosotros" },
     { name: "Contacto", href: "/contacto" },
   ];
+
+  // Extraemos el primer nombre del usuario para mostrarlo en el botón
+  const clientName = user?.user_metadata?.full_name?.split(" ")[0] || "Mi Perfil";
 
   return (
     <header className="header">
@@ -63,8 +84,29 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Acciones */}
+       {/* Acciones */}
         <div className="header-actions">
+
+          {/* Botón dinámico con clase única e independiente */}
+          {user ? (
+            <Link 
+              href="/perfil" 
+              className="header-auth-btn"
+              title="Ir a mi perfil"
+            >
+              <User size={18} />
+              <span>{clientName}</span>
+            </Link>
+          ) : (
+            <Link 
+              href="/login" 
+              className="header-auth-btn"
+              title="Iniciar sesión"
+            >
+              <User size={18} />
+              <span>Ingresar</span>
+            </Link>
+          )}
 
           {/* WhatsApp */}
           <a
@@ -106,10 +148,8 @@ export default function Header() {
       </div>
 
       {/* Menú móvil */}
-
       {open && (
         <nav className="mobile-nav">
-
           {links.map((link) => {
             const active = pathname === link.href;
 
@@ -125,6 +165,26 @@ export default function Header() {
             );
           })}
 
+          {/* Opción de cuenta en el menú móvil */}
+          <div className="mobile-auth-section">
+            {user ? (
+              <Link
+                href="/perfil"
+                className="mobile-link active"
+                onClick={() => setOpen(false)}
+              >
+                👤 Mi Perfil ({clientName})
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="mobile-link"
+                onClick={() => setOpen(false)}
+              >
+                🔑 Iniciar Sesión / Registrarse
+              </Link>
+            )}
+          </div>
         </nav>
       )}
 

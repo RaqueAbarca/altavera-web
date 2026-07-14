@@ -1865,3 +1865,125 @@ h2 {
   }
 
 }
+/* --- BOTÓN ESPECÍFICO DE AUTENTICACIÓN EN EL HEADER --- */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Mantiene un espacio prudente entre elementos */
+}
+
+/* Usamos una clase única para no interferir con otros btn-secondary de la página */
+.header-auth-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  background-color: var(--cream);
+  color: var(--green);
+  border: 1.5px solid var(--cream);
+}
+
+.header-auth-btn:hover {
+  background-color: var(--white);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+/* Sección extra para separar estéticamente en menú móvil */
+.mobile-auth-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+}
+
+/* ==========================================================================
+   Responsive para botones de acción del Header
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  /* En pantallas medianas ocultamos los textos de los botones para no saturar */
+  .header-auth-btn span,
+  .whatsapp-btn span {
+    display: none;
+  }
+  
+  .header-auth-btn,
+  .whatsapp-btn {
+    padding: 0.75rem;
+    border-radius: 50%;
+    aspect-ratio: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  /* En móviles muy pequeños, ocultamos el acceso de Login del header principal */
+  .header-auth-btn {
+    display: none;
+  }
+}
+
+.login-promo-banner {
+  background-color: var(--white);
+  border: 1.5px solid var(--cream);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.promo-content h3 {
+  color: var(--green);
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.promo-content p {
+  color: var(--text);
+  margin: 0;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.promo-btn {
+  background-color: var(--orange);
+  color: var(--white);
+  padding: 0.85rem 1.5rem;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(201, 120, 51, 0.2);
+}
+
+.promo-btn:hover {
+  background-color: #b56527;
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .login-promo-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.5rem;
+    margin: 2.5rem 1rem;
+  }
+  .promo-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
