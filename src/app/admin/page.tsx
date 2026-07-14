@@ -1,307 +1,78 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import ShoppingList from "@/components/admin/ShoppingList";
+import { useRouter } from "next/navigation";
 import "./admin.css";
 
-type OrderItem = {
-  id: string;
-  product_name: string;
-  price: number;
-  quantity: number;
-};
+export default function AdminLogin(){
 
-type Order = {
-  id: string;
-  guest_name: string;
-  guest_phone: string;
-  total: number;
-  status: string;
-  created_at: string;
-  items: OrderItem[];
-};
+  const router = useRouter();
 
-export default function AdminPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+  const [error,setError] = useState("");
 
-  async function loadOrders() {
-    const { data: ordersData, error } = await supabase
-      .from("orders")
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+    async function handleLogin() {
+        setError("");
 
-    if (error) {
-      console.error("ERROR PEDIDOS:", error);
-      return;
-    }
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+            });
 
-    const ordersWithItems = await Promise.all(
-      (ordersData || []).map(async (order) => {
+            if (error) {
+            setError("Correo o contraseña incorrectos");
+            return;
+            }
 
-        const { data: items, error: itemError } = await supabase
-          .from("order_item")
-          .select("*")
-          .eq("order_id", order.id);
+            // Usar window.location.href obliga al navegador a enviar 
+            // todas las cookies frescas directamente al Middleware
+            window.location.href = "/admin/dashboard";
 
-        if (itemError) {
-          console.error("ERROR ITEMS:", itemError);
-        }
-
-        return {
-          ...order,
-          items: items || [],
-        };
-      })
-    );
-
-    setOrders(ordersWithItems);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-async function updateStatus(
-  order: Order,
-  status: string
-){
-
-  const { data, error } = await supabase
-    .from("orders")
-    .update({
-      status
-    })
-    .eq(
-      "id",
-      order.id
-    )
-    .select();
-
-  if(error){
-
-    console.error(
-      "ERROR CAMBIANDO ESTADO:",
-      error
-    );
-
-    return;
-
-  }
-
-
-  const { data:functionData, error:functionError } =
-    await supabase.functions.invoke(
-    "order-status",
-    {
-        body:{
-        orderId: order.id,
-        status:status,
-        customerName: order.guest_name,
-        phone: order.guest_phone,
-        total: order.total
+        } catch (err) {
+            console.error("Error inesperado en el inicio de sesión:", err);
         }
     }
-    );
-
-  await loadOrders();
-
-}
-
-  const shoppingMap: Record<string, number> = {};
-  orders.forEach((order) => {
-    order.items.forEach((item) => {
-
-      shoppingMap[item.product_name] =
-        (shoppingMap[item.product_name] || 0) + item.quantity;
-
-    });
-  });
-
-  const shoppingProducts = Object.entries(shoppingMap).map(
-    ([name, quantity]) => ({
-      name,
-      quantity,
-    })
-  );
 
 
-  if (loading) {
-    return (
-      <main className="admin-container">
-        <p>Cargando pedidos...</p>
-      </main>
-    );
-  }
-
-
-  return (
-    <main className="admin-container">
+  return(
+    <main className="admin-login">
 
       <h1>
-        Panel de pedidos
+        Altavera Admin
       </h1>
 
 
-      <ShoppingList
-        products={shoppingProducts}
+      <input
+        type="email"
+        placeholder="Correo"
+        value={email}
+        onChange={(e)=>setEmail(e.target.value)}
       />
 
 
-      <section className="orders-section">
-
-        <h2>
-          Pedidos recibidos
-        </h2>
-
-
-        {
-          orders.length === 0 ? (
-
-            <p>
-              No hay pedidos todavía.
-            </p>
-
-          ) : (
-
-            orders.map((order)=>(
-
-              <article
-                className="order-card"
-                key={order.id}
-              >
-
-                <h3>
-                  Pedido #{order.id.slice(0,8)}
-                </h3>
+      <input
+        type="password"
+        placeholder="Contraseña"
+        value={password}
+        onChange={(e)=>setPassword(e.target.value)}
+      />
 
 
-                <p>
-                  Cliente:
-                  {" "}
-                  {order.guest_name}
-                </p>
+      <button onClick={handleLogin}>
+        Ingresar
+      </button>
 
 
-                <p>
-                  Teléfono:
-                  {" "}
-                  {order.guest_phone}
-                </p>
+      {
+        error &&
+        <p>
+          {error}
+        </p>
+      }
 
-
-                <h4>
-                  Productos
-                </h4>
-
-
-                {
-                  order.items.length === 0 ? (
-
-                    <p>
-                      Sin productos
-                    </p>
-
-                  ) : (
-
-                    <ul>
-
-                      {
-                        order.items.map((item)=>(
-
-                          <li key={item.id}>
-
-                            {item.product_name}
-
-                            {" x "}
-
-                            {item.quantity}
-
-                            {" - ₡"}
-
-                            {item.price}
-
-                          </li>
-
-                        ))
-                      }
-
-                    </ul>
-
-                  )
-                }
-
-
-                <p>
-                  Total:
-                  {" "}
-                  ₡{order.total}
-                </p>
-
-
-                <p>
-                Estado:
-                    {" "}
-                    {order.status}
-                    <br />
-                    ID:
-                    {" "}
-                    {order.id}
-                </p>
-
-
-                <div className="order-actions">
-
-                <button
-                    onClick={() =>
-                    updateStatus(
-                        order,
-                        "preparing"
-                    )
-                    }
-                >
-                    👨‍🍳 Preparando
-                </button>
-
-
-                <button
-                    onClick={() =>
-                    updateStatus(
-                        order,
-                        "ready"
-                    )
-                    }
-                >
-                    ✅ Listo
-                </button>
-
-
-                <button
-                    onClick={() =>
-                    updateStatus(
-                        order,
-                        "delivered"
-                    )
-                    }
-                >
-                    🚚 Entregado
-                </button>
-
-                </div>
-
-
-              </article>
-
-            ))
-
-          )
-        }
-
-      </section>
 
     </main>
   );

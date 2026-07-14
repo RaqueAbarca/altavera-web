@@ -10,7 +10,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>
+      {/* Agregamos suppressHydrationWarning aquí para que las extensiones del navegador no rompan la app */}
+      <body suppressHydrationWarning>
         <CartProvider>
           <Header />
           {children}
