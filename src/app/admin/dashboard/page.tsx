@@ -177,8 +177,8 @@ export default function AdminPage() {
 
               <div className="order-actions">
                 <button onClick={() => updateStatus(order, "preparing")}>👨‍🍳 Preparando</button>
-                <button onClick={() => updateStatus(order, "ready")}>✅ Listo</button>
-                <button onClick={() => updateStatus(order, "delivered")}>🚚 Entregado</button>
+                <button onClick={() => updateStatus(order, "ready")}>🚚 En camino</button>
+                <button onClick={() => updateStatus(order, "delivered")}>✅ Entregado</button>
               </div>
             </article>
           ))

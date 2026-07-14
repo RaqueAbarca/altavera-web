@@ -4,6 +4,7 @@ export type GuestLocation = {
 };
 
 export type GuestOrder = {
+  user_id?: string | null;
   guest_name: FormDataEntryValue | null;
   guest_phone: FormDataEntryValue | null;
   guest_email: FormDataEntryValue | null;

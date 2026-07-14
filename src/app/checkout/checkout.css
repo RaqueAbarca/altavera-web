@@ -1,178 +1,251 @@
-.checkout-page{
-  padding:40px 0;
+/* src/app/checkout/checkout.css */
+
+.checkout-page {
+  padding: 3rem 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-
-.back-link{
-  display:inline-block;
-  margin-bottom:20px;
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: var(--green-light);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
 }
 
-
-.checkout-options{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:25px;
-  margin-top:40px;
+.back-link:hover {
+  color: var(--orange);
 }
 
-
-.checkout-card{
-  background:white;
-  padding:30px;
-  border-radius:20px;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
+.checkout-page h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--green);
+  margin-bottom: 2rem;
+  letter-spacing: -0.025em;
 }
 
-
-.checkout-card button{
-  margin-top:20px;
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:none;
-  cursor:pointer;
+/* --- FORMULARIO PRINCIPAL --- */
+.guest-form {
+  background: var(--white);
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04), 
+              0 1px 3px rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--cream);
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  box-sizing: border-box;
 }
 
-
-@media(max-width:768px){
-
-  .checkout-options{
-    grid-template-columns:1fr;
-  }
-
+.guest-form h2 {
+  font-size: 1.35rem;
+  color: var(--green-light);
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 2px solid var(--cream);
+  padding-bottom: 0.5rem;
 }
 
-.guest-form{
-  max-width:600px;
-  background:white;
-  padding:30px;
-  border-radius:20px;
-  display:flex;
-  flex-direction:column;
-  gap:20px;
+.guest-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
 }
-
-
-.guest-form label{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  font-weight:600;
-}
-
 
 .guest-form input,
-.guest-form textarea{
+.guest-form textarea {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 1rem;
+  color: var(--text);
+  background-color: var(--white);
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
 
-  padding:14px;
-  border-radius:12px;
-  border:1px solid #ddd;
-  font-size:1rem;
+.guest-form input:focus,
+.guest-form textarea:focus {
+  outline: none;
+  border-color: var(--orange);
+  background-color: var(--white);
+  box-shadow: 0 0 0 4px rgba(201, 120, 51, 0.15);
+}
 
+.guest-form textarea {
+  min-height: 110px;
+  resize: none;
+}
+
+/* --- MAPA Y CONTENEDORES --- */
+.map-wrapper {
+  margin-top: 0.75rem;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--cream);
+  position: relative;
+}
+
+.map-title {
+  background: var(--white);
+  padding: 1rem 1.25rem;
+  font-weight: 700;
+  color: var(--green);
+  border-bottom: 1px solid var(--cream);
+}
+
+.checkout-map {
+  height: 350px;
+  width: 100%;
+}
+
+.map-loading {
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cream);
+  border-radius: 20px;
+  color: var(--gray);
+  font-weight: 500;
+}
+
+/* Botón de Geolocalización flotante en el mapa */
+.locate-btn {
+  position: absolute;
+  z-index: 1000;
+  bottom: 20px;
+  left: 20px;
+  background: var(--white);
+  border: 1px solid var(--cream);
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--green-light);
+  transition: all 0.2s ease;
+}
+
+.locate-btn:hover {
+  background-color: var(--cream);
+  transform: translateY(-1px);
+}
+
+/* --- BOTÓN DE COMPRA (SUBMIT) --- */
+.checkout-btn {
+  background-color: var(--orange);
+  color: var(--white);
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 1.1rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(201, 120, 51, 0.25);
+  margin-top: 1rem;
+}
+
+.checkout-btn:hover {
+  background-color: #b56527; /* Un tono más oscuro */
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(201, 120, 51, 0.35);
+}
+
+.checkout-btn:active {
+  transform: translateY(0);
+}
+
+.checkout-btn:disabled {
+  background-color: var(--gray);
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Ajustes limpios para controles de Leaflet */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-control-zoom a {
+  border-radius: 8px !important;
+}
+
+.leaflet-bar {
+  border: none !important;
 }
 
 
-.guest-form textarea{
-  min-height:120px;
-  resize:none;
+/* ==========================================================================
+   Media Queries (Responsive adaptado a móviles)
+   ========================================================================== */
+
+/* Tablets y pantallas medianas */
+@media (max-width: 768px) {
+  .checkout-page {
+    padding: 2rem 1rem;
+  }
+
+  .checkout-page h1 {
+    font-size: 1.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .guest-form {
+    padding: 1.75rem;
+    gap: 1.5rem;
+  }
 }
 
-.map-wrapper{
-  margin-top:15px;
-  overflow:hidden;
-  border-radius:24px;
-  box-shadow:0 15px 40px rgba(0,0,0,.12);
-}
+/* Celulares (Pantallas pequeñas) */
+@media (max-width: 480px) {
+  .checkout-page {
+    padding: 1.5rem 0.75rem;
+  }
 
+  .checkout-page h1 {
+    font-size: 1.6rem;
+    margin-bottom: 1.25rem;
+  }
 
-.checkout-map{
-  height:380px;
-  width:100%;
-}
+  .guest-form {
+    padding: 1.25rem;
+    border-radius: 16px;
+    gap: 1.25rem;
+  }
 
+  .guest-form h2 {
+    font-size: 1.15rem;
+  }
 
-.locate-btn{
+  .checkout-map,
+  .map-loading {
+    height: 280px; /* Reducimos la altura del mapa en móvil para que el scroll sea más cómodo */
+  }
 
-  position:absolute;
-  z-index:1000;
+  .locate-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    bottom: 15px;
+    left: 15px;
+  }
 
-  bottom:20px;
-  left:20px;
-
-  background:white;
-  border:none;
-
-  padding:12px 18px;
-
-  border-radius:999px;
-
-  box-shadow:0 5px 20px rgba(0,0,0,.2);
-
-  cursor:pointer;
-
-  font-weight:600;
-}
-
-
-.map-loading{
-
-height:350px;
-
-display:flex;
-align-items:center;
-justify-content:center;
-
-background:#f4f4f4;
-
-border-radius:24px;
-
-}
-
-.map-title{
-
-background:white;
-
-padding:14px 18px;
-
-font-weight:700;
-
-border-radius:20px 20px 0 0;
-
-box-shadow:0 5px 20px rgba(0,0,0,.08);
-
-}
-
-.map-wrapper{
-  margin-top:20px;
-  border-radius:24px;
-  overflow:hidden;
-  box-shadow:0 15px 40px rgba(0,0,0,.12);
-}
-
-
-.checkout-map{
-  height:420px;
-  width:100%;
-}
-
-
-/* controles del mapa */
-
-.leaflet-control-zoom{
-  border:none !important;
-  box-shadow:0 5px 20px rgba(0,0,0,.15);
-}
-
-
-.leaflet-control-zoom a{
-
-  border-radius:12px !important;
-
-}
-
-
-/* quitar bordes raros */
-.leaflet-bar{
-  border:none !important;
+  .checkout-btn {
+    padding: 0.95rem;
+    font-size: 1rem;
+  }
 }
