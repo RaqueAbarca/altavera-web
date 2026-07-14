@@ -90,7 +90,7 @@ export default function Header() {
           {/* Botón dinámico con clase única e independiente */}
           {user ? (
             <Link 
-              href="/perfil" 
+              href="/profile" 
               className="header-auth-btn"
               title="Ir a mi perfil"
             >
@@ -169,7 +169,7 @@ export default function Header() {
           <div className="mobile-auth-section">
             {user ? (
               <Link
-                href="/perfil"
+                href="../profile"
                 className="mobile-link active"
                 onClick={() => setOpen(false)}
               >
