@@ -5,7 +5,10 @@ type ProductCardProps = {
   name: string;
   price: number;
   unit: string;
+  quantity: number;
   onAdd: () => void;
+  onIncrease: () => void;
+  onDecrease: () => void;
 };
 
 export default function ProductCard({
@@ -13,11 +16,13 @@ export default function ProductCard({
   name,
   price,
   unit,
+  quantity,
   onAdd,
+  onIncrease,
+  onDecrease,
 }: ProductCardProps) {
   return (
     <div className="product-card">
-
       <img
         src={image}
         alt={name}
@@ -25,7 +30,6 @@ export default function ProductCard({
       />
 
       <div className="product-content">
-
         <h3>{name}</h3>
 
         <p className="price">
@@ -33,15 +37,35 @@ export default function ProductCard({
           <span> / {unit}</span>
         </p>
 
-        <button
-          className="add-btn"
-          onClick={onAdd}
-        >
-          Agregar
-        </button>
+        {quantity === 0 ? (
+          <button
+            className="add-btn"
+            onClick={onAdd}
+          >
+            Agregar
+          </button>
+        ) : (
+          <div className="quantity-controls">
+            <button
+              className="qty-btn"
+              onClick={onDecrease}
+            >
+              −
+            </button>
 
+            <span className="qty">
+              {quantity}
+            </span>
+
+            <button
+              className="qty-btn"
+              onClick={onIncrease}
+            >
+              +
+            </button>
+          </div>
+        )}
       </div>
-
     </div>
   );
 }

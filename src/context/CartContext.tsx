@@ -54,12 +54,12 @@ export function CartProvider({
       if (exists) {
         return current.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + 0.5 }
             : item
         );
       }
 
-      return [...current, { ...product, quantity: 1 }];
+      return [...current, { ...product, quantity: 0.5 }];
     });
   }
 
@@ -75,7 +75,7 @@ export function CartProvider({
         item.id === id
           ? {
               ...item,
-              quantity: item.quantity + 1,
+              quantity: item.quantity + 0.5,
             }
           : item
       )
@@ -89,7 +89,7 @@ export function CartProvider({
           item.id === id
             ? {
                 ...item,
-                quantity: item.quantity - 1,
+                quantity: item.quantity - 0.5,
               }
             : item
         )

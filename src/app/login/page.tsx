@@ -86,7 +86,7 @@ export default function ClientLoginPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="form-input"
-                placeholder="Raquel Abarca"
+                placeholder="Nombre Apellidos"
               />
             </div>
 
