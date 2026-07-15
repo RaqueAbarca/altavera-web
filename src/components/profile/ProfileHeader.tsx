@@ -1,6 +1,43 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { FaUserCircle } from "react-icons/fa";
+import { supabase } from "@/lib/supabase";
 
 export default function ProfileHeader() {
+
+  const [name, setName] = useState("Mi perfil");
+
+
+  useEffect(()=>{
+
+    async function loadUser(){
+
+      const {
+        data:{
+          user
+        }
+      } = await supabase.auth.getUser();
+
+
+      if(user){
+
+        setName(
+          user.user_metadata?.full_name ||
+          user.email?.split("@")[0] ||
+          "Usuario"
+        );
+
+      }
+
+    }
+
+
+    loadUser();
+
+  },[]);
+
+
 
   return (
 
@@ -11,7 +48,7 @@ export default function ProfileHeader() {
       <div>
 
         <h1>
-          Mi perfil
+          {name}
         </h1>
 
         <p>
