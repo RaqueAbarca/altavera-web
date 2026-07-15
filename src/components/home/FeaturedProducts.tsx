@@ -18,7 +18,12 @@ type SupabaseProduct = {
 export default function FeaturedProducts() {
   const [products, setProducts] = useState<Product[]>([]);
 
-  const { addToCart } = useCart();
+  const {
+    cart,
+    addToCart,
+    increaseQuantity,
+    decreaseQuantity,
+  } = useCart();
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -63,7 +68,15 @@ export default function FeaturedProducts() {
 
       <div className="featured-products">
 
-        {products.map((product) => (
+      {products.map((product) => {
+
+        const cartItem = cart.find(
+          (item) => item.id === product.id
+        );
+
+        const quantity = cartItem?.quantity ?? 0;
+
+        return (
 
           <ProductCard
             key={product.id}
@@ -71,10 +84,19 @@ export default function FeaturedProducts() {
             name={product.name}
             price={product.price}
             unit={product.unit}
+            quantity={quantity}
             onAdd={() => addToCart(product)}
+            onIncrease={() =>
+              increaseQuantity(product.id)
+            }
+            onDecrease={() =>
+              decreaseQuantity(product.id)
+            }
           />
 
-        ))}
+        );
+
+      })}
 
       </div>
 
