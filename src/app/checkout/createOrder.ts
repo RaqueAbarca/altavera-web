@@ -1,9 +1,9 @@
 import { supabase } from "@/lib/supabase";
-import type { GuestOrder } from "./types";
+import type { OrderInput } from "./types";
 import type { CartItem } from "@/types/cart";
 
 type CreateOrderParams = {
-  order: GuestOrder;
+  order: OrderInput;
   cart: CartItem[];
 };
 
@@ -12,38 +12,53 @@ export async function createOrder({
   cart,
 }: CreateOrderParams) {
 
-    const { data: sessionData } = await supabase.auth.getSession();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    console.log(
-    "SESSION DESDE WEB:",
-    sessionData.session
-    );
+
+  const orderData: OrderInput = {
+
+    ...order,
+
+    customer_id: user?.id ?? null,
+
+  };
+
 
   const { data: createdOrder, error } = await supabase
     .from("orders")
-    .insert(order)
+    .insert(orderData)
     .select("id")
     .single();
+
 
   if (error) {
     throw error;
   }
 
-  const item = cart.map((item) => ({
+
+  const items = cart.map((item) => ({
+
     order_id: createdOrder.id,
     product_id: item.id,
     product_name: item.name,
     price: item.price,
     quantity: item.quantity,
+
   }));
+
 
   const { error: itemError } = await supabase
     .from("order_item")
-    .insert(item);
+    .insert(items);
+
 
   if (itemError) {
     throw itemError;
   }
 
+
   return createdOrder;
+
 }

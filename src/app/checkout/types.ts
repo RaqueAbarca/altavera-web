@@ -3,8 +3,8 @@ export type GuestLocation = {
   lng: number;
 };
 
-export type GuestOrder = {
-  user_id?: string | null;
+export type OrderInput = {
+  customer_id?: string | null;
   guest_name: FormDataEntryValue | null;
   guest_phone: FormDataEntryValue | null;
   guest_email: FormDataEntryValue | null;

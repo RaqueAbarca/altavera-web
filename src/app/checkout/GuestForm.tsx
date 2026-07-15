@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useCart } from "@/hooks/useCart";
 import LocationPicker from "@/components/checkout/LocationPicker";
 import { createOrder } from "./createOrder";
-import type { GuestLocation, GuestOrder } from "./types";
+import type { GuestLocation, OrderInput } from "./types";
 
 export default function GuestForm() {
   const { cart, totalPrice, clearCart } = useCart();
@@ -54,9 +54,9 @@ export default function GuestForm() {
       const form = e.currentTarget as HTMLFormElement;
       const data = new FormData(form);
 
-      const order: GuestOrder = {
+      const order: OrderInput = {
         // Enlazamos el ID si está logueado, de lo contrario viaja como null (invitado)
-        user_id: user ? user.id : null, 
+        customer_id: user ? user.id : null, 
 
         guest_name: data.get("name"),
         guest_phone: data.get("phone"),

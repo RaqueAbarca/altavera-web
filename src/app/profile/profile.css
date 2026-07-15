@@ -1,3 +1,14 @@
+:root {
+  --green: #1f402a;
+  --green-light: #355843;
+  --orange: #c97833;
+  --cream: #f7f2ea;
+  --white: #ffffff;
+  --text: #1f1f1f;
+  --gray: #6b7280;
+}
+
+
 .profile-container{
 max-width:900px;
 margin:40px auto;
@@ -86,8 +97,8 @@ align-self:flex-start;
 padding:12px 22px;
 border:none;
 border-radius:10px;
-background:var(--primary);
-color:#fff;
+background:var(--white);
+color: var(--green-light);
 font-weight:600;
 cursor:pointer;
 transition:.25s;
@@ -196,4 +207,34 @@ width:100%;
 justify-content:center;
 }
 
+}
+
+/* Ajustes pedidos */
+.order-products{
+  list-style:none;
+  padding:0;
+  margin:8px 0 12px;
+}
+
+.order-products li{
+  font-size:14px;
+  color:#666;
+  padding:3px 0;
+}
+
+.order-info p{
+  font-size:16px;
+  font-weight:700;
+  color:#222;
+  margin-top:10px;
+}
+
+@media(max-width:768px){
+  .order-products li{
+    font-size:13px;
+  }
+
+  .profile-btn{
+    padding:11px;
+  }
 }
