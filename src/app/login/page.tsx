@@ -32,7 +32,7 @@ export default function ClientLoginPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/perfil`,
+            emailRedirectTo: `${window.location.origin}/profile`,
             // Guardamos el nombre y el teléfono dentro de los metadatos del usuario en Supabase
             data: {
               full_name: name,
@@ -58,7 +58,7 @@ export default function ClientLoginPage() {
         if (loginError) throw loginError;
 
         // Redirección nativa para garantizar que las cookies viajen de inmediato al Middleware
-        window.location.href = "/perfil";
+        window.location.href = "/profile";
       }
     } catch (err: any) {
       setError(err.message || "Ocurrió un error inesperado");
