@@ -18,6 +18,7 @@ export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<any>(null); // 👈 Estado para guardar el usuario logueado
+  const [profile, setProfile] = useState<any>(null);
 
   const { cart } = useCart();
 
@@ -29,13 +30,44 @@ export default function Header() {
   // Escuchar el estado de autenticación de Supabase
   useEffect(() => {
     // 1. Obtener sesión actual
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+
       setUser(session?.user ?? null);
+
+
+      if(session?.user){
+
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+
+        setProfile(data);
+
+      } else {
+
+        setProfile(null);
+
+      }
+
     });
 
     // 2. Suscribirse a cambios (Login, Logout, Registro)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if(session?.user){
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        setProfile(data);
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -88,24 +120,41 @@ export default function Header() {
         <div className="header-actions">
 
           {/* Botón dinámico con clase única e independiente */}
-          {user ? (
-            <Link 
-              href="/profile" 
+          {profile?.role === "admin" ? (
+
+            <Link
+              href="/admin/dashboard"
+              className="header-auth-btn"
+              title="Ir al panel administrativo"
+            >
+              <User size={18} />
+              <span>Panel Admin</span>
+            </Link>
+
+
+          ) : profile?.role === "customer" ? (
+
+            <Link
+              href="/profile"
               className="header-auth-btn"
               title="Ir a mi perfil"
             >
               <User size={18} />
               <span>{clientName}</span>
             </Link>
+
+
           ) : (
-            <Link 
-              href="/login" 
+
+            <Link
+              href="/login"
               className="header-auth-btn"
               title="Iniciar sesión"
             >
               <User size={18} />
               <span>Ingresar</span>
             </Link>
+
           )}
 
           {/* WhatsApp */}
@@ -167,15 +216,28 @@ export default function Header() {
 
           {/* Opción de cuenta en el menú móvil */}
           <div className="mobile-auth-section">
-            {user ? (
+            {profile?.role === "admin" ? (
+
               <Link
-                href="../profile"
+                href="/admin/dashboard"
+                className="mobile-link active"
+                onClick={() => setOpen(false)}
+              >
+                👤 Panel Admin
+              </Link>
+
+            ) : profile?.role === "customer" ? (
+
+              <Link
+                href="/profile"
                 className="mobile-link active"
                 onClick={() => setOpen(false)}
               >
                 👤 Mi Perfil ({clientName})
               </Link>
+
             ) : (
+
               <Link
                 href="/login"
                 className="mobile-link"

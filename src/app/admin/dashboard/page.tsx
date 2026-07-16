@@ -65,18 +65,50 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/admin"); // Si detecta que no hay sesión, lo saca
-        return;
+useEffect(() => {
+  const checkAuth = async () => {
+
+    const {
+      data: {
+        session
       }
-      // Solo cargamos los pedidos si la sesión es válida
-      loadOrders();
-    };
-    checkAuth();
-  }, []);
+    } = await supabase.auth.getSession();
+
+
+    if (!session) {
+      router.push("/admin");
+      return;
+    }
+
+
+    const {
+      data: profile,
+      error
+    } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .single();
+
+
+    console.log("PROFILE:", profile);
+    console.log("PROFILE ERROR:", error);
+
+
+    if (error || !profile || profile.role !== "admin") {
+      router.push("/admin");
+      return;
+    }
+
+
+    loadOrders();
+
+  };
+
+
+  checkAuth();
+
+}, []);
 
   async function updateStatus(order: Order, status: string) {
     const { data, error } = await supabase
