@@ -58,7 +58,13 @@ export default function ClientLoginPage() {
         if (loginError) throw loginError;
 
         // Redirección nativa para garantizar que las cookies viajen de inmediato al Middleware
-        window.location.href = "/profile";
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get("redirect");
+
+        window.location.href =
+          redirect === "checkout"
+            ? "/checkout"
+            : "/profile";
       }
     } catch (err: any) {
       setError(err.message || "Ocurrió un error inesperado");
