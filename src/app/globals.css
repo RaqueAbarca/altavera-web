@@ -50,7 +50,7 @@ body {
 }
 
 section {
-  padding:10px 0;
+  padding:20px 0;
 }
 
 p {
@@ -879,16 +879,11 @@ h2 {
 
 
 .filters {
-
-
  background:white;
-
  border-radius:13px;
-
  padding:20px;
-
  height:fit-content;
-
+ margin-top: 20px;
 }
 
 
@@ -912,35 +907,24 @@ h2 {
 
 
 .filters-list {
-
- display:flex;
-
- flex-wrap:wrap;
-
- gap:10px;
-
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:100%;
 }
 
 
 
 
 .filter {
-
-
+ text-align: left;
  padding:14px 18px;
-
  border:none;
-
  border-radius:10px;
-
  background:white;
-
  cursor:pointer;
-
  transition:.2s;
-
  font-weight:500;
-
 }
 
 
