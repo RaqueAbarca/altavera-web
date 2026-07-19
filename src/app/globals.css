@@ -125,237 +125,6 @@ h2 {
 
 
 /* =========================
-   HEADER
-========================= */
-
-
-.header {
-
-  background:var(--cream);
-
-  position:sticky;
-  top:0;
-
-  z-index:999;
-
-}
-
-
-.header-inner {
-
-  height:88px;
-
-  display:flex;
-
-  align-items:center;
-
-  justify-content:space-between;
-
-}
-
-
-.logo {
-
-  color:var(--green);
-
-}
-
-
-.logo-img {
-
-  height:80px;
-  width:auto;
-
-}
-
-
-
-/* NAV */
-
-.nav {
-
-  display:flex;
-
-  align-items:center;
-
-  gap:34px;
-
-}
-
-
-.nav-link {
-
-  text-decoration:none;
-
-  color:var(--text);
-
-  position:relative;
-
-}
-
-
-.nav-link:hover {
-
-  color:var(--green);
-
-}
-
-
-.nav-link::after {
-
-  content:"";
-
-  position:absolute;
-
-  left:0;
-  bottom:-8px;
-
-  width:0;
-  height:2px;
-
-  background:var(--orange);
-
-  transition:.25s;
-
-}
-
-
-.nav-link:hover::after,
-.nav-link.active::after {
-
-  width:100%;
-
-}
-
-
-.nav-link.active {
-
-  color:var(--orange);
-  font-weight:700;
-
-}
-
-
-
-/* HEADER ACTIONS */
-
-.header-actions {
-
-  display:flex;
-
-  align-items:center;
-
-  gap:14px;
-
-}
-
-
-.whatsapp-btn {
-
-  display:flex;
-
-  align-items:center;
-
-  gap:8px;
-
-}
-
-
-
-/* CARRITO */
-
-.cart-button {
-  width:48px;
-  height:48px;
-  border:none;
-  color: var(--green);
-  background:var(--cream);
-  border-radius:12px;
-  cursor:pointer;
-  position:relative;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-
-.cart-badge {
-  position:absolute;
-  top: 2px;
-  right:-2px;
-  width:22px;
-  height:22px;
-  border-radius:50%;
-  background:var(--orange);
-  color:white;
-  font-size:12px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-
-
-/* MENU */
-
-.menu-btn {
-
-  display:none;
-  width:46px;
-  height:46px;
-  border:none;
-  border-radius:12px;
-  background:var(--cream);
-  color:var(--green);
-  align-items:center;
-  justify-content:center;
-
-}
-
-
-
-/* =========================
-   MOBILE HEADER
-========================= */
-
-@media(max-width:768px){
-
-  .header-inner{
-    height:74px;
-    position:relative;
-    justify-content:center;
-  }
-
-  /* LOGO CENTRADO */
-  .logo{
-    position:absolute;
-    left:50%;
-    transform:translateX(-50%);
-  }
-
-  .logo-img{
-    height:60px;
-  }
-
-  /* ocultar desktop */
-  .nav,
-  .whatsapp-btn{
-    display:none;
-  }
-
-  /* SOLO CARRITO DERECHA */
-  .header-actions{
-
-    position:absolute;
-
-    right:18px;
-    top:50%;
-
-    transform:translateY(-50%);
-  }
-}
-
-/* =========================
    HERO
 ========================= */
 
@@ -399,6 +168,22 @@ h2 {
  object-fit:cover;
 
  transform:translateY(9px);
+
+}
+
+@media(max-width:1100px){
+
+.hero-grid{
+
+grid-template-columns:1fr 1.4fr;
+
+}
+
+.hero-text h1{
+
+font-size:2.5rem;
+
+}
 
 }
 
@@ -527,7 +312,6 @@ h2 {
   background:rgba(239, 236, 231, 0.35);
 
 }
-
 
 
 /* quitar divisores en móvil */
@@ -1032,69 +816,7 @@ h2 {
 
 
 
-.section-header {
 
- display:flex;
-
- justify-content:space-between;
-
- align-items:center;
-
- margin-bottom:30px;
-
-}
-
-
-
-.section-header h2 {
-
- font-size:42px;
-
- color:#1f3d2b;
-
-}
-
-
-
-.section-header a {
-
- text-decoration:none;
-
- color:#1f3d2b;
-
- font-weight:600;
-
-}
-
-
-
-
-
-/* TITULOS MOBILE */
-
-
-@media(max-width:768px){
-
-  h1 {
-  font-size:33px;
-  }
-
-  .section-header{
-    padding: 0 15px;
-    margin-bottom: 15px;
-  }
-
-  .section-header h2 {
-  font-size:20px;
-  }
-
-  .section-header a {
-  font-size:13px;
-  font-weight: 10;
-
-  }
-
-}
 
 /* =========================
    NOSOTROS
@@ -1729,190 +1451,7 @@ h2 {
  margin: 0 !important;
 }
 
-/* =========================
-   HEADER MOBILE FIX FINAL
-========================= */
 
-@media(max-width:768px){
-
-  .header-inner{
-    position:relative;
-    height:74px;
-    display:flex;
-    justify-content:center;
-  }
-
-  .header-productos{
-    margin: 15px;
-  }
-
-  .header-productos p{
-    display: none;
-  }
-
-
-  /* logo centro */
-  .logo{
-    position:absolute;
-    left:50%;
-    transform:translateX(-50%);
-    z-index:5;
-  }
-
-
-  /* quitamos el posicionamiento del grupo */
-  .header-actions{
-    position:static;
-    transform:none;
-  }
-
-
-  /* carrito derecha */
-  .cart-button{
-    position:absolute;
-    right:18px;
-    top:50%;
-    transform:translateY(-50%);
-  }
-
-
-  /* menú izquierda */
-  .menu-btn{
-    display:flex;
-    position:absolute;
-    left:18px;
-    top:50%;
-    transform:translateY(-50%);
-    z-index:20;
-  }
-
-
-  /* esconder whatsapp */
-  .whatsapp-btn{
-    display:none;
-  }
-
-}
-
-/* =========================
-   MOBILE MENU DROPDOWN FIX
-========================= */
-
-.mobile-nav {
-  position:relative;
-  z-index:999;
-
-  display:flex;
-  flex-direction:column;
-
-  gap:30px;
-  padding:25px;
-
-  background:var(--white);
-
-  border-top:1px solid #ececec;
-
-  box-shadow:0 10px 25px rgba(0,0,0,.05);
-}
-
-
-@media(max-width:768px){
-
-  .mobile-nav{
-    width:100%;
-    margin-top:0;
-    animation:menuOpen .5s ease;
-  }
-
-
-  .mobile-link{
-    width:100%;
-    color: var(--text);
-    text-decoration: none;
-    display:block;
-
-  }
-}
-
-
-@keyframes menuOpen {
-
-  from {
-    opacity:0;
-    transform:translateY(-10px);
-  }
-
-  to {
-    opacity:1;
-    transform:translateY(0);
-  }
-
-}
-/* --- BOTÓN ESPECÍFICO DE AUTENTICACIÓN EN EL HEADER --- */
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem; /* Mantiene un espacio prudente entre elementos */
-}
-
-/* Usamos una clase única para no interferir con otros btn-secondary de la página */
-.header-auth-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.1rem;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-decoration: none;
-  transition: all 0.25s ease;
-  cursor: pointer;
-  background-color: var(--cream);
-  color: var(--green);
-  border: 1.5px solid var(--cream);
-}
-
-.header-auth-btn:hover {
-  background-color: var(--white);
-  border-color: var(--orange);
-  color: var(--orange);
-}
-
-/* Sección extra para separar estéticamente en menú móvil */
-.mobile-auth-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  width: 100%;
-}
-
-/* ==========================================================================
-   Responsive para botones de acción del Header
-   ========================================================================== */
-
-@media (max-width: 1024px) {
-  /* En pantallas medianas ocultamos los textos de los botones para no saturar */
-  .header-auth-btn span,
-  .whatsapp-btn span {
-    display: none;
-  }
-  
-  .header-auth-btn,
-  .whatsapp-btn {
-    padding: 0.75rem;
-    border-radius: 50%;
-    aspect-ratio: 1;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 640px) {
-  /* En móviles muy pequeños, ocultamos el acceso de Login del header principal */
-  .header-auth-btn {
-    display: none;
-  }
-}
 
 .login-promo-banner {
   background-color: var(--white);

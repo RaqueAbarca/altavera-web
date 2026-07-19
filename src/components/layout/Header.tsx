@@ -1,5 +1,6 @@
 "use client";
 
+import "./header.css";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -223,7 +224,7 @@ export default function Header() {
                 className="mobile-link active"
                 onClick={() => setOpen(false)}
               >
-                👤 Panel Admin
+                Panel Admin
               </Link>
 
             ) : profile?.role === "customer" ? (
@@ -233,7 +234,7 @@ export default function Header() {
                 className="mobile-link active"
                 onClick={() => setOpen(false)}
               >
-                👤 Mi Perfil ({clientName})
+                Mi Perfil ({clientName})
               </Link>
 
             ) : (
@@ -243,7 +244,7 @@ export default function Header() {
                 className="mobile-link"
                 onClick={() => setOpen(false)}
               >
-                🔑 Iniciar Sesión / Registrarse
+                Iniciar Sesión / Registrarse
               </Link>
             )}
           </div>
