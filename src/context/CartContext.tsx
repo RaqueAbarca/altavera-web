@@ -47,19 +47,25 @@ export function CartProvider({
     saveCart(cart);
   }, [cart]);
 
+  function getStep(unit: string) {
+    return unit.trim().toLowerCase() === "kg" ? 0.5 : 1;
+  }
+
   function addToCart(product: Product) {
+    const step = getStep(product.unit);
+
     setCart((current) => {
       const exists = current.find((p) => p.id === product.id);
 
       if (exists) {
         return current.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 0.5 }
+            ? { ...item, quantity: item.quantity + step }
             : item
         );
       }
 
-      return [...current, { ...product, quantity: 0.5 }];
+      return [...current, { ...product, quantity: step }];
     });
   }
 
@@ -71,28 +77,32 @@ export function CartProvider({
 
   function increaseQuantity(id: number) {
     setCart((current) =>
-      current.map((item) =>
-        item.id === id
+      current.map((item) => {
+        const step = getStep(item.unit);
+
+        return item.id === id
           ? {
               ...item,
-              quantity: item.quantity + 0.5,
+              quantity: item.quantity + step,
             }
-          : item
-      )
+          : item;
+      })
     );
   }
 
   function decreaseQuantity(id: number) {
     setCart((current) =>
       current
-        .map((item) =>
-          item.id === id
+        .map((item) => {
+          const step = getStep(item.unit);
+
+          return item.id === id
             ? {
                 ...item,
-                quantity: item.quantity - 0.5,
+                quantity: item.quantity - step,
               }
-            : item
-        )
+            : item;
+        })
         .filter((item) => item.quantity > 0)
     );
   }
