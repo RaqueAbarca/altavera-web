@@ -1,14 +1,17 @@
 "use client";
 
+import { useState } from "react";
+
 type ProductCardProps = {
   image: string;
   name: string;
   price: number;
   unit: string;
   quantity: number;
-  onAdd: () => void;
+  onAdd: (quantity: number) => void;
   onIncrease: () => void;
   onDecrease: () => void;
+  onRemove: () => void;
 };
 
 export default function ProductCard({
@@ -20,52 +23,138 @@ export default function ProductCard({
   onAdd,
   onIncrease,
   onDecrease,
+  onRemove
 }: ProductCardProps) {
+
+  const [selecting, setSelecting] = useState(false);
+  const [tempQuantity, setTempQuantity] = useState(
+    unit.toLowerCase() === "kg" ? 0.5 : 1
+  );
+
+
+  function getStep() {
+    return unit.toLowerCase() === "kg" ? 0.5 : 1;
+  }
+
+
+  function increaseTemp() {
+    setTempQuantity((prev) => prev + getStep());
+  }
+
+
+  function decreaseTemp() {
+    const newQuantity = tempQuantity - getStep();
+
+    if (newQuantity <= 0) {
+
+      if (quantity > 0) {
+        onRemove();
+      }
+
+      setSelecting(false);
+      setTempQuantity(getStep());
+
+      return;
+    }
+
+    setTempQuantity(newQuantity);
+  }
+
+
+  function confirmAdd() {
+    onAdd(tempQuantity);
+    setSelecting(false);
+  }
+
+
   return (
     <div className="product-card">
+
       <img
         src={image}
         alt={name}
         className="product-image"
       />
 
+
       <div className="product-content">
+
         <h3>{name}</h3>
+
 
         <p className="price">
           ₡{price.toLocaleString("es-CR")}
           <span> / {unit}</span>
         </p>
 
-        {quantity === 0 ? (
-          <button
-            className="add-btn"
-            onClick={onAdd}
-          >
-            Agregar
-          </button>
-        ) : (
-          <div className="quantity-controls">
-            <button
-              className="qty-btn"
-              onClick={onDecrease}
-            >
-              −
-            </button>
 
-            <span className="qty">
-              {quantity}
-            </span>
+      {quantity === 0 && !selecting && (
+        <button
+          className="add-btn"
+          onClick={() => setSelecting(true)}
+        >
+          Agregar
+        </button>
+      )}
+
+
+        {selecting && (
+          <>
+            <div className="quantity-controls">
+
+              <button
+                className="qty-btn"
+                onClick={decreaseTemp}
+              >
+                −
+              </button>
+
+
+              <span className="qty">
+                {tempQuantity} {unit}
+              </span>
+
+
+              <button
+                className="qty-btn"
+                onClick={increaseTemp}
+              >
+                +
+              </button>
+
+            </div>
+
 
             <button
-              className="qty-btn"
-              onClick={onIncrease}
+              className="add-btn"
+              onClick={confirmAdd}
             >
-              +
+              Confirmar
             </button>
-          </div>
+          </>
         )}
+
+
+        {quantity > 0 && !selecting && (
+          <>
+            <p className="added-message">
+              ✓ En carrito: {quantity} {unit}
+            </p>
+
+        <button
+          className="modify-btn"
+          onClick={() => {
+            setTempQuantity(quantity);
+            setSelecting(true);
+          }}
+        >
+          Modificar pedido
+        </button>
+          </>
+        )}
+
       </div>
+
     </div>
   );
 }

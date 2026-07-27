@@ -1,5 +1,6 @@
 "use client";
 
+import "./productos.css";
 import ProductCard from "../ui/ProductCard";
 import { useCart } from "@/hooks/useCart";
 
@@ -28,6 +29,7 @@ export default function ProductsSection({
     addToCart,
     increaseQuantity,
     decreaseQuantity,
+    removeFromCart
   } = useCart();
 
   const filteredProducts =
@@ -55,7 +57,7 @@ export default function ProductsSection({
             price={product.price}
             unit={product.unit}
             quantity={quantity}
-            onAdd={() =>
+            onAdd={(quantity) =>
               addToCart({
                 id: product.id,
                 name: product.name,
@@ -64,6 +66,7 @@ export default function ProductsSection({
                 price: product.price,
                 unit: product.unit,
                 image: product.image_url,
+                quantity,
               })
             }
             onIncrease={() =>
@@ -71,6 +74,9 @@ export default function ProductsSection({
             }
             onDecrease={() =>
               decreaseQuantity(product.id)
+            }
+            onRemove={() =>
+              removeFromCart(product.id)
             }
           />
         );

@@ -428,128 +428,6 @@ font-size:2.5rem;
 }
 
 
-/* =========================
-   PRODUCTS
-========================= */
-
-
-.products-grid{
-
-  display:grid;
-
-  grid-template-columns:repeat(3,1fr);
-
-  gap:24px;
-
-}
-
-
-.product-card{
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background:white;
-  border-radius:18px;
-  overflow:hidden;
-  border:1px solid #ece6df;
-  transition:.3s;
-  max-width:400px;
-}
-
-
-.product-card:hover{
-
-  transform:translateY(-4px);
-
-}
-
-
-
-/* IMAGENES */
-
-
-.product-image {
-
- width:100%;
- height:240px;
- object-fit:contain;
- background:#f0e1cd;
-}
-
-/* CONTENIDO */
-
-
-.product-content{
-  display: flex;
-  flex-direction: column;
-  flex: 1;
- padding:15px;
-}
-
-
-.product-content h3{
- margin-bottom:10px;
- color:var(--green);
-}
-
-
-.price {
-  margin-top: auto;
- font-size:20px;
- font-weight:700;
- color:var(--green);
-}
-
-
-.price span {
-
- font-size:14px;
-
- color:#777;
-
-}
-
-
-
-
-/* BOTONES PRODUCTOS */
-
-
-.add-btn {
- width:100%;
- margin-top:10px;
- border:none;
- background:var(--green);
- color:white;
- border-radius:10px;
- padding:14px;
- font-weight:600;
- cursor:pointer;
- display:flex;
- justify-content:center;
- gap:10px;
-}
-
-
-
-.outline-btn {
-
- width:100%;
-
- margin-top:20px;
-
- background:white;
-
- border:2px solid #d8d1c9;
-
- border-radius:12px;
-
- padding:14px;
-
- cursor:pointer;
-
-}
-
 
 
 /* =========================
@@ -567,41 +445,7 @@ font-size:2.5rem;
 
 }
 
-
-@media(max-width:1000px){
-  .products-grid{
-  grid-template-columns:repeat(2,1fr);
-  }
-
-  .featured-products {
-  grid-template-columns:repeat(3,1fr);
-  }
-}
-
 @media(max-width:768px){
-  
-  .product-content{
-    padding: 12px;
-  }
-  
-  .product-content h3{
-    font-size: 15px;
-    margin-bottom: 0px;
-  }
-
-  .product-content .price{
-    font-size: 15px;
-  }
-
-  .product-content .add-btn{
-    margin-top: 5px;
-  }
-
-  .products-grid{
-    grid-template-columns:repeat(2,1fr);
-    gap:12px;
-  }
-
   .featured-products {
   display:flex;
   overflow-x:auto;
@@ -620,184 +464,6 @@ font-size:2.5rem;
     max-height: 200px;
   }
 }
-
-
-/* =========================
-   CATALOGO
-========================= */
-
-
-.catalog-layout,
-.products-layout {
-
-
- display:grid;
-
- grid-template-columns:260px 1fr;
-
- gap:32px;
-
- align-items:flex-start;
-
-
-}
-
-
-
-.filters {
- background:white;
- border-radius:13px;
- padding:20px;
- height:fit-content;
- margin-top: 20px;
-}
-
-
-
-.filters h3 {
-
- margin-bottom:18px;
-
- color:var(--green);
-
-}
-
-
-
-.filters ul {
-
- list-style:none;
-
-}
-
-
-
-.filters-list {
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  width:100%;
-}
-
-
-
-
-.filter {
- text-align: left;
- padding:14px 18px;
- border:none;
- border-radius:10px;
- background:white;
- cursor:pointer;
- transition:.2s;
- font-weight:500;
-}
-
-
-.filter:hover {
-
- background:var(--cream);
-
-}
-
-
-
-.filter.active {
-
-
- background:#f3e5d4;
-
- color:var(--orange);
-
- font-weight:700;
-
-}
-
-
-
-
-
-/* FILTROS MOBILE */
-@media(max-width:768px){
-
-  .catalog-layout,
-  .products-layout {
-    display:block;
-    width:100%;
-    overflow:hidden;
-  }
-
-  .filters {
-    width:100%;
-    max-width:100%;
-    padding:10px 0 10px;
-    background-color: var(--cream);
-    overflow:hidden;
-  }
-
-  .filters h3 {
-    display: none;
-  }
-
-  .filters-list .filter{
-    border: var(--cream);
-    padding: 6px 12px;
-  }
-
-  .filters ul,
-  .filters-list {
-    display:flex;
-    flex-direction:row;
-    overflow-x:auto;
-    flex-wrap:nowrap;
-    gap:10px;
-    scrollbar-width:none;
-    width:100%;
-    margin-left: 15px;
-  }
-
-  .filters-list .filter{
-    color: var(--text);
-  }
-
-  .filters ul::-webkit-scrollbar {
-    display:none;
-  }
-
-  .filter {
-    white-space:nowrap;
-    flex-shrink:0;
-    border:1px solid #ddd;
-    padding:10px 14px;
-  }
-
-  .products-grid {
-    width:100%;
-    padding: 0 15px;
-    justify-items: center;
-  }
-
-  .container{
-    padding: 0px;
-  }
-
-}
-
-
-
-/* =========================
-   SECCIONES
-========================= */
-
-
-.section {
-
- margin-top:40px;
-
-}
-
-
-
 
 
 /* =========================
@@ -1501,15 +1167,15 @@ margin-top:14px;
 
 .qty-btn{
 width:40px;
-height:40px;
+height:25px;
 display:flex;
 align-items:center;
 justify-content:center;
 border:none;
-border-radius:50%;
+border-radius:8px;
 background:var(--orange);
 color:var(--white);
-font-size:1.4rem;
+font-size:1rem;
 font-weight:700;
 cursor:pointer;
 transition:.2s;

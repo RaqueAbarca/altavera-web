@@ -15,7 +15,7 @@ import { getCart, saveCart } from "@/lib/cartStorage";
 type CartContextType = {
   cart: CartItem[];
 
-  addToCart: (product: Product) => void;
+  addToCart: (product: CartItem) => void;
 
   removeFromCart: (id: number) => void;
 
@@ -51,21 +51,24 @@ export function CartProvider({
     return unit.trim().toLowerCase() === "kg" ? 0.5 : 1;
   }
 
-  function addToCart(product: Product) {
-    const step = getStep(product.unit);
-
+  function addToCart(product: CartItem) {
     setCart((current) => {
-      const exists = current.find((p) => p.id === product.id);
+      const exists = current.find(
+        (p) => p.id === product.id
+      );
 
       if (exists) {
         return current.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + step }
+            ? {
+                ...item,
+                quantity: product.quantity,
+              }
             : item
         );
       }
 
-      return [...current, { ...product, quantity: step }];
+      return [...current, product];
     });
   }
 
@@ -111,10 +114,7 @@ export function CartProvider({
     setCart([]);
   }
 
-  const totalItems = cart.reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
+  const totalItems = cart.length;
 
   const totalPrice = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,

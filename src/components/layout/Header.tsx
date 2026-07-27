@@ -23,10 +23,7 @@ export default function Header() {
 
   const { cart } = useCart();
 
-  const cartCount = cart.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+  const cartCount = cart.length;
 
   // Escuchar el estado de autenticación de Supabase
   useEffect(() => {
