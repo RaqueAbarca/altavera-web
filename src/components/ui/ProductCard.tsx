@@ -1,5 +1,6 @@
 "use client";
 
+import "../productos/productos.css";
 import { useState } from "react";
 
 type ProductCardProps = {
