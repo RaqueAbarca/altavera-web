@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import ProductsSection from "@/components/productos/ProductsSection";
 import ProductFilters from "@/components/productos/productFilters";
 import { supabase } from "@/lib/supabase";
+import SearchBar from "@/components/productos/SearchBar";
 
 type Product = {
   id: number;
@@ -17,8 +18,10 @@ type Product = {
 };
 
 export default function ProductosPage() {
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -47,6 +50,12 @@ export default function ProductosPage() {
           <Link href="/"> Inicio </Link> {" >"} Productos</p>
       </div>
 
+
+      <SearchBar
+        value={search}
+        onChange={setSearch}
+      />
+
       <div className="products-layout">
 
         {/* FILTROS */}
@@ -63,6 +72,7 @@ export default function ProductosPage() {
           <ProductsSection
             products={products}
             selectedCategory={selectedCategory}
+            search={search}
           />
         </section>
 

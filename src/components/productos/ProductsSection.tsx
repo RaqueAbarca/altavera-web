@@ -17,11 +17,13 @@ type Product = {
 type Props = {
   products: Product[];
   selectedCategory: string;
+  search: string;
 };
 
 export default function ProductsSection({
   products,
   selectedCategory,
+  search,
 }: Props) {
 
   const {
@@ -32,12 +34,20 @@ export default function ProductsSection({
     removeFromCart
   } = useCart();
 
-  const filteredProducts =
-    selectedCategory === "Todos"
-      ? products
-      : products.filter(
-          (p) => p.category === selectedCategory
-        );
+  const filteredProducts = products.filter((product) => {
+
+    const matchesCategory =
+      selectedCategory === "Todos" ||
+      product.category === selectedCategory;
+
+    const matchesSearch =
+      product.name
+        .toLowerCase()
+        .includes(search.toLowerCase().trim());
+
+    return matchesCategory && matchesSearch;
+
+  });
 
   return (
     <div className="products-grid">
