@@ -23,6 +23,7 @@ export default function FeaturedProducts() {
     addToCart,
     increaseQuantity,
     decreaseQuantity,
+    removeFromCart,
   } = useCart();
 
   useEffect(() => {
@@ -85,13 +86,19 @@ export default function FeaturedProducts() {
             price={product.price}
             unit={product.unit}
             quantity={quantity}
-            onAdd={() => addToCart(product)}
+            onAdd={(quantity) =>
+              addToCart({
+                ...product,
+                quantity,
+              })
+            }
             onIncrease={() =>
               increaseQuantity(product.id)
             }
             onDecrease={() =>
               decreaseQuantity(product.id)
             }
+            onRemove={() => removeFromCart(product.id)}
           />
 
         );
