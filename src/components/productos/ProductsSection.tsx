@@ -3,6 +3,7 @@
 import "./productos.css";
 import ProductCard from "../ui/ProductCard";
 import { useCart } from "@/hooks/useCart";
+import { SEASONAL_CATEGORY } from "./productFilters";
 
 type Product = {
   id: number;
@@ -13,6 +14,7 @@ type Product = {
   unit: string;
   image_url: string;
   maturity_selection_enabled?: boolean;
+  is_seasonal?: boolean;
 };
 
 type Props = {
@@ -37,7 +39,9 @@ export default function ProductsSection({
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "Todos" ||
-      product.category === selectedCategory;
+      (selectedCategory === SEASONAL_CATEGORY
+        ? product.is_seasonal === true
+        : product.category === selectedCategory);
 
     const matchesSearch = product.name
       .toLowerCase()
@@ -66,6 +70,7 @@ export default function ProductsSection({
             maturitySelectionEnabled={
               product.maturity_selection_enabled ?? false
             }
+            isSeasonal={product.is_seasonal ?? false}
             onAdd={(quantity) =>
               addToCart({
                 id: product.id,

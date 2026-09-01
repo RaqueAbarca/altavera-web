@@ -10,6 +10,7 @@ type ProductCardProps = {
   unit: string;
   quantity: number;
   maturitySelectionEnabled?: boolean;
+  isSeasonal?: boolean;
   onAdd: (quantity: number) => void;
   onIncrease: () => void;
   onDecrease: () => void;
@@ -23,6 +24,7 @@ export default function ProductCard({
   unit,
   quantity,
   maturitySelectionEnabled = false,
+  isSeasonal = false,
   onAdd,
   onIncrease,
   onDecrease,
@@ -63,12 +65,26 @@ export default function ProductCard({
   }
 
   return (
-    <div className="product-card">
-      <img
-        src={image}
-        alt={name}
-        className="product-image"
-      />
+    <div
+      className={
+        isSeasonal
+          ? "product-card seasonal-product-card"
+          : "product-card"
+      }
+    >
+      <div className="product-image-wrap">
+        <img
+          src={image}
+          alt={name}
+          className="product-image"
+        />
+
+        {isSeasonal && (
+          <span className="seasonal-badge">
+            De temporada
+          </span>
+        )}
+      </div>
 
       <div className="product-content">
         <h3>{name}</h3>
@@ -79,14 +95,7 @@ export default function ProductCard({
         </p>
 
         {maturitySelectionEnabled && (
-          <p
-            style={{
-              margin: "0.35rem 0 0.8rem",
-              fontSize: "0.82rem",
-              color: "var(--green)",
-              fontWeight: 600,
-            }}
-          >
+          <p className="maturity-card-note">
             Puedes elegir maduración en el carrito
           </p>
         )}

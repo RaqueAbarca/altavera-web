@@ -15,6 +15,7 @@ type SupabaseProduct = {
   unit: string;
   image_url: string;
   maturity_selection_enabled?: boolean;
+  is_seasonal?: boolean;
 };
 
 export default function FeaturedProducts() {
@@ -52,6 +53,7 @@ export default function FeaturedProducts() {
           category: "",
           maturity_selection_enabled:
             product.maturity_selection_enabled ?? false,
+          is_seasonal: product.is_seasonal ?? false,
         })
       );
 
@@ -90,6 +92,7 @@ export default function FeaturedProducts() {
               maturitySelectionEnabled={
                 product.maturity_selection_enabled ?? false
               }
+              isSeasonal={product.is_seasonal ?? false}
               onAdd={(quantity) =>
                 addToCart({
                   ...product,

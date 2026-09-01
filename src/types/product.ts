@@ -7,4 +7,5 @@ export interface Product {
   unit: string;
   image: string;
   maturity_selection_enabled?: boolean;
+  is_seasonal?: boolean;
 }

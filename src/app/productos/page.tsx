@@ -15,10 +15,11 @@ type Product = {
   price: number;
   unit: string;
   image_url: string;
+  maturity_selection_enabled?: boolean;
+  is_seasonal?: boolean;
 };
 
 export default function ProductosPage() {
-  
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [search, setSearch] = useState("");
@@ -43,14 +44,13 @@ export default function ProductosPage() {
   }, []);
 
   return (
-    <main className="products-page container">
-
+    <main className="container">
       <div className="header-productos">
         <h1>Nuestros productos</h1>
         <p>
-          <Link href="/"> Inicio </Link> {" >"} Productos</p>
+          <Link href="/">Inicio</Link> {" >"} Productos
+        </p>
       </div>
-
 
       <SearchBar
         value={search}
@@ -58,8 +58,6 @@ export default function ProductosPage() {
       />
 
       <div className="products-layout">
-
-        {/* FILTROS */}
         <aside className="filters">
           <ProductFilters
             products={products}
@@ -68,7 +66,6 @@ export default function ProductosPage() {
           />
         </aside>
 
-        {/* PRODUCTOS */}
         <section className="products">
           <ProductsSection
             products={products}
@@ -76,9 +73,7 @@ export default function ProductosPage() {
             search={search}
           />
         </section>
-
       </div>
-
     </main>
   );
 }

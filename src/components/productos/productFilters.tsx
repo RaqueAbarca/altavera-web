@@ -1,7 +1,10 @@
 "use client";
 
+export const SEASONAL_CATEGORY = "Productos de temporada";
+
 type Product = {
   category: string;
+  is_seasonal?: boolean;
 };
 
 type Props = {
@@ -15,11 +18,18 @@ export default function ProductFilters({
   selected,
   onSelect,
 }: Props) {
+  const regularCategories = Array.from(
+    new Set(products.map((product) => product.category))
+  );
+
+  const hasSeasonalProducts = products.some(
+    (product) => product.is_seasonal
+  );
+
   const categories = [
     "Todos",
-    ...Array.from(
-      new Set(products.map((p) => p.category))
-    ),
+    ...(hasSeasonalProducts ? [SEASONAL_CATEGORY] : []),
+    ...regularCategories,
   ];
 
   return (
@@ -27,17 +37,25 @@ export default function ProductFilters({
       <h3>Categorías</h3>
 
       <div className="filters-list">
-        {categories.map((category) => (
-          <button
-            key={category}
-            onClick={() => onSelect(category)}
-            className={
-              selected === category ? "filter active" : "filter"
-            }
-          >
-            {category}
-          </button>
-        ))}
+        {categories.map((category) => {
+          const isSeasonal = category === SEASONAL_CATEGORY;
+
+          return (
+            <button
+              key={category}
+              onClick={() => onSelect(category)}
+              className={[
+                "filter",
+                selected === category ? "active" : "",
+                isSeasonal ? "seasonal-filter" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {category}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
