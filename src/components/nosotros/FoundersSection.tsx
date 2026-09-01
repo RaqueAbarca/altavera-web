@@ -9,11 +9,12 @@ export default function FoundersSection(){
         <div className="nosotros-founders-photo-wrap">
           <div className="nosotros-founders-photo-card">
             <Image
-              src="/nosotros/equipo-altavera.svg"
+              src="/nosotros/equipo-altavera.webp"
               alt="Fundadores de Altavera"
               width={760}
               height={900}
               priority
+              fetchPriority="high"
               className="nosotros-founders-photo"
               onError={(event)=>{
                 event.currentTarget.src="/heroBox.png";
