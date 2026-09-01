@@ -41,7 +41,7 @@ export default function Hero() {
         <div className="hero-image">
 
           <img 
-            src="/heroBox.png" 
+            src="/heroBox.svg" 
             alt="Altavera productos" 
           />
 
