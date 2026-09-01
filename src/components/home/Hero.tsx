@@ -4,10 +4,7 @@ export default function Hero() {
   return (
     <section className="hero">
       <div className="container hero-grid">
-
-        {/* TEXTO */}
-        <div className="hero-text">
-
+        <div className="hero-copy">
           <h1>
             Selección fresca
             <span className="mobile-break"><br /></span>
@@ -21,32 +18,24 @@ export default function Hero() {
             <span className="mobile-break"><br /></span>
             a su puerta.
           </p>
-
-          <div className="hero-buttons">
-
-            <Link href="/productos" className="btn btn-primary">
-              Comprar ahora
-            </Link>
-
-            <button className="btn btn-secondary">
-              Ver catálogo
-            </button>
-
-          </div>
-
         </div>
 
-
-        {/* IMAGEN */}
         <div className="hero-image">
-
-          <img 
-            src="/heroBox.svg" 
-            alt="Altavera productos" 
+          <img
+            src="/heroBox.svg"
+            alt="Altavera productos"
           />
-
         </div>
 
+        <div className="hero-buttons">
+          <Link href="/productos" className="btn btn-primary">
+            Comprar ahora
+          </Link>
+
+          <Link href="/productos" className="btn btn-secondary">
+            Ver catálogo
+          </Link>
+        </div>
       </div>
     </section>
   );

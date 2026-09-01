@@ -1,6 +1,5 @@
 "use client";
 
-import "./home.css";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductCard from "../ui/ProductCard";

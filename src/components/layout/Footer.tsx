@@ -1,7 +1,5 @@
-import {
-  MessageCircle,
-  MapPin
-} from "lucide-react";
+import "./footer.css";
+import { MessageCircle } from "lucide-react";
 
 import { FaFacebook } from "react-icons/fa";
 import { FaInstagram } from "react-icons/fa";

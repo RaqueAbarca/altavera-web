@@ -75,7 +75,11 @@ export default function GuestForm() {
       );
     } catch (error) {
       console.error("ERROR CREANDO PEDIDO:", error);
-      alert("Hubo un error creando el pedido.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Hubo un error creando el pedido."
+      );
     } finally {
       setLoading(false);
     }
@@ -90,22 +94,15 @@ export default function GuestForm() {
       
       {/* BANNER DE UX INTELIGENTE: Solo aparece si el usuario está comprando como invitado */}
       {!user && (
-        <div style={{
-          backgroundColor: "var(--cream)",
-          borderLeft: "4px solid var(--orange)",
-          padding: "1rem",
-          borderRadius: "8px",
-          marginBottom: "1.5rem",
-          fontSize: "0.9rem",
-          color: "var(--text)"
-        }}>
-          💡 <strong>¿Ya tienes una cuenta?</strong>{" "}
-          <span 
-            onClick={() => router.push("/login?redirect=checkout")} 
-            style={{ color: "var(--orange)", cursor: "pointer", fontWeight: "bold", textDecoration: "underline" }}
+        <div className="checkout-auth-banner">
+          <strong>¿Ya tienes una cuenta?</strong>{" "}
+          <button
+            type="button"
+            className="checkout-auth-link"
+            onClick={() => router.push("/login?redirect=checkout")}
           >
             Inicia sesión aquí
-          </span>{" "}
+          </button>{" "}
           para autocompletar tus datos y seguir tu orden en tiempo real.
         </div>
       )}
@@ -157,10 +154,8 @@ export default function GuestForm() {
         }
       />
 
-      <p style={{ fontSize: "0.85rem", color: "var(--gray)" }}>
-        Latitud: {location.lat}
-        <br />
-        Longitud: {location.lng}
+      <p className="checkout-coordinates">
+        Ubicación seleccionada: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
       </p>
 
       <label>
@@ -172,7 +167,9 @@ export default function GuestForm() {
       </label>
 
       <button type="submit" className="checkout-btn" disabled={loading}>
-        {loading ? "Creando pedido..." : "Confirmar y pagar ₡" + totalPrice}
+        {loading
+          ? "Creando pedido..."
+          : `Confirmar y pagar ₡${totalPrice.toLocaleString("es-CR")}`}
       </button>
     </form>
   );

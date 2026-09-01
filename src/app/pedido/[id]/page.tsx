@@ -92,7 +92,7 @@ export default function PedidoPage({
           <p>
             {error ?? "No se pudo encontrar este pedido."}
           </p>
-          <Link href="/productos">
+          <Link href="/productos" className="pedido-back-link">
             Volver a productos
           </Link>
         </div>
@@ -140,27 +140,23 @@ export default function PedidoPage({
 
         <hr />
 
-        <div>
-          Subtotal:{" "}
-          <strong>
-            ₡{Number(order.subtotal).toLocaleString("es-CR")}
-          </strong>
-        </div>
-
-        {order.shipping > 0 && (
-          <div>
-            Envío:{" "}
-            <strong>
-              ₡{Number(order.shipping).toLocaleString("es-CR")}
-            </strong>
+        <div className="pedido-totals">
+          <div className="pedido-total-row">
+            <span>Subtotal</span>
+            <strong>₡{Number(order.subtotal).toLocaleString("es-CR")}</strong>
           </div>
-        )}
 
-        <div>
-          Total:{" "}
-          <strong>
-            ₡{Number(order.total).toLocaleString("es-CR")}
-          </strong>
+          {order.shipping > 0 && (
+            <div className="pedido-total-row">
+              <span>Envío</span>
+              <strong>₡{Number(order.shipping).toLocaleString("es-CR")}</strong>
+            </div>
+          )}
+
+          <div className="pedido-total-row final">
+            <span>Total</span>
+            <strong>₡{Number(order.total).toLocaleString("es-CR")}</strong>
+          </div>
         </div>
 
         <div className="payment-box">
@@ -173,7 +169,7 @@ export default function PedidoPage({
           <strong>8652-6792</strong>
         </div>
 
-        <Link href="/productos">
+        <Link href="/productos" className="pedido-back-link">
           Seguir comprando
         </Link>
       </div>

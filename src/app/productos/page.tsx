@@ -43,7 +43,7 @@ export default function ProductosPage() {
   }, []);
 
   return (
-    <main className="container">
+    <main className="products-page container">
 
       <div className="header-productos">
         <h1>Nuestros productos</h1>

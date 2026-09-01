@@ -29,7 +29,7 @@ export default function CartItem({ item }: Props) {
         <h3>{item.name}</h3>
 
         <p className="cart-unit">
-          ₡{item.price} / {item.unit}
+          ₡{item.price.toLocaleString("es-CR")} / {item.unit}
         </p>
 
         <div className="cart-controls">
@@ -53,6 +53,7 @@ export default function CartItem({ item }: Props) {
           <button
             onClick={() => removeFromCart(item.id)}
             className="delete-btn"
+            aria-label={`Eliminar ${item.name} del carrito`}
           >
             <FaTrash />
           </button>
@@ -62,7 +63,7 @@ export default function CartItem({ item }: Props) {
       </div>
 
       <div className="cart-price">
-        ₡{item.price * item.quantity}
+        ₡{(item.price * item.quantity).toLocaleString("es-CR")}
       </div>
 
     </article>

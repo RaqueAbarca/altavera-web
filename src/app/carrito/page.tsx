@@ -19,7 +19,7 @@ export default function CarritoPage() {
       ) : (
         <div className="cart-layout">
 
-          <section className="cart-">
+          <section className="cart-items">
 
             {cart.map((item) => (
               <CartItem

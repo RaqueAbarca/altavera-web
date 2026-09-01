@@ -120,7 +120,7 @@
   font-size:15px;
 }
 
-p{
+.prices-container p{
   line-height:1.5;
 }
 
@@ -129,7 +129,7 @@ p{
   overflow-x:auto;
 }
 
-table{
+.prices-container table{
   width:100%;
   border-collapse:collapse;
   background:white;
@@ -137,19 +137,19 @@ table{
   overflow:hidden;
 }
 
-thead{
+.prices-container thead{
   background:#1f402a;
   color:white;
 }
 
-th,
-td{
+.prices-container th,
+.prices-container td{
   padding:14px;
   text-align:left;
   border-bottom:1px solid #e5e7eb;
 }
 
-tbody tr:hover{
+.prices-container tbody tr:hover{
   background:#f9fafb;
 }
 
@@ -1921,5 +1921,41 @@ tbody tr:hover{
 
   .button-group{
     flex-direction:column;
+  }
+}
+
+/* Ajustes de robustez visual */
+.walmart-altavera-panel{
+  width:100%;
+  min-width:0;
+}
+
+.status-message{
+  margin:12px 0 0;
+  padding:10px 12px;
+  border-radius:9px;
+  background:#edf5ef;
+  color:#355843;
+  font-size:13px;
+  font-weight:600;
+}
+
+@media(max-width:700px){
+  .prices-container{
+    padding:16px;
+  }
+
+  .prices-container input,
+  .prices-container select,
+  .prices-container textarea,
+  .prices-container button{
+    max-width:100%;
+  }
+
+  .pending-card,
+  .walmart-item,
+  .walmart-altavera-item,
+  .pricing-recommendation-card{
+    min-width:0;
   }
 }

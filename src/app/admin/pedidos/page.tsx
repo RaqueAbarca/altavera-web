@@ -169,26 +169,9 @@ export default function AdminPage() {
 
   return (
     <main className="admin-container">
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "2rem",
-        }}
-      >
+      <header className="admin-page-header">
         <h1>Panel de pedidos</h1>
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: "0.5rem 1rem",
-            backgroundColor: "#dc2626",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={handleLogout} className="admin-logout-button">
           Cerrar Sesión
         </button>
       </header>

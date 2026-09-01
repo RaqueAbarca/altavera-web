@@ -1,331 +1,265 @@
 .header {
-  background:var(--cream);
-  position:sticky;
-  top:0;
-  z-index:999;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: var(--cream);
+  border-bottom: 1px solid rgba(31, 64, 42, 0.06);
 }
 
 .header-inner {
-  height:88px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 82px;
+  gap: 24px;
+}
+
+.logo {
+  flex-shrink: 0;
 }
 
 .logo-img {
-  height:80px;
-  width:auto;
+  width: auto;
+  height: 74px;
 }
 
 .nav {
-  display:flex;
-  align-items:center;
-  gap:34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 2.5vw, 34px);
 }
 
 .nav-link {
-  text-decoration:none;
-  color:var(--text);
-  position:relative;
+  position: relative;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .nav-link:hover {
-  color:var(--green);
+  color: var(--green);
 }
 
 .nav-link::after {
-  content:"";
-  position:absolute;
-  left:0;
-  bottom:-8px;
-  width:0;
-  height:2px;
-  background:var(--orange);
-  transition:.25s;
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -8px;
+  width: 0;
+  height: 2px;
+  background: var(--orange);
+  transition: width 0.2s ease;
 }
 
 .nav-link:hover::after,
 .nav-link.active::after {
-  width:100%;
+  width: 100%;
 }
 
 .nav-link.active {
-  color:var(--orange);
-  font-weight:700;
+  color: var(--orange);
+  font-weight: 700;
 }
-
-/* HEADER ACTIONS */
 
 .header-actions {
-  display:flex;
-  align-items:center;
-  gap:1rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
+.header-auth-btn,
 .whatsapp-btn {
-  display:flex;
-  align-items:center;
-  gap:8px;
-  border: 1.5px solid var(--green);
-}
-
-.whatsapp-btn:hover {
-  background-color: var(--green-light);
-  color: var(--white);
-}
-
-@media (max-width:1100px){
-    .header-inner{
-        gap:20px;
-        height:74px;
-        position:relative;
-    }
-
-    .nav{
-        gap:18px;
-    }
-
-    .nav-link{
-        font-size:.9rem;
-    }
-
-    .logo-img{
-        height:68px;
-    }
-
-    .header-actions{
-        gap:8px;
-    }
-}
-
-/* CARRITO */
-
-.cart-button {
-  width:48px;
-  height:48px;
-  border:none;
-  color: var(--green);
-  background:var(--cream);
-  border-radius:12px;
-  cursor:pointer;
-  position:relative;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-.cart-badge {
-  position:absolute;
-  top: 2px;
-  right:-2px;
-  width:22px;
-  height:22px;
-  border-radius:50%;
-  background:var(--orange);
-  color:white;
-  font-size:12px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-/* MENU */
-
-.menu-btn {
-
-  display:none;
-  width:46px;
-  height:46px;
-  border:none;
-  border-radius:12px;
-  background:var(--cream);
-  color:var(--green);
-  align-items:center;
-  justify-content:center;
-}
-
-/* =========================
-   MOBILE HEADER
-========================= */
-
-@media(max-width:768px){
-
-    h1 {
-     font-size:33px;
-    }
-
-    .section-header{
-        padding: 0 15px;
-        margin-bottom: 15px;
-    }
-
-    .section-header h2 {
-    font-size:1.5rem !important;
-    }
-
-    .section-header a {
-    font-size:13px;
-    font-weight: 10;
-
-    }
-
-    /* LOGO CENTRADO */
-    .logo{
-        position:absolute;
-        left:50%;
-        transform:translateX(-50%);
-    }
-
-    .logo-img{
-        height:60px;
-    }
-
-    /* ocultar desktop */
-    .nav,
-    .whatsapp-btn{
-        display:none; /* esconder whatsapp */
-    }
-
-    .header-actions{
-        position:static;
-        transform:none;
-    }
-
-    /* carrito derecha */
-    .cart-button{
-        position:absolute;
-        right:18px;
-        top:50%;
-        transform:translateY(-50%);
-    }
-
-    /* menú izquierda */
-    .menu-btn{
-        display:flex;
-        position:absolute;
-        left:18px;
-        top:50%;
-        transform:translateY(-50%);
-        z-index:20;
-    }
-
-    .mobile-nav{
-        width:100%;
-        margin-top:0;
-        margin-bottom: 1rem;
-    }
-
-    .mobile-link{
-        width:100%;
-        color: var(--text);
-        text-decoration: none;
-        display:block;
-    }
-}
-
-.section-header {
- display:flex;
- justify-content:space-between;
- align-items:center;
- margin-bottom:30px;
-}
-
-.section-header h2 {
- font-size:42px;
- color:#1f3d2b;
-}
-
-.section-header a {
- text-decoration:none;
- color:#1f3d2b;
- font-weight:600;
-}
-
-/* =========================
-   MOBILE MENU DROPDOWN FIX
-========================= */
-
-.mobile-nav {
-  position:relative;
-  z-index:999;
-  display:flex;
-  flex-direction:column;
-  gap:30px;
-  padding:25px;
-  background:var(--white);
-  border-top:1px solid #ececec;
-  box-shadow:0 10px 25px rgba(0,0,0,.05);
-  animation:slideDown .7s ease;
-}
-
-@keyframes slideDown{
-    from{
-        opacity:0;
-        transform:translateY(-30px);
-    }
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-}
-
-
-/* Usamos una clase única para no interferir con otros btn-secondary de la página */
-.header-auth-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.1rem;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.header-auth-btn {
+  padding: 10px 16px;
+  border: 1.5px solid transparent;
   border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-decoration: none;
-  transition: all 0.25s ease;
-  cursor: pointer;
-  background-color: var(--cream);
+  background: var(--cream);
   color: var(--green);
-  border: 1.5px solid var(--cream);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .header-auth-btn:hover {
-  background-color: var(--white);
+  background: var(--white);
   border-color: var(--orange);
   color: var(--orange);
 }
 
-@media (max-width:768px){
-    .header-auth-btn{
-        display:none;
-    }
+.whatsapp-btn {
+  border: 1.5px solid var(--green);
 }
 
-/* Sección extra para separar estéticamente en menú móvil */
-.mobile-auth-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  width: 100%;
+.whatsapp-btn:hover {
+  background: var(--green-light);
+  color: var(--white);
 }
 
-/* ==========================================================================
-   Responsive para botones de acción del Header
-   ========================================================================== */
+.cart-button,
+.menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+}
 
-@media (max-width: 1024px) {
-  /* En pantallas medianas ocultamos los textos de los botones para no saturar */
+.cart-button {
+  position: relative;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.menu-btn {
+  display: none;
+}
+
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 1080px) {
+  .header-inner {
+    min-height: 74px;
+    gap: 16px;
+  }
+
+  .logo-img {
+    height: 66px;
+  }
+
+  .nav {
+    gap: 16px;
+  }
+
+  .nav-link {
+    font-size: 0.9rem;
+  }
+
   .header-auth-btn span,
   .whatsapp-btn span {
     display: none;
   }
-  
-  .header-auth-btn{
-    background-color: var(--white);
-    padding: 0.75rem;
+
+  .header-auth-btn,
+  .whatsapp-btn {
+    width: 44px;
+    padding: 0;
+    border-radius: 50%;
   }
 
+  .header-auth-btn {
+    background: var(--white);
+  }
+}
 
+@media (max-width: 780px) {
+  .header-inner {
+    min-height: 68px;
+  }
+
+  .logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .logo-img {
+    height: 58px;
+  }
+
+  .nav,
+  .header-auth-btn,
   .whatsapp-btn {
-    padding: 0.75rem;
-    border-radius: 50%;
-    aspect-ratio: 1;
-    justify-content: center;
+    display: none;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .menu-btn {
+    display: flex;
+  }
+
+  .cart-button {
+    margin-left: auto;
+  }
+
+  .mobile-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    padding: 12px clamp(16px, 3vw, 32px) 18px;
+    background: var(--white);
+    border-top: 1px solid #ececec;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    animation: slideDown 0.25s ease;
+  }
+
+  .mobile-link {
+    display: block;
+    width: 100%;
+    padding: 12px 10px;
+    border-radius: 9px;
+    color: var(--text);
+  }
+
+  .mobile-link:hover,
+  .mobile-link.active {
+    background: var(--cream);
+    color: var(--orange);
+  }
+
+  .mobile-auth-section {
+    width: 100%;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #ececec;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
