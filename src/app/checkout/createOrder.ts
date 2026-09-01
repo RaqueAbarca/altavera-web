@@ -1,6 +1,5 @@
-import { supabase } from "@/lib/supabase";
-import type { OrderInput } from "./types";
 import type { CartItem } from "@/types/cart";
+import type { CreatedOrder, OrderInput } from "./types";
 
 type CreateOrderParams = {
   order: OrderInput;
@@ -10,55 +9,28 @@ type CreateOrderParams = {
 export async function createOrder({
   order,
   cart,
-}: CreateOrderParams) {
+}: CreateOrderParams): Promise<CreatedOrder> {
+  const response = await fetch("/api/orders/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      order,
+      items: cart.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      })),
+    }),
+  });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const data = await response.json();
 
-
-  const orderData: OrderInput = {
-
-    ...order,
-
-    customer_id: user?.id ?? null,
-
-  };
-
-
-  const { data: createdOrder, error } = await supabase
-    .from("orders")
-    .insert(orderData)
-    .select("id")
-    .single();
-
-
-  if (error) {
-    throw error;
+  if (!response.ok) {
+    throw new Error(
+      data.error ?? "No se pudo crear el pedido"
+    );
   }
 
-
-  const items = cart.map((item) => ({
-
-    order_id: createdOrder.id,
-    product_id: item.id,
-    product_name: item.name,
-    price: item.price,
-    quantity: item.quantity,
-
-  }));
-
-
-  const { error: itemError } = await supabase
-    .from("order_item")
-    .insert(items);
-
-
-  if (itemError) {
-    throw itemError;
-  }
-
-
-  return createdOrder;
-
+  return data as CreatedOrder;
 }

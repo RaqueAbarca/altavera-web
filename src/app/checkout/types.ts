@@ -4,20 +4,18 @@ export type GuestLocation = {
 };
 
 export type OrderInput = {
-  customer_id?: string | null;
-  guest_name: FormDataEntryValue | null;
-  guest_phone: FormDataEntryValue | null;
-  guest_email: FormDataEntryValue | null;
-
+  guest_name: string;
+  guest_phone: string;
+  guest_email: string | null;
   latitude: number;
   longitude: number;
+  address_description: string | null;
+};
 
-  address_description: FormDataEntryValue | null;
-
+export type CreatedOrder = {
+  id: string;
+  accessToken: string;
   subtotal: number;
   shipping: number;
   total: number;
-
-  payment_method: string;
-  status: string;
 };

@@ -55,20 +55,13 @@ export default function GuestForm() {
       const data = new FormData(form);
 
       const order: OrderInput = {
-        // Enlazamos el ID si está logueado, de lo contrario viaja como null (invitado)
-        customer_id: user ? user.id : null, 
-
-        guest_name: data.get("name"),
-        guest_phone: data.get("phone"),
-        guest_email: data.get("email"),
+        guest_name: String(data.get("name") ?? "").trim(),
+        guest_phone: String(data.get("phone") ?? "").trim(),
+        guest_email: String(data.get("email") ?? "").trim() || null,
         latitude: location.lat,
         longitude: location.lng,
-        address_description: data.get("address"),
-        subtotal: totalPrice,
-        shipping: 0,
-        total: totalPrice,
-        payment_method: "SINPE",
-        status: "pending_payment",
+        address_description:
+          String(data.get("address") ?? "").trim() || null,
       };
 
       const createdOrder = await createOrder({
@@ -77,7 +70,9 @@ export default function GuestForm() {
       });
 
       clearCart();
-      router.push(`/pedido/${createdOrder.id}`);
+      router.push(
+        `/pedido/${createdOrder.id}#token=${createdOrder.accessToken}`
+      );
     } catch (error) {
       console.error("ERROR CREANDO PEDIDO:", error);
       alert("Hubo un error creando el pedido.");

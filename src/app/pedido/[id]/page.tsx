@@ -1,215 +1,182 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import { use } from "react";
-
 import "./pedido.css";
+
+type OrderItem = {
+  id: string;
+  product_name: string;
+  price: number | string;
+  quantity: number | string;
+};
+
+type Order = {
+  id: string;
+  subtotal: number;
+  shipping: number;
+  total: number;
+  payment_method: string;
+  status: string;
+  created_at: string;
+  order_item: OrderItem[];
+};
 
 export default function PedidoPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-
   const { id } = use(params);
 
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    async function loadOrder() {
+      try {
+        const hash = window.location.hash.replace(/^#token=/, "");
+        const accessToken = hash
+          ? decodeURIComponent(hash)
+          : "";
 
-  const [order,setOrder] = useState<any>(null);
+        const response = await fetch(
+          `/api/orders/${encodeURIComponent(id)}`,
+          {
+            headers: accessToken
+              ? {
+                  "x-order-access-token": accessToken,
+                }
+              : undefined,
+            cache: "no-store",
+          }
+        );
 
+        const data = await response.json();
 
+        if (!response.ok) {
+          throw new Error(
+            data.error ?? "No se pudo cargar el pedido"
+          );
+        }
 
-  useEffect(()=>{
-
-
-    const loadOrder = async()=>{
-
-
-      const {data,error}=
-
-      await supabase
-      .from("orders")
-      .select(`
-        *,
-        order_item(*)
-      `)
-      .eq(
-        "id",
-        id
-      )
-      .single();
-
-
-
-      if(error){
-
-        console.error(error);
-        return;
-
+        setOrder(data as Order);
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "No se pudo cargar el pedido"
+        );
+      } finally {
+        setLoading(false);
       }
-
-
-      setOrder(data);
-
-
-    };
-
+    }
 
     loadOrder();
+  }, [id]);
 
-
-  },[]);
-
-
-
-  if(!order){
-
+  if (loading) {
     return (
       <main className="container">
         Cargando pedido...
       </main>
-    )
-
+    );
   }
 
-
+  if (error || !order) {
+    return (
+      <main className="container pedido-page">
+        <div className="success-card">
+          <h1>Pedido no disponible</h1>
+          <p>
+            {error ?? "No se pudo encontrar este pedido."}
+          </p>
+          <Link href="/productos">
+            Volver a productos
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-
     <main className="container pedido-page">
-
-
       <div className="success-card">
+        <h1>✅ Pedido recibido</h1>
 
+        <p>Gracias por tu compra.</p>
 
-        <h1>
-          ✅ Pedido recibido
-        </h1>
-
-
-        <p>
-          Gracias por tu compra.
-        </p>
-
-
-        <h3>
-          Pedido:
-        </h3>
-
+        <h3>Pedido:</h3>
 
         <strong>
-          #{order.id.slice(0,8)}
+          #{order.id.slice(0, 8)}
         </strong>
 
-
-
         <div className="pedido-items">
+          {order.order_item.map((item) => {
+            const price = Number(item.price);
+            const quantity = Number(item.quantity);
 
+            return (
+              <div
+                key={item.id}
+                className="pedido-item"
+              >
+                <span>
+                  {item.product_name}
+                  {" x "}
+                  {quantity}
+                </span>
 
-        {order.order_item.map(
-          (item:any)=>(
-
-          <div
-          key={item.id}
-          className="pedido-item"
-          >
-
-
-            <span>
-              {item.product_name}
-              {" x "}
-              {item.quantity}
-            </span>
-
-
-            <strong>
-              ₡
-              {(
-                item.price *
-                item.quantity
-              ).toLocaleString()}
-            </strong>
-
-
-          </div>
-
-        ))}
-
-
+                <strong>
+                  ₡
+                  {(price * quantity).toLocaleString("es-CR")}
+                </strong>
+              </div>
+            );
+          })}
         </div>
-
-
 
         <hr />
 
-
-
         <div>
-
-          Subtotal:
-
+          Subtotal:{" "}
           <strong>
-          ₡
-          {order.subtotal.toLocaleString()}
+            ₡{Number(order.subtotal).toLocaleString("es-CR")}
           </strong>
-
-
         </div>
 
-
+        {order.shipping > 0 && (
+          <div>
+            Envío:{" "}
+            <strong>
+              ₡{Number(order.shipping).toLocaleString("es-CR")}
+            </strong>
+          </div>
+        )}
 
         <div>
-
-          Total:
-
+          Total:{" "}
           <strong>
-          ₡
-          {order.total.toLocaleString()}
+            ₡{Number(order.total).toLocaleString("es-CR")}
           </strong>
-
-
         </div>
-
-
-
 
         <div className="payment-box">
-
-          <h3>
-            Pago por SINPE
-          </h3>
-
+          <h3>Pago por SINPE</h3>
 
           <p>
             Envía el comprobante al WhatsApp:
           </p>
 
-
-          <strong>
-            8652-6792
-          </strong>
-
-
+          <strong>8652-6792</strong>
         </div>
 
-
-
-        <Link
-        href="/productos"
-        >
+        <Link href="/productos">
           Seguir comprando
         </Link>
-
-
-
       </div>
-
-
-
     </main>
-
   );
-
 }

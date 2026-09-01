@@ -1,0 +1,46 @@
+.admin-menu-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:25px;
+  margin-top:40px;
+}
+
+
+.admin-menu-card{
+
+  background:white;
+  border:none;
+  border-radius:18px;
+  padding:30px;
+  text-align:left;
+  cursor:pointer;
+
+  box-shadow:0 5px 20px rgba(0,0,0,0.08);
+
+  transition:transform .2s ease;
+
+}
+
+
+.admin-menu-card:hover{
+
+  transform:translateY(-5px);
+
+}
+
+
+.admin-menu-card h2{
+
+  margin:0 0 12px;
+  color:#1f402a;
+
+}
+
+
+.admin-menu-card p{
+
+  margin:0;
+  color:#6b7280;
+  line-height:1.5;
+
+}

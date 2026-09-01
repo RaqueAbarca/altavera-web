@@ -1,221 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import ShoppingList from "@/components/admin/ShoppingList";
 import { useRouter } from "next/navigation";
 import "../admin.css";
+import "./dashboard.css"
 
-type OrderItem = {
-  id: string;
-  product_name: string;
-  price: number;
-  quantity: number;
-};
+export default function AdminDashboard(){
 
-type Order = {
-  id: string;
-  guest_name: string;
-  guest_phone: string;
-  total: number;
-  status: string;
-  created_at: string;
-  items: OrderItem[];
-};
-
-export default function AdminPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  // CORRECCIÓN: Declaramos el router de forma correcta aquí dentro
   const router = useRouter();
 
-  async function loadOrders() {
-    const { data: ordersData, error } = await supabase
-      .from("orders")
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+  return(
 
-    if (error) {
-      console.error("ERROR PEDIDOS:", error);
-      return;
-    }
-
-    const ordersWithItems = await Promise.all(
-      (ordersData || []).map(async (order) => {
-        const { data: items, error: itemError } = await supabase
-          .from("order_item")
-          .select("*")
-          .eq("order_id", order.id);
-
-        if (itemError) {
-          console.error("ERROR ITEMS:", itemError);
-        }
-
-        return {
-          ...order,
-          items: items || [],
-        };
-      })
-    );
-
-    setOrders(ordersWithItems);
-    setLoading(false);
-  }
-
-useEffect(() => {
-  const checkAuth = async () => {
-
-    const {
-      data: {
-        session
-      }
-    } = await supabase.auth.getSession();
-
-
-    if (!session) {
-      router.push("/admin");
-      return;
-    }
-
-
-    const {
-      data: profile,
-      error
-    } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", session.user.id)
-      .single();
-
-
-    console.log("PROFILE:", profile);
-    console.log("PROFILE ERROR:", error);
-
-
-    if (error || !profile || profile.role !== "admin") {
-      router.push("/admin");
-      return;
-    }
-
-
-    loadOrders();
-
-  };
-
-
-  checkAuth();
-
-}, []);
-
-  async function updateStatus(order: Order, status: string) {
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status })
-      .eq("id", order.id)
-      .select();
-
-    if (error) {
-      console.error("ERROR CAMBIANDO ESTADO:", error);
-      return;
-    }
-
-    const { data: functionData, error: functionError } =
-      await supabase.functions.invoke("order-status", {
-        body: {
-          orderId: order.id,
-          status: status,
-          customerName: order.guest_name,
-          phone: order.guest_phone,
-          total: order.total
-        }
-      });
-
-    await loadOrders();
-  }
-
-  // Función para cerrar sesión limpiamente
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    window.location.href = "/admin"; // Redirección limpia para limpiar cookies del servidor
-  }
-
-  const shoppingMap: Record<string, number> = {};
-  orders.forEach((order) => {
-    order.items.forEach((item) => {
-      shoppingMap[item.product_name] =
-        (shoppingMap[item.product_name] || 0) + item.quantity;
-    });
-  });
-
-  const shoppingProducts = Object.entries(shoppingMap).map(
-    ([name, quantity]) => ({
-      name,
-      quantity,
-    })
-  );
-
-  if (loading) {
-    return (
-      <main className="admin-container">
-        <p>Cargando pedidos...</p>
-      </main>
-    );
-  }
-
-  return (
     <main className="admin-container">
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <h1>Panel de pedidos</h1>
-        <button 
-          onClick={handleLogout} 
-          style={{ padding: "0.5rem 1rem", backgroundColor: "#dc2626", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}
-        >
-          🚪 Cerrar Sesión
-        </button>
+
+      <header>
+        <h1>
+          Altavera Admin
+        </h1>
+
+        <p>
+          Seleccione una opción para administrar la plataforma.
+        </p>
       </header>
 
-      <ShoppingList products={shoppingProducts} />
 
-      <section className="orders-section">
-        <h2>Pedidos recibidos</h2>
+      <section className="admin-menu-grid">
 
-        {orders.length === 0 ? (
-          <p>No hay pedidos todavía.</p>
-        ) : (
-          orders.map((order) => (
-            <article className="order-card" key={order.id}>
-              <h3>Pedido #{order.id.slice(0, 8)}</h3>
-              <p>Cliente: {order.guest_name}</p>
-              <p>Teléfono: {order.guest_phone}</p>
 
-              <h4>Productos</h4>
-              {order.items.length === 0 ? (
-                <p>Sin productos</p>
-              ) : (
-                <ul>
-                  {order.items.map((item) => (
-                    <li key={item.id}>
-                      {item.product_name} x {item.quantity} - ₡{item.price}
-                    </li>
-                  ))}
-                </ul>
-              )}
+        <button
+          className="admin-menu-card"
+          onClick={()=>
+            router.push("/admin/pedidos")
+          }
+        >
 
-              <p>Total: ₡{order.total}</p>
-              <p>Estado: {order.status}</p>
+          <h2>
+            📋 Pedidos
+          </h2>
 
-              <div className="order-actions">
-                <button onClick={() => updateStatus(order, "preparing")}>👨‍🍳 Preparando</button>
-                <button onClick={() => updateStatus(order, "ready")}>🚚 En camino</button>
-                <button onClick={() => updateStatus(order, "delivered")}>✅ Entregado</button>
-              </div>
-            </article>
-          ))
-        )}
+          <p>
+            Ver pedidos recibidos,
+            estados y lista de compras.
+          </p>
+
+        </button>
+
+
+
+        <button
+          className="admin-menu-card"
+          onClick={()=>
+            router.push("/admin/precios")
+          }
+        >
+
+          <h2>
+            💰 Precios CENADA
+          </h2>
+
+          <p>
+            Actualizar precios mediante
+            boletines de CENADA.
+          </p>
+
+        </button>
+
+
+
+        <button
+          className="admin-menu-card"
+          onClick={()=>
+            router.push("/admin/productos")
+          }
+        >
+
+          <h2>
+            🥑 Productos
+          </h2>
+
+          <p>
+            Administrar productos,
+            categorías e información.
+          </p>
+
+        </button>
+
+
+
+        <button
+          className="admin-menu-card"
+          onClick={()=>
+            router.push("/admin/configuracion")
+          }
+        >
+
+          <h2>
+            ⚙️ Configuración
+          </h2>
+
+          <p>
+            Ajustes generales del sistema.
+          </p>
+
+        </button>
+
+
       </section>
+
+
     </main>
+
   );
+
 }
