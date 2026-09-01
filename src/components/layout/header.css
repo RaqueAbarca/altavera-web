@@ -263,3 +263,64 @@
     transform: translateY(0);
   }
 }
+
+/* ========================================
+   HEADER MOBILE
+   Menú izquierda - Logo centro - Carrito derecha
+======================================== */
+
+@media (max-width: 768px) {
+  .header-inner {
+    position: relative;
+    height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* HAMBURGUESA A LA IZQUIERDA */
+  .menu-btn {
+    display: flex;
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+
+  /* LOGO CENTRADO */
+  .logo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+  }
+
+  .logo-img {
+    height: 58px;
+    width: auto;
+  }
+
+  /* CARRITO A LA DERECHA */
+  .cart-button {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+  }
+
+  /* Ocultar acciones de escritorio */
+  .nav,
+  .whatsapp-btn,
+  .header-auth-btn {
+    display: none;
+  }
+
+  .header-actions {
+    position: static;
+  }
+}

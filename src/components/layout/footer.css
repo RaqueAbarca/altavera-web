@@ -91,6 +91,10 @@
     align-items: center;
   }
 
+  .footer-brand{
+    margin-top: 15px;
+  }
+
   .footer-logo {
     width: 150px;
     margin-inline: auto;

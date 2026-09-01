@@ -6,6 +6,7 @@
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:24px;
+  margin-top: 20px;
 }
 
 .product-card{
@@ -64,19 +65,83 @@
 
 /* BOTONES PRODUCTOS */
 
-.add-btn {
- width:100%;
- margin-top:10px;
- border:none;
- background:var(--green);
- color:white;
- border-radius:10px;
- padding:14px;
- font-weight:600;
- cursor:pointer;
- display:flex;
- justify-content:center;
- gap:10px;
+/* Selector de cantidad dentro de las tarjetas */
+
+.product-card .quantity-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.product-card .qty-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 36px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: var(--orange);
+  color: var(--white);
+
+  font-size: 1.1rem;
+  font-weight: 700;
+
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
+
+  flex-shrink: 0;
+}
+
+.product-card .qty-btn:hover {
+  transform: scale(1.05);
+}
+
+.product-card .qty {
+  min-width: 70px;
+
+  color: var(--green);
+
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.product-card .add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: var(--green);
+  color: var(--white);
+
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.product-card .add-btn:hover {
+  background: var(--green-light);
+  transform: translateY(-1px);
 }
 
 .outline-btn {
@@ -294,6 +359,7 @@
     scrollbar-width:none;
     width:100%;
     margin-left: 15px;
+    margin-bottom: 15px;
   }
 
   .filters-list .filter{

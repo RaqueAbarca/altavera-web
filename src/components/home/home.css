@@ -258,15 +258,22 @@
     grid-template-columns: 1fr;
     width: 100%;
     margin-top: 18px;
+    margin-bottom: 20px;
     padding-inline: 14px;
   }
 
   .login-promo-banner {
     flex-direction: column;
     align-items: stretch;
-    margin-top: 12px;
+    margin-top: 10px;
+    margin-bottom: 30px;
     padding-block: 18px;
     text-align: center;
+    gap: 5px;
+  }
+
+  .promo-content {
+    padding-top: 15px;
   }
 
   .promo-btn {
@@ -281,6 +288,7 @@
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
+    margin-left: 10px;
   }
 
   .featured-products::-webkit-scrollbar {
@@ -300,6 +308,7 @@
   .section-header {
     align-items: center;
     margin-bottom: 18px;
+    margin-left: 18px;
   }
 
   .section-header h2 {
