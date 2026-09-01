@@ -30,6 +30,7 @@ export async function GET(
         customer_id,
         user_id,
         order_access_token,
+        customer_notes,
         subtotal,
         shipping,
         total,
@@ -40,7 +41,8 @@ export async function GET(
           id,
           product_name,
           price,
-          quantity
+          quantity,
+          maturity_preference
         )
       `)
       .eq("id", id)
@@ -76,7 +78,6 @@ export async function GET(
     );
 
     if (!isOwner && !hasValidToken) {
-      // Devolvemos 404 para no confirmar si el ID existe.
       return NextResponse.json(
         { error: "Pedido no encontrado" },
         { status: 404 }
@@ -85,6 +86,7 @@ export async function GET(
 
     return NextResponse.json({
       id: order.id,
+      customer_notes: order.customer_notes,
       subtotal: Number(order.subtotal),
       shipping: Number(order.shipping),
       total: Number(order.total),

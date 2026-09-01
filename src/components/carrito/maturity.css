@@ -1,0 +1,35 @@
+.maturity-selector {
+  margin-top: 1rem;
+  max-width: 320px;
+}
+
+.maturity-selector label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.maturity-selector select {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #d8dfd8;
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.maturity-selector select:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(201, 120, 51, 0.12);
+}
+
+.maturity-selector p {
+  margin: 0.45rem 0 0;
+  color: #777;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}

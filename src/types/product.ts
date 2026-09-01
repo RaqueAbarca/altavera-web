@@ -6,4 +6,5 @@ export interface Product {
   price: number;
   unit: string;
   image: string;
+  maturity_selection_enabled?: boolean;
 }

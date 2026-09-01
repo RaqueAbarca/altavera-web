@@ -9,6 +9,7 @@ type ProductCardProps = {
   price: number;
   unit: string;
   quantity: number;
+  maturitySelectionEnabled?: boolean;
   onAdd: (quantity: number) => void;
   onIncrease: () => void;
   onDecrease: () => void;
@@ -21,88 +22,87 @@ export default function ProductCard({
   price,
   unit,
   quantity,
+  maturitySelectionEnabled = false,
   onAdd,
   onIncrease,
   onDecrease,
-  onRemove
+  onRemove,
 }: ProductCardProps) {
-
   const [selecting, setSelecting] = useState(false);
   const [tempQuantity, setTempQuantity] = useState(
     unit.toLowerCase() === "kg" ? 0.5 : 1
   );
 
-
   function getStep() {
     return unit.toLowerCase() === "kg" ? 0.5 : 1;
   }
-
 
   function increaseTemp() {
     setTempQuantity((prev) => prev + getStep());
   }
 
-
   function decreaseTemp() {
     const newQuantity = tempQuantity - getStep();
 
     if (newQuantity <= 0) {
-
       if (quantity > 0) {
         onRemove();
       }
 
       setSelecting(false);
       setTempQuantity(getStep());
-
       return;
     }
 
     setTempQuantity(newQuantity);
   }
 
-
   function confirmAdd() {
     onAdd(tempQuantity);
     setSelecting(false);
   }
 
-
   return (
     <div className="product-card">
-
       <img
         src={image}
         alt={name}
         className="product-image"
       />
 
-
       <div className="product-content">
-
         <h3>{name}</h3>
-
 
         <p className="price">
           ₡{price.toLocaleString("es-CR")}
           <span> / {unit}</span>
         </p>
 
+        {maturitySelectionEnabled && (
+          <p
+            style={{
+              margin: "0.35rem 0 0.8rem",
+              fontSize: "0.82rem",
+              color: "var(--green)",
+              fontWeight: 600,
+            }}
+          >
+            Puedes elegir maduración en el carrito
+          </p>
+        )}
 
-      {quantity === 0 && !selecting && (
-        <button
-          className="add-btn"
-          onClick={() => setSelecting(true)}
-        >
-          Agregar
-        </button>
-      )}
-
+        {quantity === 0 && !selecting && (
+          <button
+            className="add-btn"
+            onClick={() => setSelecting(true)}
+          >
+            Agregar
+          </button>
+        )}
 
         {selecting && (
           <>
             <div className="quantity-controls">
-
               <button
                 className="qty-btn"
                 onClick={decreaseTemp}
@@ -110,11 +110,9 @@ export default function ProductCard({
                 −
               </button>
 
-
               <span className="qty">
                 {tempQuantity} {unit}
               </span>
-
 
               <button
                 className="qty-btn"
@@ -122,9 +120,7 @@ export default function ProductCard({
               >
                 +
               </button>
-
             </div>
-
 
             <button
               className="add-btn"
@@ -135,27 +131,24 @@ export default function ProductCard({
           </>
         )}
 
-
         {quantity > 0 && !selecting && (
           <>
             <p className="added-message">
               ✓ En carrito: {quantity} {unit}
             </p>
 
-        <button
-          className="modify-btn"
-          onClick={() => {
-            setTempQuantity(quantity);
-            setSelecting(true);
-          }}
-        >
-          Modificar pedido
-        </button>
+            <button
+              className="modify-btn"
+              onClick={() => {
+                setTempQuantity(quantity);
+                setSelecting(true);
+              }}
+            >
+              Modificar pedido
+            </button>
           </>
         )}
-
       </div>
-
     </div>
   );
 }

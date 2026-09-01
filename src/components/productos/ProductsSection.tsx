@@ -12,6 +12,7 @@ type Product = {
   price: number;
   unit: string;
   image_url: string;
+  maturity_selection_enabled?: boolean;
 };
 
 type Props = {
@@ -25,34 +26,29 @@ export default function ProductsSection({
   selectedCategory,
   search,
 }: Props) {
-
   const {
     cart,
     addToCart,
     increaseQuantity,
     decreaseQuantity,
-    removeFromCart
+    removeFromCart,
   } = useCart();
 
   const filteredProducts = products.filter((product) => {
-
     const matchesCategory =
       selectedCategory === "Todos" ||
       product.category === selectedCategory;
 
-    const matchesSearch =
-      product.name
-        .toLowerCase()
-        .includes(search.toLowerCase().trim());
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(search.toLowerCase().trim());
 
     return matchesCategory && matchesSearch;
-
   });
 
   return (
     <div className="products-grid">
       {filteredProducts.map((product) => {
-
         const cartItem = cart.find(
           (item) => item.id === product.id
         );
@@ -67,6 +63,9 @@ export default function ProductsSection({
             price={product.price}
             unit={product.unit}
             quantity={quantity}
+            maturitySelectionEnabled={
+              product.maturity_selection_enabled ?? false
+            }
             onAdd={(quantity) =>
               addToCart({
                 id: product.id,
@@ -77,6 +76,10 @@ export default function ProductsSection({
                 unit: product.unit,
                 image: product.image_url,
                 quantity,
+                maturity_selection_enabled:
+                  product.maturity_selection_enabled ?? false,
+                maturity_preference:
+                  cartItem?.maturity_preference ?? null,
               })
             }
             onIncrease={() =>

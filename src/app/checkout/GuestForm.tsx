@@ -7,13 +7,14 @@ import { useCart } from "@/hooks/useCart";
 import LocationPicker from "@/components/checkout/LocationPicker";
 import { createOrder } from "./createOrder";
 import type { GuestLocation, OrderInput } from "./types";
+import "./orderExtras.css";
 
 export default function GuestForm() {
   const { cart, totalPrice, clearCart } = useCart();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null); // Guardará la sesión del usuario si existe
+  const [user, setUser] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   const [location, setLocation] = useState<GuestLocation>({
@@ -21,15 +22,19 @@ export default function GuestForm() {
     lng: 0,
   });
 
-  // Verificar si el cliente ya está logueado al cargar la página
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session) {
         setUser(session.user);
       }
+
       setCheckingAuth(false);
     };
+
     checkUser();
   }, []);
 
@@ -57,11 +62,14 @@ export default function GuestForm() {
       const order: OrderInput = {
         guest_name: String(data.get("name") ?? "").trim(),
         guest_phone: String(data.get("phone") ?? "").trim(),
-        guest_email: String(data.get("email") ?? "").trim() || null,
+        guest_email:
+          String(data.get("email") ?? "").trim() || null,
         latitude: location.lat,
         longitude: location.lng,
         address_description:
           String(data.get("address") ?? "").trim() || null,
+        customer_notes:
+          String(data.get("customer_notes") ?? "").trim() || null,
       };
 
       const createdOrder = await createOrder({
@@ -91,18 +99,32 @@ export default function GuestForm() {
 
   return (
     <form className="guest-form" onSubmit={handleSubmit}>
-      
-      {/* BANNER DE UX INTELIGENTE: Solo aparece si el usuario está comprando como invitado */}
       {!user && (
-        <div className="checkout-auth-banner">
+        <div
+          style={{
+            backgroundColor: "var(--cream)",
+            borderLeft: "4px solid var(--orange)",
+            padding: "1rem",
+            borderRadius: "8px",
+            marginBottom: "1.5rem",
+            fontSize: "0.9rem",
+            color: "var(--text)",
+          }}
+        >
           <strong>¿Ya tienes una cuenta?</strong>{" "}
-          <button
-            type="button"
-            className="checkout-auth-link"
-            onClick={() => router.push("/login?redirect=checkout")}
+          <span
+            onClick={() =>
+              router.push("/login?redirect=checkout")
+            }
+            style={{
+              color: "var(--orange)",
+              cursor: "pointer",
+              fontWeight: "bold",
+              textDecoration: "underline",
+            }}
           >
             Inicia sesión aquí
-          </button>{" "}
+          </span>{" "}
           para autocompletar tus datos y seguir tu orden en tiempo real.
         </div>
       )}
@@ -116,7 +138,6 @@ export default function GuestForm() {
           name="name"
           placeholder="Ej: María Rodríguez"
           required
-          // Si está logueado, saca el nombre de los metadatos que guardamos en el registro
           defaultValue={user?.user_metadata?.full_name || ""}
         />
       </label>
@@ -128,7 +149,6 @@ export default function GuestForm() {
           name="phone"
           placeholder="8888-8888"
           required
-          // Si está logueado, auto-rellena con el teléfono guardado
           defaultValue={user?.user_metadata?.phone || ""}
         />
       </label>
@@ -139,12 +159,12 @@ export default function GuestForm() {
           type="email"
           name="email"
           placeholder="correo@email.com"
-          // Si está logueado, auto-rellena el correo de la cuenta de Supabase
           defaultValue={user?.email || ""}
         />
       </label>
 
       <h2>Dirección de entrega</h2>
+
       <LocationPicker
         onChange={(lat, lng) =>
           setLocation({
@@ -154,8 +174,10 @@ export default function GuestForm() {
         }
       />
 
-      <p className="checkout-coordinates">
-        Ubicación seleccionada: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+      <p style={{ fontSize: "0.85rem", color: "var(--gray)" }}>
+        Latitud: {location.lat}
+        <br />
+        Longitud: {location.lng}
       </p>
 
       <label>
@@ -166,10 +188,32 @@ export default function GuestForm() {
         />
       </label>
 
-      <button type="submit" className="checkout-btn" disabled={loading}>
+      <div className="order-notes-field">
+        <label htmlFor="customer-notes">
+          Notas para tu pedido
+          <span>Opcional</span>
+        </label>
+
+        <textarea
+          id="customer-notes"
+          name="customer_notes"
+          maxLength={1000}
+          placeholder="Ej: si falta un producto no sustituirlo, prefiero piezas pequeñas, dejar en recepción..."
+        />
+
+        <p>
+          Usa este espacio para indicaciones generales. La maduración de cada producto se selecciona desde el carrito.
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        className="checkout-btn"
+        disabled={loading}
+      >
         {loading
           ? "Creando pedido..."
-          : `Confirmar y pagar ₡${totalPrice.toLocaleString("es-CR")}`}
+          : "Confirmar y pagar ₡" + totalPrice}
       </button>
     </form>
   );

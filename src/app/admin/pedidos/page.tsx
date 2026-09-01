@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import ShoppingList from "@/components/admin/ShoppingList";
+import { getMaturityLabel } from "@/lib/maturity";
 import { useRouter } from "next/navigation";
 import "../admin.css";
 
@@ -11,6 +12,7 @@ type OrderItem = {
   product_name: string;
   price: number;
   quantity: number;
+  maturity_preference: string | null;
 };
 
 type Order = {
@@ -20,6 +22,7 @@ type Order = {
   total: number;
   status: string;
   created_at: string;
+  customer_notes: string | null;
   items: OrderItem[];
 };
 
@@ -142,22 +145,32 @@ export default function AdminPage() {
     window.location.href = "/admin";
   }
 
-  const shoppingMap: Record<string, number> = {};
+  const shoppingMap = new Map<
+    string,
+    {
+      name: string;
+      quantity: number;
+      maturityPreference: string | null;
+    }
+  >();
 
   orders.forEach((order) => {
     order.items.forEach((item) => {
-      shoppingMap[item.product_name] =
-        (shoppingMap[item.product_name] || 0) +
-        item.quantity;
+      const maturityPreference =
+        item.maturity_preference ?? null;
+      const key = `${item.product_name}::${maturityPreference ?? "none"}`;
+      const current = shoppingMap.get(key);
+
+      shoppingMap.set(key, {
+        name: item.product_name,
+        quantity:
+          (current?.quantity ?? 0) + item.quantity,
+        maturityPreference,
+      });
     });
   });
 
-  const shoppingProducts = Object.entries(
-    shoppingMap
-  ).map(([name, quantity]) => ({
-    name,
-    quantity,
-  }));
+  const shoppingProducts = [...shoppingMap.values()];
 
   if (loading) {
     return (
@@ -169,9 +182,26 @@ export default function AdminPage() {
 
   return (
     <main className="admin-container">
-      <header className="admin-page-header">
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "2rem",
+        }}
+      >
         <h1>Panel de pedidos</h1>
-        <button onClick={handleLogout} className="admin-logout-button">
+        <button
+          onClick={handleLogout}
+          style={{
+            padding: "0.5rem 1rem",
+            backgroundColor: "#dc2626",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        >
           Cerrar Sesión
         </button>
       </header>
@@ -195,18 +225,46 @@ export default function AdminPage() {
               <p>Cliente: {order.guest_name}</p>
               <p>Teléfono: {order.guest_phone}</p>
 
+              {order.customer_notes && (
+                <div
+                  style={{
+                    margin: "0.9rem 0",
+                    padding: "0.85rem 1rem",
+                    background: "#fffaf2",
+                    border: "1px solid #f0e3ce",
+                    borderRadius: "10px",
+                  }}
+                >
+                  <strong>Notas del cliente</strong>
+                  <p style={{ margin: "0.35rem 0 0" }}>
+                    {order.customer_notes}
+                  </p>
+                </div>
+              )}
+
               <h4>Productos</h4>
               {order.items.length === 0 ? (
                 <p>Sin productos</p>
               ) : (
                 <ul>
-                  {order.items.map((item) => (
-                    <li key={item.id}>
-                      {item.product_name} x{" "}
-                      {item.quantity} - ₡
-                      {item.price}
-                    </li>
-                  ))}
+                  {order.items.map((item) => {
+                    const maturityLabel = getMaturityLabel(
+                      item.maturity_preference
+                    );
+
+                    return (
+                      <li key={item.id}>
+                        {item.product_name} x{" "}
+                        {item.quantity} - ₡
+                        {item.price}
+                        {maturityLabel && (
+                          <span>
+                            {" "}· Maduración: {maturityLabel}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
 

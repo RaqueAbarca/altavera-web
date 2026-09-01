@@ -20,6 +20,10 @@ export async function createOrder({
       items: cart.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
+        maturityPreference:
+          item.maturity_selection_enabled
+            ? item.maturity_preference ?? null
+            : null,
       })),
     }),
   });

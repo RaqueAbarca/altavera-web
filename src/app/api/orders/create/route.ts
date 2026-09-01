@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isMaturityPreference } from "@/lib/maturity";
 
 export const runtime = "nodejs";
 
 type IncomingItem = {
   productId?: unknown;
   quantity?: unknown;
+  maturityPreference?: unknown;
 };
 
 type IncomingOrder = {
@@ -17,6 +19,7 @@ type IncomingOrder = {
   latitude?: unknown;
   longitude?: unknown;
   address_description?: unknown;
+  customer_notes?: unknown;
 };
 
 type IncomingBody = {
@@ -30,6 +33,7 @@ type ProductRow = {
   price: number | string;
   unit: string;
   is_active: boolean;
+  maturity_selection_enabled: boolean;
 };
 
 function cleanText(value: unknown, maxLength: number) {
@@ -64,7 +68,7 @@ function isQuantityValid(quantity: number, unit: string) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as IncomingBody;
+    const body = (await request.json()) as IncomingBody;
     const incomingOrder = body.order ?? {};
     const incomingItems = Array.isArray(body.items)
       ? body.items
@@ -95,6 +99,10 @@ export async function POST(request: Request) {
     const addressDescription = cleanText(
       incomingOrder.address_description,
       500
+    );
+    const customerNotes = cleanText(
+      incomingOrder.customer_notes,
+      1000
     );
 
     if (!guestName) {
@@ -147,6 +155,11 @@ export async function POST(request: Request) {
     const normalizedItems = incomingItems.map((item) => ({
       productId: Number(item.productId),
       quantity: Number(item.quantity),
+      maturityPreference:
+        typeof item.maturityPreference === "string" &&
+        item.maturityPreference.trim()
+          ? item.maturityPreference.trim()
+          : null,
     }));
 
     if (
@@ -181,7 +194,9 @@ export async function POST(request: Request) {
       error: productError,
     } = await supabaseAdmin
       .from("products")
-      .select("id,name,price,unit,is_active")
+      .select(
+        "id,name,price,unit,is_active,maturity_selection_enabled"
+      )
       .in("id", productIds)
       .eq("is_active", true);
 
@@ -223,11 +238,33 @@ export async function POST(request: Request) {
         );
       }
 
+      if (
+        item.maturityPreference &&
+        !product.maturity_selection_enabled
+      ) {
+        throw new Error(
+          `${product.name} no permite seleccionar maduración`
+        );
+      }
+
+      if (
+        item.maturityPreference &&
+        !isMaturityPreference(item.maturityPreference)
+      ) {
+        throw new Error(
+          `Preferencia de maduración inválida para ${product.name}`
+        );
+      }
+
       return {
         product_id: product.id,
         product_name: product.name,
         price: roundMoney(price),
         quantity: item.quantity,
+        maturity_preference:
+          product.maturity_selection_enabled
+            ? item.maturityPreference
+            : null,
       };
     });
 
@@ -238,8 +275,6 @@ export async function POST(request: Request) {
       )
     );
 
-    // El envío se cobra por separado actualmente. El navegador
-    // nunca decide shipping, subtotal, total, estado ni precios.
     const shipping = 0;
     const total = roundMoney(subtotal + shipping);
 
@@ -264,6 +299,7 @@ export async function POST(request: Request) {
         latitude,
         longitude,
         address_description: addressDescription || null,
+        customer_notes: customerNotes || null,
         subtotal,
         shipping,
         total,

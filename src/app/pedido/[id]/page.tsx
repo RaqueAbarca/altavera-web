@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { getMaturityLabel } from "@/lib/maturity";
 import "./pedido.css";
 
 type OrderItem = {
@@ -9,10 +10,12 @@ type OrderItem = {
   product_name: string;
   price: number | string;
   quantity: number | string;
+  maturity_preference: string | null;
 };
 
 type Order = {
   id: string;
+  customer_notes: string | null;
   subtotal: number;
   shipping: number;
   total: number;
@@ -92,7 +95,7 @@ export default function PedidoPage({
           <p>
             {error ?? "No se pudo encontrar este pedido."}
           </p>
-          <Link href="/productos" className="pedido-back-link">
+          <Link href="/productos">
             Volver a productos
           </Link>
         </div>
@@ -103,7 +106,7 @@ export default function PedidoPage({
   return (
     <main className="container pedido-page">
       <div className="success-card">
-        <h1>✅ Pedido recibido</h1>
+        <h1>Pedido recibido</h1>
 
         <p>Gracias por tu compra.</p>
 
@@ -117,6 +120,9 @@ export default function PedidoPage({
           {order.order_item.map((item) => {
             const price = Number(item.price);
             const quantity = Number(item.quantity);
+            const maturityLabel = getMaturityLabel(
+              item.maturity_preference
+            );
 
             return (
               <div
@@ -127,6 +133,17 @@ export default function PedidoPage({
                   {item.product_name}
                   {" x "}
                   {quantity}
+                  {maturityLabel && (
+                    <small
+                      style={{
+                        display: "block",
+                        marginTop: "0.25rem",
+                        color: "#6b7280",
+                      }}
+                    >
+                      Maduración: {maturityLabel}
+                    </small>
+                  )}
                 </span>
 
                 <strong>
@@ -138,25 +155,45 @@ export default function PedidoPage({
           })}
         </div>
 
+        {order.customer_notes && (
+          <div
+            style={{
+              margin: "1rem 0",
+              padding: "1rem",
+              background: "#faf8f2",
+              borderRadius: "12px",
+            }}
+          >
+            <strong>Notas para el pedido</strong>
+            <p style={{ margin: "0.4rem 0 0" }}>
+              {order.customer_notes}
+            </p>
+          </div>
+        )}
+
         <hr />
 
-        <div className="pedido-totals">
-          <div className="pedido-total-row">
-            <span>Subtotal</span>
-            <strong>₡{Number(order.subtotal).toLocaleString("es-CR")}</strong>
-          </div>
+        <div>
+          Subtotal:{" "}
+          <strong>
+            ₡{Number(order.subtotal).toLocaleString("es-CR")}
+          </strong>
+        </div>
 
-          {order.shipping > 0 && (
-            <div className="pedido-total-row">
-              <span>Envío</span>
-              <strong>₡{Number(order.shipping).toLocaleString("es-CR")}</strong>
-            </div>
-          )}
-
-          <div className="pedido-total-row final">
-            <span>Total</span>
-            <strong>₡{Number(order.total).toLocaleString("es-CR")}</strong>
+        {order.shipping > 0 && (
+          <div>
+            Envío:{" "}
+            <strong>
+              ₡{Number(order.shipping).toLocaleString("es-CR")}
+            </strong>
           </div>
+        )}
+
+        <div>
+          Total:{" "}
+          <strong>
+            ₡{Number(order.total).toLocaleString("es-CR")}
+          </strong>
         </div>
 
         <div className="payment-box">
@@ -169,7 +206,7 @@ export default function PedidoPage({
           <strong>8652-6792</strong>
         </div>
 
-        <Link href="/productos" className="pedido-back-link">
+        <Link href="/productos">
           Seguir comprando
         </Link>
       </div>

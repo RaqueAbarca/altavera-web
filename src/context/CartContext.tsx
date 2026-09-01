@@ -8,25 +8,22 @@ import {
   ReactNode,
 } from "react";
 
-import { Product } from "@/types/product";
 import { CartItem } from "@/types/cart";
+import type { MaturityPreference } from "@/lib/maturity";
 import { getCart, saveCart } from "@/lib/cartStorage";
 
 type CartContextType = {
   cart: CartItem[];
-
   addToCart: (product: CartItem) => void;
-
   removeFromCart: (id: number) => void;
-
   increaseQuantity: (id: number) => void;
-
   decreaseQuantity: (id: number) => void;
-
+  setMaturityPreference: (
+    id: number,
+    preference: MaturityPreference | null
+  ) => void;
   clearCart: () => void;
-
   totalItems: number;
-
   totalPrice: number;
 };
 
@@ -54,7 +51,7 @@ export function CartProvider({
   function addToCart(product: CartItem) {
     setCart((current) => {
       const exists = current.find(
-        (p) => p.id === product.id
+        (item) => item.id === product.id
       );
 
       if (exists) {
@@ -62,13 +59,24 @@ export function CartProvider({
           item.id === product.id
             ? {
                 ...item,
-                quantity: product.quantity,
+                ...product,
+                maturity_preference:
+                  item.maturity_preference ??
+                  product.maturity_preference ??
+                  null,
               }
             : item
         );
       }
 
-      return [...current, product];
+      return [
+        ...current,
+        {
+          ...product,
+          maturity_preference:
+            product.maturity_preference ?? null,
+        },
+      ];
     });
   }
 
@@ -110,6 +118,22 @@ export function CartProvider({
     );
   }
 
+  function setMaturityPreference(
+    id: number,
+    preference: MaturityPreference | null
+  ) {
+    setCart((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              maturity_preference: preference,
+            }
+          : item
+      )
+    );
+  }
+
   function clearCart() {
     setCart([]);
   }
@@ -129,6 +153,7 @@ export function CartProvider({
         removeFromCart,
         increaseQuantity,
         decreaseQuantity,
+        setMaturityPreference,
         clearCart,
         totalItems,
         totalPrice,

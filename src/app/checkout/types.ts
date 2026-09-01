@@ -10,6 +10,7 @@ export type OrderInput = {
   latitude: number;
   longitude: number;
   address_description: string | null;
+  customer_notes: string | null;
 };
 
 export type CreatedOrder = {

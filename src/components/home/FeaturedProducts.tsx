@@ -1,5 +1,6 @@
 "use client";
 
+import "./home.css";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductCard from "../ui/ProductCard";
@@ -13,6 +14,7 @@ type SupabaseProduct = {
   price: number;
   unit: string;
   image_url: string;
+  maturity_selection_enabled?: boolean;
 };
 
 export default function FeaturedProducts() {
@@ -48,6 +50,8 @@ export default function FeaturedProducts() {
           unit: product.unit,
           image: product.image_url,
           category: "",
+          maturity_selection_enabled:
+            product.maturity_selection_enabled ?? false,
         })
       );
 
@@ -59,7 +63,6 @@ export default function FeaturedProducts() {
 
   return (
     <section className="container section">
-
       <div className="section-header">
         <h2>Nuestros productos</h2>
 
@@ -69,45 +72,43 @@ export default function FeaturedProducts() {
       </div>
 
       <div className="featured-products">
+        {products.map((product) => {
+          const cartItem = cart.find(
+            (item) => item.id === product.id
+          );
 
-      {products.map((product) => {
+          const quantity = cartItem?.quantity ?? 0;
 
-        const cartItem = cart.find(
-          (item) => item.id === product.id
-        );
-
-        const quantity = cartItem?.quantity ?? 0;
-
-        return (
-
-          <ProductCard
-            key={product.id}
-            image={product.image}
-            name={product.name}
-            price={product.price}
-            unit={product.unit}
-            quantity={quantity}
-            onAdd={(quantity) =>
-              addToCart({
-                ...product,
-                quantity,
-              })
-            }
-            onIncrease={() =>
-              increaseQuantity(product.id)
-            }
-            onDecrease={() =>
-              decreaseQuantity(product.id)
-            }
-            onRemove={() => removeFromCart(product.id)}
-          />
-
-        );
-
-      })}
-
+          return (
+            <ProductCard
+              key={product.id}
+              image={product.image}
+              name={product.name}
+              price={product.price}
+              unit={product.unit}
+              quantity={quantity}
+              maturitySelectionEnabled={
+                product.maturity_selection_enabled ?? false
+              }
+              onAdd={(quantity) =>
+                addToCart({
+                  ...product,
+                  quantity,
+                  maturity_preference:
+                    cartItem?.maturity_preference ?? null,
+                })
+              }
+              onIncrease={() =>
+                increaseQuantity(product.id)
+              }
+              onDecrease={() =>
+                decreaseQuantity(product.id)
+              }
+              onRemove={() => removeFromCart(product.id)}
+            />
+          );
+        })}
       </div>
-
     </section>
   );
 }
