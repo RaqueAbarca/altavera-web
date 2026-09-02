@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isMaturityPreference } from "@/lib/maturity";
+import { DELIVERY_UNAVAILABLE_MESSAGE } from "@/lib/deliveryCoverage";
+import { evaluateDeliveryLocation } from "@/lib/deliveryAvailability.server";
 
 export const runtime = "nodejs";
 
@@ -148,6 +150,16 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         { error: "Selecciona una ubicación de entrega válida" },
+        { status: 400 }
+      );
+    }
+
+    const deliveryAvailability =
+      await evaluateDeliveryLocation(latitude, longitude);
+
+    if (!deliveryAvailability.available) {
+      return NextResponse.json(
+        { error: DELIVERY_UNAVAILABLE_MESSAGE },
         { status: 400 }
       );
     }

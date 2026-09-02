@@ -7,6 +7,10 @@ import { useCart } from "@/hooks/useCart";
 import LocationPicker from "@/components/checkout/LocationPicker";
 import { createOrder } from "./createOrder";
 import type { GuestLocation, OrderInput } from "./types";
+import {
+  DELIVERY_UNAVAILABLE_MESSAGE,
+  type DeliveryAvailability,
+} from "@/lib/deliveryCoverage";
 import "./orderExtras.css";
 
 export default function GuestForm() {
@@ -21,6 +25,8 @@ export default function GuestForm() {
     lat: 0,
     lng: 0,
   });
+  const [deliveryAvailability, setDeliveryAvailability] =
+    useState<DeliveryAvailability | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -50,6 +56,11 @@ export default function GuestForm() {
 
     if (location.lat === 0 && location.lng === 0) {
       alert("Selecciona una ubicación de entrega.");
+      return;
+    }
+
+    if (!deliveryAvailability?.available) {
+      alert(DELIVERY_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -166,12 +177,13 @@ export default function GuestForm() {
       <h2>Dirección de entrega</h2>
 
       <LocationPicker
-        onChange={(lat, lng) =>
+        onChange={(lat, lng, availability) => {
           setLocation({
             lat,
             lng,
-          })
-        }
+          });
+          setDeliveryAvailability(availability);
+        }}
       />
 
       <p style={{ fontSize: "0.85rem", color: "var(--gray)" }}>
@@ -209,7 +221,10 @@ export default function GuestForm() {
       <button
         type="submit"
         className="checkout-btn"
-        disabled={loading}
+        disabled={
+          loading ||
+          !deliveryAvailability?.available
+        }
       >
         {loading
           ? "Creando pedido..."

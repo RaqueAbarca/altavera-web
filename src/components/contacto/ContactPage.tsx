@@ -1,4 +1,5 @@
 import "./contacto.css";
+import CoverageMap from "@/components/coverage/CoverageMap";
 import {
   FaWhatsapp,
   FaPhoneAlt,
@@ -56,13 +57,7 @@ export default function ContactPage() {
               <FaMapMarkerAlt />
               <div>
                 <strong>Zona de cobertura</strong>
-                <p>
-                  Escazú, Santa Ana,
-                  <br />
-                  Curridabat, Tres Ríos
-                  <br />
-                  y alrededores.
-                </p>
+                <p>Consulta nuestra zona de cobertura actual en el mapa.</p>
               </div>
             </div>
 
@@ -117,14 +112,8 @@ export default function ContactPage() {
 
       {/* MAPA */}
 
-      <section className="map-section">
-
-        <iframe
-          title="Mapa"
-          src="https://www.google.com/maps?q=Escaz%C3%BA,+Costa+Rica&output=embed"
-          loading="lazy"
-        />
-
+      <section className="map-section" aria-label="Mapa de cobertura de Altavera">
+        <CoverageMap />
       </section>
 
     </main>

@@ -58,10 +58,21 @@ export default function Footer() {
         <div className="footer-column">
           <h4>Zonas de cobertura</h4>
 
-          <a href="#">📍 Alajuela Centro</a>
-          <a href="#">📍 Desamparados</a>
-          <a href="#">📍 Heredia</a>
-          <a href="#">📍 Belén</a>
+          <a href="/zona-de-cobertura">
+            Alajuela
+          </a>
+
+          <a href="/zona-de-cobertura">
+            Heredia
+          </a>
+
+          <a href="/zona-de-cobertura">
+            Belén, Santa Bárbara y San Isidro
+          </a>
+
+          <a href="/zona-de-cobertura">
+            Tibás y Moravia
+          </a>
         </div>
 
       </div>

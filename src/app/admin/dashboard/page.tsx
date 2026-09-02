@@ -89,6 +89,26 @@ export default function AdminDashboard(){
         <button
           className="admin-menu-card"
           onClick={()=>
+            router.push("/admin/cobertura")
+          }
+        >
+
+          <h2>
+            🗺️ Cobertura
+          </h2>
+
+          <p>
+            Dibujar zonas de entrega
+            y exclusiones operativas.
+          </p>
+
+        </button>
+
+
+
+        <button
+          className="admin-menu-card"
+          onClick={()=>
             router.push("/admin/configuracion")
           }
         >

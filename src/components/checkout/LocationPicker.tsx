@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-
+import type { DeliveryAvailability } from "@/lib/deliveryCoverage";
 
 const LocationPickerClient = dynamic(
   () => import("./LocationPickerClient"),
@@ -15,23 +15,20 @@ const LocationPickerClient = dynamic(
   }
 );
 
-
 type Props = {
   onChange: (
     lat: number,
-    lng: number
+    lng: number,
+    availability: DeliveryAvailability
   ) => void;
 };
-
 
 export default function LocationPicker({
   onChange,
 }: Props) {
-
   return (
     <LocationPickerClient
       onChange={onChange}
     />
   );
-
 }

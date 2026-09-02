@@ -34,3 +34,22 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Cobertura de entregas editable
+
+La cobertura se administra desde `/admin/cobertura` mediante polígonos de inclusión y exclusión.
+
+Antes de usar el editor por primera vez, aplica la migración:
+
+```bash
+npx supabase db push
+```
+
+La migración `supabase/migrations/20260901_delivery_zones.sql` crea `delivery_zones` y copia las 13 zonas de cobertura que existían en `src/lib/deliveryCoverage.ts` para que no sea necesario redibujarlas.
+
+- **Agregar cobertura:** dibuja un polígono nuevo sobre el mapa.
+- **Excluir zona:** dibuja un polígono dentro de una zona cubierta; el checkout lo rechazará y el mapa público lo mostrará como un hueco.
+- **Editar:** selecciona una zona y arrastra sus vértices. Clic derecho sobre un vértice elimina ese punto.
+- **Desactivar:** conserva la zona guardada pero deja de usarla temporalmente.
+
+El checkout y la creación server-side de pedidos validan contra la misma tabla. Si la migración todavía no existe en la base de datos, el servidor usa temporalmente la cobertura estática anterior como respaldo.
