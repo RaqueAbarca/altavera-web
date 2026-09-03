@@ -299,8 +299,8 @@ export default function LocationPickerClient({
       </div>
 
       <MapContainer
-        center={[10.005, -84.11]}
-        zoom={10}
+        center={[10.016,-84.214]}
+        zoom={14}
         scrollWheelZoom
         className="checkout-map"
       >

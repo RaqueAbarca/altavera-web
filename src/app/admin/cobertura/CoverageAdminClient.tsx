@@ -244,7 +244,7 @@ export default function CoverageAdminPage() {
 
       <section className="coverage-editor-layout">
         <div className="coverage-map-card">
-          <MapContainer center={[10.005, -84.11]} zoom={11} scrollWheelZoom className="coverage-admin-map">
+          <MapContainer center={[10.016,-84.214]} zoom={13} scrollWheelZoom className="coverage-admin-map">
             <AltaveraMapLayer />
             <MapClickHandler
               enabled={drawMode !== "idle" || Boolean(selectedZone && addingVertex)}
