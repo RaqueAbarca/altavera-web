@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, MapPin, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { buildOrderOnTheWayMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { playAdminSound } from "@/lib/adminSounds";
 import ShoppingList from "@/components/admin/ShoppingList";
 import { getMaturityLabel } from "@/lib/maturity";
 import {
@@ -276,6 +277,10 @@ export default function AdminOrdersPage() {
 
     // Para "En camino" no dependemos de ninguna API paga: abrimos
     // WhatsApp con el mensaje listo y la persona administradora solo envía.
+    if (status === "confirmed") {
+      void playAdminSound("payment-confirmed");
+    }
+
     if (isGoingOnTheWay) {
       if (whatsappUrl && whatsappWindow) {
         whatsappWindow.opener = null;

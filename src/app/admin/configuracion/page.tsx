@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bell, BellOff, CheckCircle2, Smartphone, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, CheckCircle2, Play, Smartphone, TriangleAlert, Volume2, VolumeX } from "lucide-react";
+import {
+  ADMIN_SOUNDS,
+  getAdminSoundsEnabled,
+  getAdminSoundsVolume,
+  playAdminSound,
+  setAdminSoundsEnabled,
+  setAdminSoundsVolume,
+} from "@/lib/adminSounds";
 import "../admin.css";
 import "./configuracion.css";
 
@@ -41,6 +49,9 @@ export default function AdminConfiguracionPage() {
   const [message, setMessage] = useState("");
   const [working, setWorking] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [soundsEnabled, setSoundsEnabledState] = useState(true);
+  const [soundVolume, setSoundVolumeState] = useState(0.85);
+  const [soundMessage, setSoundMessage] = useState("");
 
   const stateCopy = useMemo(() => {
     switch (state) {
@@ -85,6 +96,8 @@ export default function AdminConfiguracionPage() {
 
   useEffect(() => {
     void checkPushState();
+    setSoundsEnabledState(getAdminSoundsEnabled());
+    setSoundVolumeState(getAdminSoundsVolume());
   }, []);
 
   async function getRegistration() {
@@ -260,6 +273,28 @@ export default function AdminConfiguracionPage() {
     }
   }
 
+  function togglePanelSounds() {
+    const nextValue = !soundsEnabled;
+    setAdminSoundsEnabled(nextValue);
+    setSoundsEnabledState(nextValue);
+    setSoundMessage(nextValue ? "Sonidos del panel activados." : "Sonidos del panel desactivados.");
+  }
+
+  function changeSoundVolume(value: number) {
+    setSoundVolumeState(value);
+    setAdminSoundsVolume(value);
+  }
+
+  async function testPanelSound(kind: "new-order" | "payment-confirmed") {
+    setSoundMessage("");
+    const played = await playAdminSound(kind, { force: true });
+    setSoundMessage(
+      played
+        ? `Reproduciendo ${ADMIN_SOUNDS[kind].label}.`
+        : "El navegador bloqueó el audio. Tocá nuevamente el botón para habilitarlo."
+    );
+  }
+
   const StatusIcon =
     state === "active"
       ? CheckCircle2
@@ -333,6 +368,90 @@ export default function AdminConfiguracionPage() {
                 {working ? "Activando..." : "Activar notificaciones"}
               </button>
             ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="admin-setting-card admin-sound-card">
+        <div className="admin-setting-icon" aria-hidden="true">
+          {soundsEnabled ? <Volume2 size={24} strokeWidth={1.8} /> : <VolumeX size={24} strokeWidth={1.8} />}
+        </div>
+
+        <div className="admin-setting-content">
+          <span className="admin-setting-kicker">Sonidos del panel</span>
+          <h2>Alertas audibles cuando el admin está abierto</h2>
+          <p>
+            Altavera usa un sonido para pedidos nuevos y otro para pagos confirmados mientras tenés abierto el panel administrativo.
+          </p>
+
+          <div className="admin-sound-toggle-row">
+            <button
+              type="button"
+              className={`admin-sound-toggle${soundsEnabled ? " is-active" : ""}`}
+              onClick={togglePanelSounds}
+              aria-pressed={soundsEnabled}
+            >
+              {soundsEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              {soundsEnabled ? "Sonidos activados" : "Sonidos desactivados"}
+            </button>
+
+            <label className="admin-sound-volume">
+              <span>Volumen</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={soundVolume}
+                onChange={(event) => changeSoundVolume(Number(event.target.value))}
+                aria-label="Volumen de sonidos del panel"
+              />
+              <strong>{Math.round(soundVolume * 100)}%</strong>
+            </label>
+          </div>
+
+          <div className="admin-sound-options">
+            <article className="admin-sound-option">
+              <div>
+                <span>Nuevo pedido</span>
+                <strong>{ADMIN_SOUNDS["new-order"].label}</strong>
+                <a href={ADMIN_SOUNDS["new-order"].sourcePage} target="_blank" rel="noreferrer">
+                  {ADMIN_SOUNDS["new-order"].sourceLabel}
+                </a>
+              </div>
+              <button
+                type="button"
+                className="admin-setting-button admin-setting-button--secondary"
+                onClick={() => void testPanelSound("new-order")}
+              >
+                <Play size={17} />
+                Probar
+              </button>
+            </article>
+
+            <article className="admin-sound-option">
+              <div>
+                <span>Pago confirmado</span>
+                <strong>{ADMIN_SOUNDS["payment-confirmed"].label}</strong>
+                <a href={ADMIN_SOUNDS["payment-confirmed"].sourcePage} target="_blank" rel="noreferrer">
+                  {ADMIN_SOUNDS["payment-confirmed"].sourceLabel}
+                </a>
+              </div>
+              <button
+                type="button"
+                className="admin-setting-button admin-setting-button--secondary"
+                onClick={() => void testPanelSound("payment-confirmed")}
+              >
+                <Play size={17} />
+                Probar
+              </button>
+            </article>
+          </div>
+
+          {soundMessage && <div className="admin-setting-message">{soundMessage}</div>}
+
+          <div className="admin-setting-note">
+            El sonido de pago se reproduce actualmente cuando un administrador confirma el pago del pedido. Si después conectamos una confirmación automática de SINPE o una pasarela, podemos dispararlo en el instante real del pago.
           </div>
         </div>
       </section>

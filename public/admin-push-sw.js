@@ -1,3 +1,11 @@
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   let payload = {};
 
@@ -26,7 +34,24 @@ self.addEventListener("push", (event) => {
     },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  const notifyOpenAdminWindows = clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((windowClients) => {
+      windowClients.forEach((client) => {
+        client.postMessage({
+          type: "ALTAVERA_ADMIN_PUSH",
+          eventType: payload.eventType || null,
+          orderId: payload.orderId || null,
+        });
+      });
+    });
+
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      notifyOpenAdminWindows,
+    ])
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

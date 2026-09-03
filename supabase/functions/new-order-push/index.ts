@@ -123,12 +123,14 @@ Deno.serve(async (request) => {
             title: "Notificación de prueba",
             body: "Las notificaciones de nuevos pedidos de Altavera funcionan correctamente.",
             tag: "altavera-push-test",
+            eventType: "test",
             url: "/admin/configuracion",
           }
         : {
             title: "Nuevo pedido recibido",
             body: details.join(" · "),
             tag: `altavera-order-${orderId}`,
+            eventType: "new-order",
             orderId,
             url: "/admin/pedidos",
           }

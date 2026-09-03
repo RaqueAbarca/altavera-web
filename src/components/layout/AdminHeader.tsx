@@ -4,8 +4,9 @@ import "./adminHeader.css";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { playAdminSound, preloadAdminSounds, unlockAdminSounds } from "@/lib/adminSounds";
 import {
   BadgeDollarSign,
   ChartNoAxesCombined,
@@ -36,6 +37,35 @@ export default function AdminHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const isLoginPage = pathname === "/admin";
+
+  useEffect(() => {
+    if (isLoginPage || typeof navigator === "undefined") return;
+
+    preloadAdminSounds();
+
+    const unlock = () => {
+      void unlockAdminSounds();
+    };
+
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (
+        event.data?.type === "ALTAVERA_ADMIN_PUSH" &&
+        (event.data?.eventType === "new-order" || event.data?.eventType === "test")
+      ) {
+        void playAdminSound("new-order");
+      }
+    };
+
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    navigator.serviceWorker?.addEventListener("message", handleServiceWorkerMessage);
+
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      navigator.serviceWorker?.removeEventListener("message", handleServiceWorkerMessage);
+    };
+  }, [isLoginPage]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
