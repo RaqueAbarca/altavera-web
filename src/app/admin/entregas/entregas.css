@@ -1,0 +1,550 @@
+.deliveries-admin-page {
+  width: min(100%, 1320px);
+  padding-top: clamp(24px, 4vw, 38px);
+  padding-bottom: clamp(36px, 6vw, 64px);
+}
+
+.deliveries-page-header p {
+  margin: 0.35rem 0 0;
+  color: var(--gray);
+}
+
+.deliveries-cycle-picker {
+  margin-bottom: 1.1rem;
+}
+
+.deliveries-heading-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.2rem 0 1rem;
+}
+
+.deliveries-heading-row h2 {
+  margin: 0.18rem 0 0;
+  color: var(--green);
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+  text-transform: capitalize;
+}
+
+.deliveries-location-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.72rem;
+  border: 1px solid #dfe8df;
+  border-radius: 999px;
+  background: #f7faf6;
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.delivery-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.delivery-stat-card {
+  padding: 0.95rem 1rem;
+  border: 1px solid #e5eae3;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.delivery-stat-card span,
+.delivery-stat-card strong {
+  display: block;
+}
+
+.delivery-stat-card span {
+  color: #737d75;
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.delivery-stat-card strong {
+  margin-top: 0.28rem;
+  color: #1f402a;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.delivery-stat-card.is-payment {
+  border-color: #f0dfcc;
+  background: #fffaf4;
+}
+
+.delivery-stat-card.is-pending {
+  border-color: #dce7dc;
+  background: #f8fbf7;
+}
+
+.delivery-stat-card.is-route {
+  border-color: #d9e1ec;
+  background: #f7f9fc;
+}
+
+.delivery-stat-card.is-delivered {
+  border-color: #d9eadb;
+  background: #f5faf5;
+}
+
+.delivery-location-warning {
+  margin-bottom: 1rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid #ead7b8;
+  border-radius: 11px;
+  background: #fffaf0;
+  color: #7d5923;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.delivery-map-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #e4e9e2;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(26, 49, 31, 0.05);
+}
+
+.delivery-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.delivery-filter-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  padding: 0.48rem 0.72rem;
+  border: 1px solid #e0e5df;
+  border-radius: 9px;
+  background: #fff;
+  color: #38423a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.delivery-filter-tabs button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: #edf1ec;
+  font-size: 0.7rem;
+}
+
+.delivery-filter-tabs button.active {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.delivery-filter-tabs button.active span {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.delivery-map-frame {
+  overflow: hidden;
+  border: 1px solid #dfe6dd;
+  border-radius: 14px;
+  background: #eef3ec;
+}
+
+.delivery-admin-map,
+.delivery-map-loading,
+.delivery-map-empty {
+  width: 100%;
+  height: min(58vh, 540px);
+  min-height: 390px;
+}
+
+.delivery-map-loading,
+.delivery-map-empty {
+  display: grid;
+  place-items: center;
+  border: 1px dashed #d8dfd5;
+  border-radius: 13px;
+  background: #f8faf7;
+  color: var(--gray);
+  font-size: 0.88rem;
+}
+
+.delivery-map-marker-shell {
+  border: 0;
+  background: transparent;
+}
+
+.delivery-map-marker {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 8px;
+  background: #355843;
+  box-shadow: 0 3px 10px rgba(25, 48, 31, 0.28);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 850;
+  transform: rotate(-45deg);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.delivery-map-marker.is-payment-pending {
+  background: #a9662c;
+}
+
+.delivery-map-marker.is-route {
+  background: #315d8a;
+}
+
+.delivery-map-marker.is-delivered {
+  background: #6a8d70;
+}
+
+.delivery-map-marker.is-selected {
+  box-shadow: 0 0 0 4px rgba(201, 120, 51, 0.34), 0 4px 12px rgba(25, 48, 31, 0.3);
+  transform: rotate(-45deg) scale(1.12);
+}
+
+.delivery-map-marker {
+  line-height: 1;
+}
+
+.delivery-map-marker-label {
+  display: inline-block;
+  transform: rotate(45deg);
+}
+
+.delivery-map-popup {
+  min-width: 190px;
+  color: #243127;
+}
+
+.delivery-map-popup strong {
+  display: block;
+  color: #1f402a;
+  font-size: 0.86rem;
+}
+
+.delivery-map-popup p {
+  margin: 0.45rem 0 0;
+  color: #657069;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.delivery-map-popup-actions {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.delivery-map-popup-actions a {
+  padding: 0.38rem 0.52rem;
+  border-radius: 7px;
+  background: #eef4ef;
+  color: #1f402a;
+  font-size: 0.73rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.delivery-stop-section {
+  margin-top: 1.1rem;
+}
+
+.delivery-stop-heading {
+  margin-bottom: 0.8rem;
+}
+
+.delivery-stop-heading h2 {
+  margin: 0;
+  color: var(--green);
+  font-size: 1.25rem;
+}
+
+.delivery-stop-heading p {
+  margin: 0.25rem 0 0;
+  color: var(--gray);
+  font-size: 0.78rem;
+}
+
+.delivery-stop-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.delivery-stop-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid #e4e8e2;
+  border-radius: 14px;
+  background: #fff;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.delivery-stop-card.is-selected {
+  border-color: #a9bea9;
+  box-shadow: 0 0 0 3px rgba(31, 64, 42, 0.07);
+}
+
+.delivery-stop-index {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: #eef4ef;
+  color: var(--green);
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.delivery-stop-content {
+  min-width: 0;
+}
+
+.delivery-stop-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.delivery-stop-topline h3 {
+  margin: 0;
+  color: #1e2c22;
+  font-size: 1rem;
+}
+
+.delivery-stop-topline > div > span {
+  display: block;
+  margin-top: 0.18rem;
+  color: #7a837c;
+  font-size: 0.72rem;
+}
+
+.delivery-order-status {
+  flex: 0 0 auto;
+  padding: 0.36rem 0.55rem;
+  border-radius: 999px;
+  background: #edf1ec;
+  color: #57615a;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.delivery-order-status.status-pending,
+.delivery-order-status.status-pending_payment {
+  background: #fff2df;
+  color: #8d5c22;
+}
+
+.delivery-order-status.status-confirmed,
+.delivery-order-status.status-preparing {
+  background: #edf5eb;
+  color: #34603b;
+}
+
+.delivery-order-status.status-ready {
+  background: #eaf1f8;
+  color: #315d8a;
+}
+
+.delivery-order-status.status-delivered {
+  background: #e9f5eb;
+  color: #3f7048;
+}
+
+.delivery-stop-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem 1rem;
+  margin-top: 0.8rem;
+}
+
+.delivery-stop-details > div,
+.delivery-stop-details > a {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+  color: #59635b;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.delivery-stop-details svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #6b816f;
+}
+
+.delivery-stop-details a {
+  color: var(--green);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.delivery-stop-notes {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #efe3d1;
+  border-radius: 9px;
+  background: #fffaf3;
+}
+
+.delivery-stop-notes strong {
+  color: #5f4b31;
+  font-size: 0.7rem;
+}
+
+.delivery-stop-notes p {
+  margin: 0.22rem 0 0;
+  color: #6d6253;
+  font-size: 0.77rem;
+  line-height: 1.4;
+}
+
+.delivery-stop-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #eff1ee;
+}
+
+.delivery-stop-footer > strong {
+  flex: 0 0 auto;
+  color: var(--green);
+  font-size: 0.94rem;
+}
+
+.delivery-stop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.delivery-secondary-action,
+.delivery-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  min-height: 36px;
+  padding: 0.46rem 0.62rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.delivery-secondary-action {
+  border: 1px solid #dde5dc;
+  background: #fff;
+  color: #355843;
+}
+
+.delivery-secondary-action:hover {
+  background: #f6f9f5;
+}
+
+.delivery-primary-action {
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.delivery-primary-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 900px) {
+  .delivery-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .delivery-stop-details {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-stop-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .delivery-stop-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .deliveries-heading-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .delivery-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .delivery-admin-map,
+  .delivery-map-loading,
+  .delivery-map-empty {
+    height: 420px;
+    min-height: 340px;
+  }
+
+  .delivery-stop-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0.7rem;
+    padding: 0.85rem;
+  }
+
+  .delivery-stop-index {
+    width: 32px;
+    height: 32px;
+  }
+
+  .delivery-stop-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .delivery-stop-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .delivery-secondary-action,
+  .delivery-primary-action {
+    width: 100%;
+  }
+}

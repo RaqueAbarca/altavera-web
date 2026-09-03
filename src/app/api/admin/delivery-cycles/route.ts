@@ -34,6 +34,9 @@ export async function GET() {
         status,
         created_at,
         customer_notes,
+        latitude,
+        longitude,
+        address_description,
         delivery_cycle_id,
         order_item(
           id,
@@ -62,6 +65,9 @@ export async function GET() {
         status,
         created_at,
         customer_notes,
+        latitude,
+        longitude,
+        address_description,
         delivery_cycle_id,
         order_item(
           id,

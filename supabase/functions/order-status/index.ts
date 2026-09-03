@@ -14,60 +14,117 @@ const allowedStatuses = new Set([
   "delivered",
 ]);
 
-async function sendWhatsApp(
-  phone: string,
-  message: string
-) {
-  console.log("=== Enviando WhatsApp ===");
-  console.log({
-    phone,
-    message,
-  });
+type WhatsAppSendResult = {
+  sent: boolean;
+  messageId?: string;
+  skipped?: boolean;
+  reason?: string;
+};
 
-  // Aquí irá la llamada real a la API de WhatsApp.
-  return true;
+function normalizeWhatsAppPhone(value: string) {
+  let digits = value.replace(/\D/g, "");
+
+  if (digits.startsWith("00")) {
+    digits = digits.slice(2);
+  }
+
+  // Los teléfonos locales guardados por Altavera normalmente tienen 8 dígitos.
+  // Para WhatsApp Cloud API se usa el formato internacional sin el signo +.
+  if (digits.length === 8) {
+    digits = `506${digits}`;
+  }
+
+  return digits;
 }
 
-function buildMessage(
-  customerName: string,
-  status: string,
-  total: number
-) {
-  switch (status) {
-    case "pending_payment":
-      return `¡Hola, ${customerName}!
-Hemos recibido tu pedido en Altavera. 🌿
-Total del pedido: ₡${total.toLocaleString("es-CR")}
-En este momento estamos esperando la confirmación de tu pago. Una vez recibido, comenzaremos a preparar tu pedido.
-¡Gracias por confiar en nosotros!`;
+async function sendWhatsAppEnCamino(params: {
+  phone: string;
+  customerName: string;
+  orderId: string;
+}): Promise<WhatsAppSendResult> {
+  const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+  const templateName =
+    Deno.env.get("WHATSAPP_TEMPLATE_NAME") ??
+    "altavera_pedido_en_camino";
+  const templateLanguage =
+    Deno.env.get("WHATSAPP_TEMPLATE_LANGUAGE") ?? "es";
+  const graphVersion =
+    Deno.env.get("WHATSAPP_GRAPH_VERSION") ?? "v26.0";
 
-    case "confirmed":
-      return `¡Hola, ${customerName}!
-Tu pago fue confirmado correctamente. ✅
-Tu pedido ya quedó confirmado en Altavera y será preparado para la fecha de entrega seleccionada.
-Te avisaremos cuando comencemos a prepararlo.`;
-
-    case "preparing":
-      return `¡Hola, ${customerName}!
-Ya comenzamos a preparar tu pedido con mucho cuidado. 🥬
-Estamos seleccionando productos frescos para que lleguen en las mejores condiciones.
-Te avisaremos nuevamente cuando tu pedido esté listo para la entrega.`;
-
-    case "ready":
-      return `¡Hola, ${customerName}!
-Tu pedido ya salió para entrega. 📦
-Va en camino a la dirección que registraste.
-Gracias por comprar en Altavera.`;
-
-    case "delivered":
-      return `¡Hola, ${customerName}!
-Tu pedido fue entregado correctamente. ✅
-Esperamos que disfrutes tus productos frescos y que hayas tenido una excelente experiencia con nosotros.
-¡Gracias por elegir Altavera!`;
-
-    default:
-      return "";
+  if (!accessToken || !phoneNumberId) {
+    throw new Error(
+      "WhatsApp no está configurado. Faltan WHATSAPP_ACCESS_TOKEN o WHATSAPP_PHONE_NUMBER_ID."
+    );
   }
+
+  const to = normalizeWhatsAppPhone(params.phone);
+
+  if (!to) {
+    throw new Error("El pedido no tiene un número de WhatsApp válido.");
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "template",
+        template: {
+          name: templateName,
+          language: {
+            code: templateLanguage,
+          },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                {
+                  type: "text",
+                  text: params.customerName,
+                },
+                {
+                  type: "text",
+                  text: params.orderId.slice(0, 8).toUpperCase(),
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    }
+  );
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const metaMessage =
+      payload?.error?.message ??
+      `WhatsApp respondió con HTTP ${response.status}`;
+
+    console.error("ERROR WHATSAPP CLOUD API:", payload);
+    throw new Error(metaMessage);
+  }
+
+  const messageId = payload?.messages?.[0]?.id;
+
+  console.log("WHATSAPP EN CAMINO ENVIADO:", {
+    orderId: params.orderId,
+    to,
+    messageId,
+  });
+
+  return {
+    sent: true,
+    messageId,
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -88,8 +145,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authorization =
-      req.headers.get("Authorization");
+    const authorization = req.headers.get("Authorization");
 
     if (!authorization) {
       return Response.json(
@@ -101,38 +157,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabaseUrl =
-      Deno.env.get("SUPABASE_URL");
-    const anonKey =
-      Deno.env.get("SUPABASE_ANON_KEY");
-    const serviceRoleKey =
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (
-      !supabaseUrl ||
-      !anonKey ||
-      !serviceRoleKey
-    ) {
-      throw new Error(
-        "Faltan variables de entorno de Supabase"
-      );
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      throw new Error("Faltan variables de entorno de Supabase");
     }
 
-    const userClient = createClient(
-      supabaseUrl,
-      anonKey,
-      {
-        global: {
-          headers: {
-            Authorization: authorization,
-          },
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: {
+        headers: {
+          Authorization: authorization,
         },
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      }
-    );
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
 
     const {
       data: { user },
@@ -149,10 +192,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const {
-      data: isAdmin,
-      error: adminError,
-    } = await userClient.rpc("is_admin");
+    const { data: isAdmin, error: adminError } =
+      await userClient.rpc("is_admin");
 
     if (adminError || isAdmin !== true) {
       return Response.json(
@@ -178,23 +219,34 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const adminClient = createClient(
-      supabaseUrl,
-      serviceRoleKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
+    // Por ahora Altavera solo envía WhatsApp automáticamente cuando el pedido
+    // cambia a "ready", que en la interfaz se muestra como "En camino".
+    if (status !== "ready") {
+      return Response.json(
+        {
+          success: true,
+          orderId,
+          status,
+          notification: {
+            sent: false,
+            skipped: true,
+            reason: "Este estado no requiere WhatsApp automático.",
+          },
         },
-      }
-    );
+        { headers: corsHeaders }
+      );
+    }
 
-    const {
-      data: order,
-      error: orderError,
-    } = await adminClient
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    const { data: order, error: orderError } = await adminClient
       .from("orders")
-      .select("id,guest_name,guest_phone,total,status")
+      .select("id,guest_name,guest_phone,status")
       .eq("id", orderId)
       .single();
 
@@ -208,27 +260,36 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // El cliente solo indica qué pedido cambió y a qué estado.
-    // Nombre, teléfono y total siempre se leen de la base de datos.
-    const customerName = String(
-      order.guest_name ?? "cliente"
-    );
-    const phone = String(order.guest_phone ?? "");
-    const total = Number(order.total ?? 0);
-    const message = buildMessage(
-      customerName,
-      status,
-      total
-    );
+    // Evita enviar una notificación que no corresponda al estado que quedó
+    // realmente guardado en la base de datos.
+    if (order.status !== "ready") {
+      return Response.json(
+        {
+          success: false,
+          error: "El pedido no está marcado como En camino.",
+        },
+        {
+          status: 409,
+          headers: corsHeaders,
+        }
+      );
+    }
 
-    await sendWhatsApp(phone, message);
+    const customerName = String(order.guest_name ?? "cliente").trim();
+    const phone = String(order.guest_phone ?? "").trim();
+
+    const notification = await sendWhatsAppEnCamino({
+      phone,
+      customerName: customerName || "cliente",
+      orderId,
+    });
 
     return Response.json(
       {
         success: true,
         orderId,
         status,
-        message,
+        notification,
       },
       {
         headers: corsHeaders,

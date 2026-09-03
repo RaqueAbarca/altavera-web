@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { buildOrderOnTheWayMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import ShoppingList from "@/components/admin/ShoppingList";
 import { getMaturityLabel } from "@/lib/maturity";
 import {
@@ -34,6 +35,9 @@ type Order = {
   status: string;
   created_at: string;
   customer_notes: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
+  address_description: string | null;
   delivery_cycle_id: string | null;
   order_item: OrderItem[];
 };
@@ -85,6 +89,25 @@ function belongsToTab(status: string, tab: StatusTab) {
     return status === "pending" || status === "pending_payment";
   }
   return status === tab;
+}
+
+
+function hasDeliveryCoordinates(order: Order) {
+  const latitude = Number(order.latitude);
+  const longitude = Number(order.longitude);
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    !(latitude === 0 && longitude === 0)
+  );
+}
+
+function googleMapsUrl(order: Order) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${Number(order.latitude)},${Number(order.longitude)}`)}`;
+}
+
+function wazeUrl(order: Order) {
+  return `https://www.waze.com/ul?ll=${encodeURIComponent(`${Number(order.latitude)},${Number(order.longitude)}`)}&navigate=yes`;
 }
 
 function buildLiveShoppingList(orders: Order[]) {
@@ -222,29 +245,50 @@ export default function AdminOrdersPage() {
   }, [selectedCycle]);
 
   async function updateStatus(order: Order, status: string) {
+    const isGoingOnTheWay = status === "ready";
+    const whatsappUrl = isGoingOnTheWay
+      ? buildWhatsAppUrl({
+          phone: order.guest_phone,
+          message: buildOrderOnTheWayMessage({
+            customerName: order.guest_name,
+            orderId: order.id,
+          }),
+        })
+      : null;
+
+    // Abrimos una pestaña vacía durante el click para evitar que el navegador
+    // bloquee WhatsApp por ocurrir después de una operación asíncrona.
+    const whatsappWindow = whatsappUrl
+      ? window.open("about:blank", "_blank")
+      : null;
+
     const { error: updateError } = await supabase
       .from("orders")
       .update({ status })
       .eq("id", order.id);
 
     if (updateError) {
+      whatsappWindow?.close();
       alert("No se pudo cambiar el estado del pedido.");
       console.error("ERROR CAMBIANDO ESTADO:", updateError);
       return;
     }
 
-    const { error: functionError } = await supabase.functions.invoke(
-      "order-status",
-      {
-        body: {
-          orderId: order.id,
-          status,
-        },
+    // Para "En camino" no dependemos de ninguna API paga: abrimos
+    // WhatsApp con el mensaje listo y la persona administradora solo envía.
+    if (isGoingOnTheWay) {
+      if (whatsappUrl && whatsappWindow) {
+        whatsappWindow.opener = null;
+        whatsappWindow.location.href = whatsappUrl;
+      } else if (!whatsappUrl) {
+        alert(
+          "El pedido quedó marcado como En camino, pero no tiene un teléfono válido para abrir WhatsApp."
+        );
+      } else {
+        alert(
+          "El pedido quedó marcado como En camino, pero el navegador bloqueó la ventana de WhatsApp."
+        );
       }
-    );
-
-    if (functionError) {
-      console.error("ERROR NOTIFICANDO ESTADO:", functionError);
     }
 
     await loadData();
@@ -416,6 +460,31 @@ export default function AdminOrdersPage() {
                             <div className="order-customer-notes">
                               <strong>Notas del cliente</strong>
                               <p>{order.customer_notes}</p>
+                            </div>
+                          )}
+
+                          {hasDeliveryCoordinates(order) && (
+                            <div className="order-delivery-location">
+                              <div className="order-delivery-location-copy">
+                                <MapPin size={17} aria-hidden="true" />
+                                <div>
+                                  <strong>Ubicación de entrega</strong>
+                                  <p>
+                                    {order.address_description?.trim() ||
+                                      `${Number(order.latitude).toFixed(5)}, ${Number(order.longitude).toFixed(5)}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="order-delivery-location-actions">
+                                <a href={wazeUrl(order)} target="_blank" rel="noreferrer">
+                                  <Navigation size={15} aria-hidden="true" />
+                                  Waze
+                                </a>
+                                <a href={googleMapsUrl(order)} target="_blank" rel="noreferrer">
+                                  <ExternalLink size={15} aria-hidden="true" />
+                                  Google Maps
+                                </a>
+                              </div>
                             </div>
                           )}
 

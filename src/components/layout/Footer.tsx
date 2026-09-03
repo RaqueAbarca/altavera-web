@@ -1,17 +1,15 @@
+import Link from "next/link";
 import "./footer.css";
-import { MessageCircle } from "lucide-react";
+import { FaInstagram, FaWhatsapp } from "react-icons/fa";
 
-import { FaFacebook } from "react-icons/fa";
-import { FaInstagram } from "react-icons/fa";
+const INSTAGRAM_URL = "https://www.instagram.com/altavera.cr/?hl=es-la";
+const WHATSAPP_URL = "https://wa.me/50686526792";
 
 export default function Footer() {
   return (
     <footer className="footer">
-
       <div className="container footer-content">
-
         <div className="footer-brand">
-
           <img
             src="/logowhite.svg"
             alt="Altavera"
@@ -24,57 +22,66 @@ export default function Footer() {
             con el mejor servicio.
           </p>
 
-        <div className="socials">
+          <div className="socials">
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram de Altavera"
+              title="Instagram"
+            >
+              <FaInstagram size={24} />
+            </a>
 
-          <FaInstagram size={24} />
-
-          <FaFacebook size={24} />
-
-          <MessageCircle size={24} />
-
-        </div>
-
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp de Altavera"
+              title="WhatsApp"
+            >
+              <FaWhatsapp size={24} />
+            </a>
+          </div>
         </div>
 
         <div className="footer-column">
           <h4>Enlaces</h4>
 
-          <a href="#">Inicio</a>
-          <a href="#">Productos</a>
-          <a href="#">Nosotros</a>
-          <a href="#">Contacto</a>
-          <a href="#">Política de privacidad</a>
+          <Link href="/">Inicio</Link>
+          <Link href="/productos">Productos</Link>
+          <Link href="/nosotros">Nosotros</Link>
+          <Link href="/contacto">Contacto</Link>
+          <span className="footer-link-disabled" title="Próximamente">
+            Política de privacidad
+          </span>
         </div>
 
         <div className="footer-column">
           <h4>Ayuda</h4>
 
-          <a href="#">Preguntas frecuentes</a>
-          <a href="#">Términos y condiciones</a>
-          <a href="#">Política de envíos</a>
-          <a href="#">Cambios y devoluciones</a>
+          <span className="footer-link-disabled" title="Próximamente">
+            Preguntas frecuentes
+          </span>
+          <span className="footer-link-disabled" title="Próximamente">
+            Términos y condiciones
+          </span>
+          <span className="footer-link-disabled" title="Próximamente">
+            Política de envíos
+          </span>
+          <span className="footer-link-disabled" title="Próximamente">
+            Cambios y devoluciones
+          </span>
         </div>
 
         <div className="footer-column">
           <h4>Zonas de cobertura</h4>
 
-          <a href="/zona-de-cobertura">
-            Alajuela
-          </a>
-
-          <a href="/zona-de-cobertura">
-            Heredia
-          </a>
-
-          <a href="/zona-de-cobertura">
-            Belén, Santa Bárbara y San Isidro
-          </a>
-
-          <a href="/zona-de-cobertura">
-            Tibás y Moravia
-          </a>
+          <Link href="/zona-de-cobertura">Alajuela</Link>
+          <Link href="/zona-de-cobertura">Heredia</Link>
+          <Link href="/zona-de-cobertura">Belén, Santa Bárbara y San Isidro</Link>
+          <Link href="/zona-de-cobertura">Tibás y Moravia</Link>
         </div>
-
       </div>
 
       <div className="footer-bottom">
@@ -83,7 +90,6 @@ export default function Footer() {
 
       <div className="footer-plant"></div>
       <div className="footer-orange"></div>
-
     </footer>
   );
 }

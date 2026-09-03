@@ -117,3 +117,35 @@
     font-size: 0.78rem;
   }
 }
+
+.socials a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cream);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.socials a:hover {
+  color: var(--white);
+  transform: translateY(-2px);
+}
+
+.socials a:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.footer-link-disabled {
+  margin-bottom: 11px;
+  color: rgba(247, 242, 234, 0.55);
+  line-height: 1.45;
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .footer-link-disabled {
+    font-size: 0.86rem;
+  }
+}

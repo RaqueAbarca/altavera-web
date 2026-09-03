@@ -9,6 +9,7 @@ import {
   MapPinned,
   PackageOpen,
   Settings,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 import "../admin.css";
@@ -27,6 +28,12 @@ const menuItems: AdminMenuItem[] = [
     description: "Ver pedidos recibidos, estados y listas de compra.",
     href: "/admin/pedidos",
     icon: ClipboardList,
+  },
+  {
+    title: "Entregas",
+    description: "Ver ubicaciones, mapa y estado de cada ruta de entrega.",
+    href: "/admin/entregas",
+    icon: Truck,
   },
   {
     title: "Precios CENADA",
