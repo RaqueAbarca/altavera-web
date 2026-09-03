@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useCart } from "@/hooks/useCart";
 import { getMaturityLabel } from "@/lib/maturity";
+import { DELIVERY_FEE_CRC, formatCRC } from "@/lib/deliveryFee";
 
 export default function CartSummary() {
   const {
     cart,
     totalPrice,
   } = useCart();
+
+  const estimatedTotal = totalPrice + DELIVERY_FEE_CRC;
 
   return (
     <aside className="cart-summary">
@@ -51,13 +54,24 @@ export default function CartSummary() {
 
       <hr className="summary-divider" />
 
-      <div className="summary-row summary-total">
+      <div className="summary-row">
         <span>Subtotal</span>
-
-        <strong>
-          ₡{totalPrice.toLocaleString("es-CR")}
-        </strong>
+        <strong>{formatCRC(totalPrice)}</strong>
       </div>
+
+      <div className="summary-row summary-shipping">
+        <span>Envío</span>
+        <strong>{formatCRC(DELIVERY_FEE_CRC)}</strong>
+      </div>
+
+      <div className="summary-row summary-total">
+        <span>Total estimado</span>
+        <strong>{formatCRC(estimatedTotal)}</strong>
+      </div>
+
+      <p className="summary-checkout-note">
+        El total final se confirma en checkout junto con tu dirección de entrega.
+      </p>
 
       <Link
         href="/checkout"

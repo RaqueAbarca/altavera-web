@@ -184,7 +184,7 @@ export default function LocationPickerClient({
   const [validationError, setValidationError] =
     useState("");
   const [showLocationIntro, setShowLocationIntro] =
-    useState(false);
+    useState(true);
   const [locationPermissionError, setLocationPermissionError] =
     useState("");
   const requestIdRef = useRef(0);
@@ -284,7 +284,7 @@ export default function LocationPickerClient({
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
           setLocationPermissionError(
-            "El permiso de ubicación está bloqueado para Altavera. Puedes habilitarlo desde la configuración del navegador o marcar tu ubicación manualmente en el mapa."
+            "No se concedió el permiso de ubicación. Puedes intentarlo de nuevo o marcar tu ubicación manualmente en el mapa."
           );
           return;
         }
@@ -300,80 +300,6 @@ export default function LocationPickerClient({
       }
     );
   }
-
-  async function getGeolocationPermission() {
-    if (!("permissions" in navigator)) {
-      return null;
-    }
-
-    try {
-      const permission = await navigator.permissions.query({
-        name: "geolocation",
-      });
-      return permission.state;
-    } catch {
-      return null;
-    }
-  }
-
-  async function handleLocationRequest() {
-    setLocationPermissionError("");
-
-    if (!("geolocation" in navigator)) {
-      setLocationPermissionError(
-        "Tu navegador no permite obtener la ubicación automáticamente. Puedes marcarla manualmente en el mapa."
-      );
-      return;
-    }
-
-    const permission = await getGeolocationPermission();
-
-    if (permission === "granted") {
-      requestCurrentLocation();
-      return;
-    }
-
-    if (permission === "denied") {
-      setShowLocationIntro(false);
-      setLocationPermissionError(
-        "El permiso de ubicación está bloqueado para Altavera. Puedes habilitarlo desde la configuración del navegador o marcar tu ubicación manualmente en el mapa."
-      );
-      return;
-    }
-
-    setShowLocationIntro(true);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function prepareLocation() {
-      if (!("geolocation" in navigator)) {
-        return;
-      }
-
-      const permission = await getGeolocationPermission();
-
-      if (cancelled) {
-        return;
-      }
-
-      if (permission === "granted") {
-        requestCurrentLocation();
-        return;
-      }
-
-      if (permission === "prompt") {
-        setShowLocationIntro(true);
-      }
-    }
-
-    void prepareLocation();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   return (
     <div className="map-wrapper">
@@ -475,7 +401,7 @@ export default function LocationPickerClient({
 
         <LocateButton
           onRequestLocation={() => {
-            void handleLocationRequest();
+            setShowLocationIntro(true);
           }}
         />
       </MapContainer>

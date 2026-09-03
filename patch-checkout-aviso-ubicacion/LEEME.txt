@@ -1,0 +1,11 @@
+PATCH CHECKOUT - AVISO PREVIO DE UBICACION
+
+1. Copia la carpeta src encima de tu proyecto y reemplaza el archivo indicado.
+2. No requiere dependencias nuevas.
+3. El permiso de geolocalizacion ya NO se solicita al cargar el checkout.
+4. Primero aparece una ventana de Altavera. Solo al pulsar Compartir mi ubicacion se dispara el permiso real del navegador.
+5. Se conserva la opcion de elegir la ubicacion manualmente.
+
+Luego ejecuta:
+rm -rf .next
+npm run build

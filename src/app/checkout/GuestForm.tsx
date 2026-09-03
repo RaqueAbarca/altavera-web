@@ -13,11 +13,15 @@ import {
   type DeliveryAvailability,
 } from "@/lib/deliveryCoverage";
 import type { DeliveryCycleSummary } from "@/lib/deliverySchedule";
+import { getMaturityLabel } from "@/lib/maturity";
+import { DELIVERY_FEE_CRC, formatCRC } from "@/lib/deliveryFee";
 import "./orderExtras.css";
+import "./checkoutReceipt.css";
 
 export default function GuestForm() {
   const { cart, totalPrice, clearCart } = useCart();
   const router = useRouter();
+  const checkoutTotal = totalPrice + DELIVERY_FEE_CRC;
 
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -288,6 +292,53 @@ export default function GuestForm() {
         </p>
       </div>
 
+      <section className="checkout-receipt" aria-labelledby="checkout-receipt-title">
+        <header className="checkout-receipt__header">
+          <span>Detalle de cobro</span>
+          <h2 id="checkout-receipt-title">Resumen de compra</h2>
+          <p>Revisa el detalle antes de confirmar tu pedido.</p>
+        </header>
+
+        <details className="checkout-receipt__products">
+          <summary>
+            <span>
+              Productos
+              <small>{cart.length} {cart.length === 1 ? "producto" : "productos"}</small>
+            </span>
+            <strong>{formatCRC(totalPrice)}</strong>
+          </summary>
+
+          <div className="checkout-receipt__product-list">
+            {cart.map((item) => {
+              const maturityLabel = getMaturityLabel(item.maturity_preference);
+
+              return (
+                <div className="checkout-receipt__product" key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>
+                      {item.quantity.toLocaleString("es-CR")} {item.unit} × {formatCRC(item.price)}
+                    </span>
+                    {maturityLabel && <small>Maduración: {maturityLabel}</small>}
+                  </div>
+                  <strong>{formatCRC(item.price * item.quantity)}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+
+        <div className="checkout-receipt__row">
+          <span>Envío</span>
+          <strong>{formatCRC(DELIVERY_FEE_CRC)}</strong>
+        </div>
+
+        <div className="checkout-receipt__total">
+          <span>Total a pagar</span>
+          <strong>{formatCRC(checkoutTotal)}</strong>
+        </div>
+      </section>
+
       <button
         type="submit"
         className="checkout-btn"
@@ -300,7 +351,7 @@ export default function GuestForm() {
       >
         {loading
           ? "Creando pedido..."
-          : "Confirmar y pagar ₡" + totalPrice}
+          : `Confirmar y pagar ${formatCRC(checkoutTotal)}`}
       </button>
     </form>
   );

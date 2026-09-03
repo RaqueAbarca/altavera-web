@@ -340,7 +340,15 @@ export async function POST(request: Request) {
       )
     );
 
-    const shipping = 0;
+    const configuredShipping = Number(
+      process.env.NEXT_PUBLIC_DELIVERY_FEE_CRC ?? 0
+    );
+
+    if (!Number.isFinite(configuredShipping) || configuredShipping < 0) {
+      throw new Error("La tarifa de envío configurada no es válida");
+    }
+
+    const shipping = roundMoney(configuredShipping);
     const total = roundMoney(subtotal + shipping);
 
     const supabase = await createSupabaseServerClient();

@@ -246,7 +246,7 @@
   }
 
   .hero-image {
-    margin: 12px -16px 0;
+    margin: 12px 0px 0;
   }
 
   .hero-image img {
@@ -280,15 +280,17 @@
     width: 100%;
   }
 
-  .featured-products {
-    display: flex;
-    gap: 14px;
-    margin-inline: -16px;
-    padding: 0 16px 10px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    margin-left: 10px;
+  .featured-products{
+    display:flex;
+    gap:14px;
+    width:100%;
+    max-width:100%;
+    box-sizing:border-box;
+    margin:0;
+    padding:0 10px 10px;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none;
   }
 
   .featured-products::-webkit-scrollbar {
