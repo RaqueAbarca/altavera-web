@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/adminAuth.server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { invokeNewOrderPush } from "@/lib/invokeNewOrderPush.server";
 
 export const runtime = "nodejs";
 
@@ -15,16 +15,8 @@ export async function POST() {
   }
 
   try {
-    const { data, error } = await supabaseAdmin.functions.invoke(
-      "new-order-push",
-      { body: { test: true } }
-    );
-
-    if (error) {
-      throw error;
-    }
-
-    return NextResponse.json({ ok: true, result: data ?? null });
+    const result = await invokeNewOrderPush({ test: true });
+    return NextResponse.json({ ok: true, result });
   } catch (error) {
     console.error("ERROR ENVIANDO PUSH DE PRUEBA:", error);
     return NextResponse.json(

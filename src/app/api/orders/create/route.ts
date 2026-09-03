@@ -6,6 +6,7 @@ import { isMaturityPreference } from "@/lib/maturity";
 import { DELIVERY_UNAVAILABLE_MESSAGE } from "@/lib/deliveryCoverage";
 import { evaluateDeliveryLocation } from "@/lib/deliveryAvailability.server";
 import { syncDeliveryCycles } from "@/lib/deliveryCycles.server";
+import { invokeNewOrderPush } from "@/lib/invokeNewOrderPush.server";
 
 export const runtime = "nodejs";
 
@@ -399,20 +400,11 @@ export async function POST(request: Request) {
     const orderResult = createdOrder as CreatedOrderRpcRow;
 
     try {
-      const { error: pushError } = await supabaseAdmin.functions.invoke(
-        "new-order-push",
-        {
-          body: {
-            orderId: orderResult.order_id,
-            total: Number(orderResult.order_total),
-            deliveryDate: deliveryCycle.delivery_date,
-          },
-        }
-      );
-
-      if (pushError) {
-        console.error("ERROR ENVIANDO PUSH DE NUEVO PEDIDO:", pushError);
-      }
+      await invokeNewOrderPush({
+        orderId: orderResult.order_id,
+        total: Number(orderResult.order_total),
+        deliveryDate: deliveryCycle.delivery_date,
+      });
     } catch (pushError) {
       // La notificación nunca debe impedir que el pedido se confirme.
       console.error("ERROR ENVIANDO PUSH DE NUEVO PEDIDO:", pushError);

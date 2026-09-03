@@ -32,16 +32,46 @@ function formatDeliveryDate(dateKey?: string) {
   }).format(new Date(`${dateKey}T12:00:00Z`));
 }
 
+function getDatabaseSecretKey() {
+  const rawSecretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (rawSecretKeys) {
+    try {
+      const parsed = JSON.parse(rawSecretKeys) as Record<string, unknown>;
+      const defaultKey = parsed.default;
+      if (typeof defaultKey === "string" && defaultKey.length > 0) {
+        return defaultKey;
+      }
+      const firstKey = Object.values(parsed).find(
+        (value): value is string => typeof value === "string" && value.length > 0
+      );
+      if (firstKey) return firstKey;
+    } catch (error) {
+      console.error("NO SE PUDO LEER SUPABASE_SECRET_KEYS:", error);
+    }
+  }
+
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+}
+
 Deno.serve(async (request) => {
   try {
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const authorization = request.headers.get("Authorization") ?? "";
+    const expectedSecret = Deno.env.get("ALTAVERA_PUSH_INTERNAL_SECRET") ?? "";
+    const receivedSecret = request.headers.get("x-altavera-push-secret") ?? "";
 
-    if (!serviceRoleKey || authorization !== `Bearer ${serviceRoleKey}`) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    if (!expectedSecret) {
+      throw new Error("Falta ALTAVERA_PUSH_INTERNAL_SECRET en Supabase");
+    }
+
+    if (!receivedSecret || receivedSecret !== expectedSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized internal push secret" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    const databaseKey = getDatabaseSecretKey();
+    if (!databaseKey) {
+      throw new Error("Supabase no expuso una llave de servidor para consultar suscripciones");
     }
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
@@ -69,7 +99,7 @@ Deno.serve(async (request) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      serviceRoleKey,
+      databaseKey,
       { auth: { persistSession: false } }
     );
 
