@@ -65,7 +65,7 @@ export default function CoverageMapClient() {
   const coverageMultiPolygon = useMemo(() => buildCoveragePolygons(zones), [zones]);
 
   return (
-    <MapContainer center={[10.015, -84.12]} zoom={10} scrollWheelZoom className="coverage-map">
+    <MapContainer center={[10.016,-84.214]} zoom={14} scrollWheelZoom className="coverage-map">
       <AltaveraMapLayer />
       <Polygon
         positions={coverageMultiPolygon}
