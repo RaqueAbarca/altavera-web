@@ -1,5 +1,5 @@
 import "./globals.css";
-import Header from "@/components/layout/Header";
+import SiteHeader from "@/components/layout/SiteHeader";
 import Footer from "@/components/layout/Footer";
 import { CartProvider } from "@/context/CartContext";
 
@@ -10,10 +10,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      {/* Agregamos suppressHydrationWarning aquí para que las extensiones del navegador no rompan la app */}
       <body suppressHydrationWarning>
         <CartProvider>
-          <Header />
+          <SiteHeader />
           {children}
           <Footer />
         </CartProvider>

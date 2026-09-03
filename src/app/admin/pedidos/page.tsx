@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import ShoppingList from "@/components/admin/ShoppingList";
 import { getMaturityLabel } from "@/lib/maturity";
@@ -68,12 +70,13 @@ type AdminResponse = {
   error?: string;
 };
 
-type StatusTab = "pending" | "preparing" | "ready" | "delivered";
+type StatusTab = "pending" | "confirmed" | "preparing" | "ready" | "delivered";
 
 const STATUS_TABS: Array<{ key: StatusTab; label: string }> = [
-  { key: "pending", label: "Pendientes" },
+  { key: "pending", label: "Pago por confirmar" },
+  { key: "confirmed", label: "Confirmados" },
   { key: "preparing", label: "Preparando" },
-  { key: "ready", label: "Enviados" },
+  { key: "ready", label: "En camino" },
   { key: "delivered", label: "Entregados" },
 ];
 
@@ -255,6 +258,13 @@ export default function AdminOrdersPage() {
   function nextAction(order: Order) {
     if (belongsToTab(order.status, "pending")) {
       return {
+        label: "Confirmar pago",
+        status: "confirmed",
+      };
+    }
+
+    if (order.status === "confirmed") {
+      return {
         label: "Pasar a preparación",
         status: "preparing",
       };
@@ -262,7 +272,7 @@ export default function AdminOrdersPage() {
 
     if (order.status === "preparing") {
       return {
-        label: "Marcar como enviado",
+        label: "Marcar en camino",
         status: "ready",
       };
     }
@@ -289,6 +299,10 @@ export default function AdminOrdersPage() {
     <main className="admin-container orders-admin-page">
       <header className="admin-page-header">
         <div>
+          <Link className="admin-back-link" href="/admin/dashboard">
+            <ArrowLeft size={17} strokeWidth={2} aria-hidden="true" />
+            Volver al panel
+          </Link>
           <h1>Panel de pedidos</h1>
           <p>Pedidos organizados por fecha de entrega y estado.</p>
         </div>

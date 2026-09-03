@@ -21,10 +21,11 @@ type Order = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Pendiente",
-  pending_payment: "Pendiente de pago",
+  pending: "Pago por confirmar",
+  pending_payment: "Pago por confirmar",
+  confirmed: "Pago confirmado",
   preparing: "Preparando",
-  ready: "Enviado",
+  ready: "En camino",
   delivered: "Entregado",
 };
 

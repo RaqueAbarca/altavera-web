@@ -6,6 +6,8 @@ import {
   useState
 } from "react";
 
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 import CenadaPendingList from "./CenadaPendingList";
@@ -645,6 +647,10 @@ export default function PreciosPage(){
 
       <header className="prices-page-header">
         <div>
+          <Link className="prices-back-link" href="/admin/dashboard">
+            <ArrowLeft size={17} strokeWidth={2} aria-hidden="true" />
+            Volver al panel
+          </Link>
           <h1 className="prices-title">
             Administración de precios
           </h1>

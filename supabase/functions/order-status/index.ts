@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const allowedStatuses = new Set([
   "pending_payment",
+  "confirmed",
   "preparing",
   "ready",
   "delivered",
@@ -39,6 +40,12 @@ Hemos recibido tu pedido en Altavera. 🌿
 Total del pedido: ₡${total.toLocaleString("es-CR")}
 En este momento estamos esperando la confirmación de tu pago. Una vez recibido, comenzaremos a preparar tu pedido.
 ¡Gracias por confiar en nosotros!`;
+
+    case "confirmed":
+      return `¡Hola, ${customerName}!
+Tu pago fue confirmado correctamente. ✅
+Tu pedido ya quedó confirmado en Altavera y será preparado para la fecha de entrega seleccionada.
+Te avisaremos cuando comencemos a prepararlo.`;
 
     case "preparing":
       return `¡Hola, ${customerName}!

@@ -153,6 +153,10 @@
   background: #7f8c8d;
 }
 
+.status.confirmed {
+  background: #2563eb;
+}
+
 .status.preparing {
   background: #d97706;
 }

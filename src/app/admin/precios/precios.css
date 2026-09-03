@@ -1474,6 +1474,23 @@
   margin-bottom:22px;
 }
 
+
+.prices-back-link{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-bottom:9px;
+  color:#1f402a;
+  text-decoration:none;
+  font-size:.9rem;
+  font-weight:700;
+}
+
+.prices-back-link:hover{
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+
 .prices-page-header .prices-title{
   margin-bottom:8px;
 }

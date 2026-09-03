@@ -81,6 +81,23 @@
   margin-bottom: 28px;
 }
 
+
+.admin-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: var(--green);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.admin-back-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .admin-page-header h1 {
   margin-bottom: 0;
 }
@@ -388,7 +405,7 @@
 
 .order-status-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem;
   margin-bottom: 1rem;
 }
