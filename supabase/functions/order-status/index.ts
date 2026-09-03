@@ -48,8 +48,8 @@ Te avisaremos nuevamente cuando tu pedido esté listo para la entrega.`;
 
     case "ready":
       return `¡Hola, ${customerName}!
-¡Tu pedido ya está listo! 📦
-Nuestro equipo lo entregará muy pronto en la dirección que registraste.
+Tu pedido ya salió para entrega. 📦
+Va en camino a la dirección que registraste.
 Gracias por comprar en Altavera.`;
 
     case "delivered":

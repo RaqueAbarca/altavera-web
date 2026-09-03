@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/useCart";
 import { supabase } from "@/lib/supabase"; // 👈 Importamos supabase
+import DeliveryNotice from "./DeliveryNotice";
 import {
   Menu,
   X,
@@ -83,6 +84,7 @@ export default function Header() {
 
   return (
     <header className="header">
+      {!pathname.startsWith("/admin") && <DeliveryNotice />}
       <div className="container header-inner">
 
         {/* Logo */}

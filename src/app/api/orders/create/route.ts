@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isMaturityPreference } from "@/lib/maturity";
 import { DELIVERY_UNAVAILABLE_MESSAGE } from "@/lib/deliveryCoverage";
 import { evaluateDeliveryLocation } from "@/lib/deliveryAvailability.server";
+import { syncDeliveryCycles } from "@/lib/deliveryCycles.server";
 
 export const runtime = "nodejs";
 
@@ -22,6 +23,7 @@ type IncomingOrder = {
   longitude?: unknown;
   address_description?: unknown;
   customer_notes?: unknown;
+  delivery_cycle_id?: unknown;
 };
 
 type IncomingBody = {
@@ -36,6 +38,14 @@ type ProductRow = {
   unit: string;
   is_active: boolean;
   maturity_selection_enabled: boolean;
+};
+
+type CreatedOrderRpcRow = {
+  order_id: string;
+  access_token: string;
+  order_subtotal: number | string;
+  order_shipping: number | string;
+  order_total: number | string;
 };
 
 function cleanText(value: unknown, maxLength: number) {
@@ -161,6 +171,48 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: DELIVERY_UNAVAILABLE_MESSAGE },
         { status: 400 }
+      );
+    }
+
+    const deliveryCycleId = cleanText(
+      incomingOrder.delivery_cycle_id,
+      80
+    );
+
+    if (!deliveryCycleId) {
+      return NextResponse.json(
+        { error: "Selecciona una fecha de entrega" },
+        { status: 400 }
+      );
+    }
+
+    await syncDeliveryCycles();
+
+    const {
+      data: deliveryCycle,
+      error: deliveryCycleError,
+    } = await supabaseAdmin
+      .from("delivery_cycles")
+      .select("id,delivery_date,cutoff_at,status")
+      .eq("id", deliveryCycleId)
+      .maybeSingle();
+
+    if (deliveryCycleError) {
+      throw deliveryCycleError;
+    }
+
+    if (
+      !deliveryCycle ||
+      deliveryCycle.status !== "open" ||
+      new Date(deliveryCycle.cutoff_at).getTime() <= Date.now()
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "El corte para esa entrega ya finalizó. Selecciona una nueva fecha para continuar.",
+          code: "DELIVERY_CUTOFF_PASSED",
+        },
+        { status: 409 }
       );
     }
 
@@ -301,55 +353,57 @@ export async function POST(request: Request) {
       data: createdOrder,
       error: orderError,
     } = await supabaseAdmin
-      .from("orders")
-      .insert({
-        customer_id: user?.id ?? null,
-        user_id: user?.id ?? null,
-        guest_name: guestName,
-        guest_email: guestEmailRaw || null,
-        guest_phone: phoneDigits,
-        latitude,
-        longitude,
-        address_description: addressDescription || null,
-        customer_notes: customerNotes || null,
-        subtotal,
-        shipping,
-        total,
-        payment_method: "SINPE",
-        status: "pending_payment",
-        order_access_token: accessToken,
+      .rpc("altavera_create_order_with_items", {
+        p_customer_id: user?.id ?? null,
+        p_guest_name: guestName,
+        p_guest_email: guestEmailRaw || null,
+        p_guest_phone: phoneDigits,
+        p_latitude: latitude,
+        p_longitude: longitude,
+        p_address_description: addressDescription || null,
+        p_customer_notes: customerNotes || null,
+        p_delivery_cycle_id: deliveryCycle.id,
+        p_subtotal: subtotal,
+        p_shipping: shipping,
+        p_total: total,
+        p_payment_method: "SINPE",
+        p_status: "pending_payment",
+        p_order_access_token: accessToken,
+        p_items: authoritativeItems.map((item) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          price: item.price,
+          quantity: item.quantity,
+          maturity_preference: item.maturity_preference,
+        })),
       })
-      .select("id,order_access_token,subtotal,shipping,total")
       .single();
 
     if (orderError || !createdOrder) {
+      if (
+        orderError?.message?.includes("DELIVERY_CUTOFF_PASSED")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "El corte para esa entrega ya finalizó. Selecciona una nueva fecha para continuar.",
+            code: "DELIVERY_CUTOFF_PASSED",
+          },
+          { status: 409 }
+        );
+      }
+
       throw orderError ?? new Error("No se pudo crear el pedido");
     }
 
-    const itemsToInsert = authoritativeItems.map((item) => ({
-      ...item,
-      order_id: createdOrder.id,
-    }));
-
-    const { error: itemError } = await supabaseAdmin
-      .from("order_item")
-      .insert(itemsToInsert);
-
-    if (itemError) {
-      await supabaseAdmin
-        .from("orders")
-        .delete()
-        .eq("id", createdOrder.id);
-
-      throw itemError;
-    }
+    const orderResult = createdOrder as CreatedOrderRpcRow;
 
     return NextResponse.json({
-      id: createdOrder.id,
-      accessToken: createdOrder.order_access_token,
-      subtotal: Number(createdOrder.subtotal),
-      shipping: Number(createdOrder.shipping),
-      total: Number(createdOrder.total),
+      id: orderResult.order_id,
+      accessToken: orderResult.access_token,
+      subtotal: Number(orderResult.order_subtotal),
+      shipping: Number(orderResult.order_shipping),
+      total: Number(orderResult.order_total),
     });
   } catch (error) {
     console.error("ERROR CREANDO PEDIDO SEGURO:", error);

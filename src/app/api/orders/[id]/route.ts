@@ -37,6 +37,9 @@ export async function GET(
         payment_method,
         status,
         created_at,
+        delivery_cycles(
+          delivery_date
+        ),
         order_item(
           id,
           product_name,
@@ -93,6 +96,7 @@ export async function GET(
       payment_method: order.payment_method,
       status: order.status,
       created_at: order.created_at,
+      delivery_cycle: order.delivery_cycles ?? null,
       order_item: order.order_item ?? [],
     });
   } catch (error) {

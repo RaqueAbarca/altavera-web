@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/hooks/useCart";
 import LocationPicker from "@/components/checkout/LocationPicker";
+import DeliveryDateSelector from "@/components/checkout/DeliveryDateSelector";
 import { createOrder } from "./createOrder";
 import type { GuestLocation, OrderInput } from "./types";
 import {
   DELIVERY_UNAVAILABLE_MESSAGE,
   type DeliveryAvailability,
 } from "@/lib/deliveryCoverage";
+import type { DeliveryCycleSummary } from "@/lib/deliverySchedule";
 import "./orderExtras.css";
 
 export default function GuestForm() {
@@ -27,6 +29,53 @@ export default function GuestForm() {
   });
   const [deliveryAvailability, setDeliveryAvailability] =
     useState<DeliveryAvailability | null>(null);
+  const [deliveryCycles, setDeliveryCycles] = useState<DeliveryCycleSummary[]>([]);
+  const [selectedDeliveryCycleId, setSelectedDeliveryCycleId] = useState("");
+  const [deliveryCyclesLoading, setDeliveryCyclesLoading] = useState(true);
+  const [deliveryCyclesError, setDeliveryCyclesError] = useState("");
+
+
+  async function loadDeliveryCycles() {
+    setDeliveryCyclesLoading(true);
+    setDeliveryCyclesError("");
+
+    try {
+      const response = await fetch("/api/delivery-cycles/available", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "No se pudieron cargar las próximas entregas"
+        );
+      }
+
+      const cycles = (data.cycles ?? []) as DeliveryCycleSummary[];
+      setDeliveryCycles(cycles);
+      setSelectedDeliveryCycleId((current) =>
+        cycles.some((cycle) => cycle.id === current)
+          ? current
+          : cycles[0]?.id ?? ""
+      );
+    } catch (error) {
+      setDeliveryCycles([]);
+      setSelectedDeliveryCycleId("");
+      setDeliveryCyclesError(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron cargar las próximas entregas"
+      );
+    } finally {
+      setDeliveryCyclesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadDeliveryCycles();
+    const timer = window.setInterval(loadDeliveryCycles, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -64,6 +113,11 @@ export default function GuestForm() {
       return;
     }
 
+    if (!selectedDeliveryCycleId) {
+      alert("Selecciona una fecha de entrega.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -81,6 +135,7 @@ export default function GuestForm() {
           String(data.get("address") ?? "").trim() || null,
         customer_notes:
           String(data.get("customer_notes") ?? "").trim() || null,
+        delivery_cycle_id: selectedDeliveryCycleId,
       };
 
       const createdOrder = await createOrder({
@@ -94,6 +149,13 @@ export default function GuestForm() {
       );
     } catch (error) {
       console.error("ERROR CREANDO PEDIDO:", error);
+
+      if (
+        error instanceof Error &&
+        (error as Error & { code?: string }).code === "DELIVERY_CUTOFF_PASSED"
+      ) {
+        await loadDeliveryCycles();
+      }
       alert(
         error instanceof Error
           ? error.message
@@ -174,6 +236,14 @@ export default function GuestForm() {
         />
       </label>
 
+      <DeliveryDateSelector
+        cycles={deliveryCycles}
+        selectedId={selectedDeliveryCycleId}
+        loading={deliveryCyclesLoading}
+        error={deliveryCyclesError}
+        onChange={setSelectedDeliveryCycleId}
+      />
+
       <h2>Dirección de entrega</h2>
 
       <LocationPicker
@@ -223,6 +293,8 @@ export default function GuestForm() {
         className="checkout-btn"
         disabled={
           loading ||
+          deliveryCyclesLoading ||
+          !selectedDeliveryCycleId ||
           !deliveryAvailability?.available
         }
       >

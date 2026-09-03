@@ -271,3 +271,130 @@
   background: #fff5ef;
   color: #8a4a24;
 }
+
+/* --- FECHA DE ENTREGA --- */
+.delivery-date-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.delivery-date-heading h2 {
+  margin-bottom: 0.35rem;
+}
+
+.delivery-date-heading p,
+.delivery-date-loading,
+.delivery-date-error,
+.delivery-date-confirmation {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.delivery-date-heading p,
+.delivery-date-loading,
+.delivery-date-confirmation {
+  color: var(--gray);
+}
+
+.delivery-date-error {
+  padding: 0.9rem 1rem;
+  border: 1px solid #f0c9bb;
+  border-radius: 12px;
+  background: #fff5ef;
+  color: #8a4a24;
+}
+
+.delivery-date-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.guest-form .delivery-date-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.8rem;
+  min-height: 150px;
+  padding: 1rem;
+  border: 1.5px solid #e6e8e4;
+  border-radius: 16px;
+  background: #fbfcf9;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.guest-form .delivery-date-card:hover {
+  border-color: rgba(31, 64, 42, 0.4);
+  transform: translateY(-1px);
+}
+
+.guest-form .delivery-date-card--selected {
+  border-color: var(--green);
+  background: #f4f8f2;
+  box-shadow: 0 0 0 3px rgba(31, 64, 42, 0.08);
+}
+
+.guest-form .delivery-date-card input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--green);
+  flex: 0 0 18px;
+}
+
+.delivery-date-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.delivery-date-card-topline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.delivery-date-card-topline strong {
+  color: var(--green);
+  font-size: 0.98rem;
+  text-transform: capitalize;
+}
+
+.delivery-date-card-topline em {
+  width: fit-content;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--white);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.delivery-date-countdown {
+  color: #9a5522;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.delivery-date-cutoff {
+  color: var(--gray);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-transform: capitalize;
+}
+
+@media (max-width: 640px) {
+  .delivery-date-options {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-form .delivery-date-card {
+    min-height: auto;
+  }
+}

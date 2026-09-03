@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { getMaturityLabel } from "@/lib/maturity";
+import { formatDeliveryDate } from "@/lib/deliverySchedule";
 import "./pedido.css";
 
 type OrderItem = {
@@ -22,6 +23,7 @@ type Order = {
   payment_method: string;
   status: string;
   created_at: string;
+  delivery_cycle: { delivery_date: string } | null;
   order_item: OrderItem[];
 };
 
@@ -115,6 +117,15 @@ export default function PedidoPage({
         <strong>
           #{order.id.slice(0, 8)}
         </strong>
+
+        {order.delivery_cycle?.delivery_date && (
+          <div className="pedido-delivery-date">
+            <span>Entrega programada</span>
+            <strong>
+              {formatDeliveryDate(order.delivery_cycle.delivery_date)}
+            </strong>
+          </div>
+        )}
 
         <div className="pedido-items">
           {order.order_item.map((item) => {

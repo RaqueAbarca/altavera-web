@@ -324,3 +324,53 @@
     position: static;
   }
 }
+/* ========================================
+   AVISO DE PRÓXIMA ENTREGA
+======================================== */
+.delivery-notice {
+  background: var(--green);
+  color: var(--white);
+  font-size: 0.82rem;
+}
+
+.delivery-notice--urgent {
+  background: var(--orange);
+}
+
+.delivery-notice-inner {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 18px;
+  text-align: center;
+}
+
+.delivery-notice-inner strong {
+  font-weight: 800;
+}
+
+.delivery-notice-inner span {
+  opacity: 0.96;
+}
+
+.delivery-notice-inner span + span::before {
+  content: "•";
+  margin-right: 18px;
+  opacity: 0.7;
+}
+
+@media (max-width: 780px) {
+  .delivery-notice-inner {
+    min-height: 44px;
+    padding-block: 6px;
+    gap: 2px;
+    flex-direction: column;
+    font-size: 0.76rem;
+    line-height: 1.25;
+  }
+
+  .delivery-notice-inner span + span::before {
+    content: none;
+  }
+}

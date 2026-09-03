@@ -11,6 +11,7 @@ export type OrderInput = {
   longitude: number;
   address_description: string | null;
   customer_notes: string | null;
+  delivery_cycle_id: string;
 };
 
 export type CreatedOrder = {

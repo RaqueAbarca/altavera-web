@@ -20,7 +20,13 @@ type Order = {
   items: OrderItem[];
 };
 
-
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  pending_payment: "Pendiente de pago",
+  preparing: "Preparando",
+  ready: "Enviado",
+  delivered: "Entregado",
+};
 
 export default function RecentOrders() {
 
@@ -232,7 +238,7 @@ export default function RecentOrders() {
                 className={`status ${order.status}`}
               >
 
-                {order.status}
+                {STATUS_LABELS[order.status] ?? order.status}
 
               </span>
 

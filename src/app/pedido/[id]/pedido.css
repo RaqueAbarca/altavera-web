@@ -109,3 +109,25 @@
     font-size: 0.9rem;
   }
 }
+
+.pedido-delivery-date {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: #f3f7f1;
+  color: var(--green);
+}
+
+.pedido-delivery-date span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pedido-delivery-date strong {
+  text-transform: capitalize;
+}

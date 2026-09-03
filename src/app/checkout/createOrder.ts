@@ -31,9 +31,11 @@ export async function createOrder({
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       data.error ?? "No se pudo crear el pedido"
-    );
+    ) as Error & { code?: string };
+    error.code = data.code;
+    throw error;
   }
 
   return data as CreatedOrder;
