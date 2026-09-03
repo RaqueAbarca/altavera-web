@@ -398,6 +398,26 @@ export async function POST(request: Request) {
 
     const orderResult = createdOrder as CreatedOrderRpcRow;
 
+    try {
+      const { error: pushError } = await supabaseAdmin.functions.invoke(
+        "new-order-push",
+        {
+          body: {
+            orderId: orderResult.order_id,
+            total: Number(orderResult.order_total),
+            deliveryDate: deliveryCycle.delivery_date,
+          },
+        }
+      );
+
+      if (pushError) {
+        console.error("ERROR ENVIANDO PUSH DE NUEVO PEDIDO:", pushError);
+      }
+    } catch (pushError) {
+      // La notificación nunca debe impedir que el pedido se confirme.
+      console.error("ERROR ENVIANDO PUSH DE NUEVO PEDIDO:", pushError);
+    }
+
     return NextResponse.json({
       id: orderResult.order_id,
       accessToken: orderResult.access_token,

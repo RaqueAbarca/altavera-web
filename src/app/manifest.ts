@@ -5,6 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Altavera",
     short_name: "Altavera",
     description: "Frutas y verduras frescas para condominios.",
+    id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",

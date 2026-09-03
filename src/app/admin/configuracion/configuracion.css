@@ -1,0 +1,134 @@
+.admin-settings-page {
+  max-width: 920px;
+}
+
+.admin-settings-header p {
+  margin: 0.4rem 0 0;
+  color: var(--gray);
+}
+
+.admin-setting-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  padding: clamp(20px, 4vw, 28px);
+  border: 1px solid #e6ece7;
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: 0 8px 28px rgba(31, 64, 42, 0.07);
+}
+
+.admin-setting-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  background: #eef5ef;
+  color: var(--green);
+}
+
+.admin-setting-icon--active {
+  background: #e5f4e8;
+  color: #246b32;
+}
+
+.admin-setting-icon--denied,
+.admin-setting-icon--unsupported,
+.admin-setting-icon--misconfigured {
+  background: #fff0eb;
+  color: #a33b22;
+}
+
+.admin-setting-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #6d7b70;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-setting-content h2,
+.admin-setting-help h2 {
+  margin: 0;
+  color: #1e2921;
+  font-size: 1.2rem;
+}
+
+.admin-setting-content > p {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: #5c685f;
+  line-height: 1.55;
+}
+
+.admin-setting-note,
+.admin-setting-message {
+  margin-top: 15px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f6f8f5;
+  color: #405047;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.admin-setting-message {
+  border-left: 3px solid var(--green);
+}
+
+.admin-setting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.admin-setting-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 1px solid var(--green);
+  border-radius: 10px;
+  background: var(--green);
+  color: var(--white);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 750;
+}
+
+.admin-setting-button--secondary {
+  background: var(--white);
+  color: var(--green);
+}
+
+.admin-setting-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-setting-help {
+  margin-top: 18px;
+  padding: 20px 22px;
+  border: 1px solid #eceeea;
+  border-radius: 16px;
+  background: #fbfcfa;
+}
+
+.admin-setting-help p {
+  margin: 9px 0 0;
+  color: #657068;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .admin-setting-card {
+    grid-template-columns: 1fr;
+  }
+}

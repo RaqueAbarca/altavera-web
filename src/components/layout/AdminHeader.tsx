@@ -16,6 +16,7 @@ import {
   MapPinned,
   Menu,
   Package,
+  Settings,
   Truck,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const adminLinks = [
   { name: "Precios", href: "/admin/precios", icon: BadgeDollarSign },
   { name: "Productos", href: "/admin/productos", icon: Package },
   { name: "Cobertura", href: "/admin/cobertura", icon: MapPinned },
+  { name: "Configuración", href: "/admin/configuracion", icon: Settings },
 ];
 
 export default function AdminHeader() {
