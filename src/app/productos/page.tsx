@@ -6,6 +6,7 @@ import ProductsSection from "@/components/productos/ProductsSection";
 import ProductFilters from "@/components/productos/productFilters";
 import { supabase } from "@/lib/supabase";
 import SearchBar from "@/components/productos/SearchBar";
+import LoginPromo from "@/components/home/LoginPromo";
 
 type Product = {
   id: number;
@@ -51,6 +52,8 @@ export default function ProductosPage() {
           <Link href="/">Inicio</Link> {" >"} Productos
         </p>
       </div>
+
+      <LoginPromo />
 
       <SearchBar
         value={search}
