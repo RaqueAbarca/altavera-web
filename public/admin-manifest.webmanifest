@@ -1,0 +1,20 @@
+{
+  "name": "Altavera Admin",
+  "short_name": "Admin",
+  "description": "Panel de administración de Altavera.",
+  "id": "/admin",
+  "start_url": "/admin/dashboard",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1F402A",
+  "theme_color": "#1F402A",
+  "icons": [
+    {
+      "src": "/admin-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
