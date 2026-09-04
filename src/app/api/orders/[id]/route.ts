@@ -31,6 +31,7 @@ export async function GET(
         user_id,
         order_access_token,
         customer_notes,
+        address_description,
         subtotal,
         shipping,
         total,
@@ -90,6 +91,7 @@ export async function GET(
     return NextResponse.json({
       id: order.id,
       customer_notes: order.customer_notes,
+      address_description: order.address_description,
       subtotal: Number(order.subtotal),
       shipping: Number(order.shipping),
       total: Number(order.total),

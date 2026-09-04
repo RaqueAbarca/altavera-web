@@ -9,6 +9,7 @@ import { buildOrderOnTheWayMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { playAdminSound } from "@/lib/adminSounds";
 import ShoppingList from "@/components/admin/ShoppingList";
 import { getMaturityLabel } from "@/lib/maturity";
+import { getPaymentMethodLabel } from "@/lib/paymentMethods";
 import {
   formatCutoffLabel,
   formatDeliveryDate,
@@ -33,6 +34,7 @@ type Order = {
   guest_name: string;
   guest_phone: string;
   total: number | string;
+  payment_method: string;
   status: string;
   created_at: string;
   customer_notes: string | null;
@@ -457,6 +459,9 @@ export default function AdminOrdersPage() {
                             <div>
                               <h3>Pedido #{order.id.slice(0, 8)}</h3>
                               <p>{order.guest_name} · {order.guest_phone}</p>
+                              <span className="order-payment-method">
+                                {getPaymentMethodLabel(order.payment_method)}
+                              </span>
                             </div>
                             <strong>₡{Number(order.total).toLocaleString("es-CR")}</strong>
                           </div>

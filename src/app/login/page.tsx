@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legalConsent";
 import "./login.css";
 
 export default function ClientLoginPage() {
@@ -18,6 +20,8 @@ export default function ClientLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +31,14 @@ export default function ClientLoginPage() {
 
     try {
       if (isRegister) {
+        if (!legalAccepted) {
+          throw new Error("Debes aceptar los Términos y Condiciones para crear tu cuenta.");
+        }
+
+        const acceptedAt = new Date().toISOString();
+
         // --- REGISTRO DE NUEVO CLIENTE CON DATOS DE PERFIL ---
-        const { data, error: signupError } = await supabase.auth.signUp({
+        const { error: signupError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -37,6 +47,12 @@ export default function ClientLoginPage() {
             data: {
               full_name: name,
               phone: phone,
+              terms_version: TERMS_VERSION,
+              terms_accepted_at: acceptedAt,
+              privacy_version: PRIVACY_VERSION,
+              privacy_acknowledged_at: acceptedAt,
+              marketing_opt_in: marketingOptIn,
+              marketing_opt_in_at: marketingOptIn ? acceptedAt : null,
             }
           },
         });
@@ -48,6 +64,8 @@ export default function ClientLoginPage() {
         // Limpiamos los campos adicionales
         setName("");
         setPhone("");
+        setLegalAccepted(false);
+        setMarketingOptIn(false);
       } else {
         // --- INICIO DE SESIÓN ---
         const { error: loginError } = await supabase.auth.signInWithPassword({
@@ -134,12 +152,39 @@ export default function ClientLoginPage() {
           />
         </div>
 
+        {isRegister && (
+          <div className="consent-options">
+            <label className="consent-option consent-option--required">
+              <input
+                type="checkbox"
+                checked={legalAccepted}
+                onChange={(e) => setLegalAccepted(e.target.checked)}
+                required
+              />
+              <span>
+                Acepto los <Link href="/terminos-y-condiciones" target="_blank">Términos y Condiciones</Link> y confirmo haber leído la <Link href="/privacidad" target="_blank">Política de Privacidad</Link>.
+              </span>
+            </label>
+
+            <label className="consent-option">
+              <input
+                type="checkbox"
+                checked={marketingOptIn}
+                onChange={(e) => setMarketingOptIn(e.target.checked)}
+              />
+              <span>
+                Acepto recibir ofertas y novedades de Altavera por correo electrónico y/o WhatsApp.
+              </span>
+            </label>
+          </div>
+        )}
+
         {error && <p className="error-message">{error}</p>}
         {message && <p className="success-message">{message}</p>}
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || (isRegister && !legalAccepted)}
           className="submit-button"
         >
           {loading ? "Cargando..." : isRegister ? "Registrarse" : "Ingresar"}
@@ -153,6 +198,8 @@ export default function ClientLoginPage() {
             setIsRegister(!isRegister);
             setError("");
             setMessage("");
+            setLegalAccepted(false);
+            setMarketingOptIn(false);
           }}
           className="toggle-button"
         >

@@ -32,7 +32,7 @@ const quickQuestions = [
   },
   {
     title: "Consulta sobre entregas",
-    message: "Hola, tengo una consulta sobre las entregas y zonas de cobertura de Altavera.",
+    message: "Hola, tengo una consulta sobre las entregas y la zona de cobertura de Altavera.",
     icon: FaTruck,
   },
   {
@@ -103,7 +103,7 @@ export default function ContactPage() {
               <FaMapMarkerAlt />
               <div>
                 <strong>Zona de cobertura</strong>
-                <p>Consulta en el mapa nuestras zonas de entrega actuales.</p>
+                <p>Consulta en el mapa nuestra zona de entrega actual.</p>
               </div>
             </a>
           </div>
@@ -169,7 +169,7 @@ export default function ContactPage() {
         <div className="coverage-heading">
           <span className="coverage-kicker">Entregas</span>
           <h2>¿Llegamos hasta tu zona?</h2>
-          <p>Consulta en el mapa nuestras zonas de entrega actuales.</p>
+          <p>Consulta en el mapa nuestra zona de entrega actual.</p>
         </div>
 
         <div className="map-section" aria-label="Mapa de cobertura de Altavera">

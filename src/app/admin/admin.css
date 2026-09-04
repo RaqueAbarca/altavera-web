@@ -479,6 +479,17 @@
   white-space: nowrap;
 }
 
+.order-payment-method {
+  display: inline-flex;
+  margin-top: 0.45rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: #eef3ee;
+  color: var(--green-light);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
 .order-customer-notes {
   margin: 0.9rem 0;
   padding: 0.8rem 0.9rem;

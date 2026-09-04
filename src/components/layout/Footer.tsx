@@ -10,15 +10,10 @@ export default function Footer() {
     <footer className="footer">
       <div className="container footer-content">
         <div className="footer-brand">
-          <img
-            src="/logowhite.svg"
-            alt="Altavera"
-            className="footer-logo"
-          />
+          <img src="/logowhite.svg" alt="Altavera" className="footer-logo" />
 
           <p>
-            Comprometidos con llevar a tu hogar
-            productos frescos, premium y de origen
+            Comprometidos con llevar a tu hogar productos frescos, premium y de origen
             con el mejor servicio.
           </p>
 
@@ -47,41 +42,27 @@ export default function Footer() {
 
         <div className="footer-column">
           <h4>Enlaces</h4>
-
           <Link href="/">Inicio</Link>
           <Link href="/productos">Productos</Link>
           <Link href="/nosotros">Nosotros</Link>
           <Link href="/contacto">Contacto</Link>
-          <span className="footer-link-disabled" title="Próximamente">
-            Política de privacidad
-          </span>
+          <Link href="/zona-de-cobertura">Zona de cobertura</Link>
         </div>
 
         <div className="footer-column">
           <h4>Ayuda</h4>
-
-          <span className="footer-link-disabled" title="Próximamente">
-            Preguntas frecuentes
-          </span>
-          <span className="footer-link-disabled" title="Próximamente">
-            Términos y condiciones
-          </span>
-          <span className="footer-link-disabled" title="Próximamente">
-            Política de envíos
-          </span>
-          <span className="footer-link-disabled" title="Próximamente">
-            Cambios y devoluciones
-          </span>
+          <Link href="/ayuda">Centro de ayuda</Link>
+          <Link href="/preguntas-frecuentes">Preguntas frecuentes</Link>
+          <Link href="/envios">Política de envíos</Link>
+          <Link href="/cambios-y-devoluciones">Cambios y devoluciones</Link>
         </div>
 
         <div className="footer-column">
-          <h4>Zonas de cobertura</h4>
-
-          <Link href="/zona-de-cobertura">Alajuela</Link>
-          <Link href="/zona-de-cobertura">Heredia</Link>
-          <Link href="/zona-de-cobertura">Belén, Santa Bárbara y San Isidro</Link>
-          <Link href="/zona-de-cobertura">Tibás y Moravia</Link>
+          <h4>Legal</h4>
+          <Link href="/terminos-y-condiciones">Términos y condiciones</Link>
+          <Link href="/privacidad">Política de privacidad</Link>
         </div>
+
       </div>
 
       <div className="footer-bottom">

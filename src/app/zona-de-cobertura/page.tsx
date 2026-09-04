@@ -7,16 +7,6 @@ const areas = [
     province: "Alajuela",
     places: "Cantón de Alajuela, excepto Sarapiquí",
   },
-  {
-    province: "Heredia",
-    places:
-      "Heredia centro, Belén, Santa Bárbara, San Isidro, San Pablo, Barva y San Rafael",
-  },
-  {
-    province: "San José",
-    places:
-      "Tibás, Moravia, Escazú, Santa Ana, Pavas y alrededores de La Sabana",
-  },
 ];
 
 export default function ZonaDeCoberturaPage() {
@@ -28,9 +18,9 @@ export default function ZonaDeCoberturaPage() {
         </span>
         <h1>Zona de cobertura</h1>
         <p>
-          Actualmente realizamos entregas en sectores de
-          Alajuela, Heredia y San José. Consulta el mapa para
-          conocer nuestra cobertura actual.
+          Por ahora realizamos entregas únicamente en nuestra zona habilitada
+          del cantón de Alajuela. Consulta el mapa para confirmar si tu
+          dirección se encuentra dentro de la cobertura actual.
         </p>
       </section>
 

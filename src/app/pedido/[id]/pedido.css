@@ -1,133 +1,320 @@
 .pedido-page {
-  min-height: 65vh;
-  padding-block: clamp(32px, 5vw, 54px);
+  width: min(100%, 1380px);
+  padding-top: clamp(2rem, 4vw, 3.5rem);
+  padding-bottom: clamp(4rem, 7vw, 7rem);
 }
-
-.success-card {
+.pedido-state {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  color: var(--gray);
+}
+.pedido-error-card {
   width: min(100%, 620px);
-  margin-inline: auto;
-  padding: clamp(22px, 4vw, 36px);
-  border: 1px solid rgba(31, 64, 42, 0.06);
+  padding: 2rem;
   border-radius: 22px;
   background: var(--white);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+  text-align: center;
 }
-
-.success-card h1 {
-  margin-bottom: 10px;
-  font-size: clamp(1.8rem, 5vw, 2.4rem);
+.pedido-confirmation-hero {
+  max-width: 760px;
+  margin: 0 auto clamp(2.2rem, 5vw, 4rem);
+  text-align: center;
 }
-
-.success-card h3 {
-  margin-top: 22px;
-  margin-bottom: 8px;
+.pedido-confirmation-icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  place-items: center;
+  border-radius: 20px;
+  background: #e8f0e8;
+  color: var(--green-light);
+}
+.pedido-confirmation-hero > span {
+  color: var(--green-light);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.pedido-confirmation-hero h1 {
+  margin: 0.45rem 0 0;
+  color: #202522;
+  font-size: clamp(2.7rem, 6vw, 5rem);
+  letter-spacing: -0.04em;
+}
+.pedido-confirmation-hero p {
+  max-width: 610px;
+  margin: 0.85rem auto 0;
+  color: #6f746f;
+  font-size: 0.98rem;
+}
+.pedido-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.pedido-card {
+  border: 1px solid rgba(31,64,42,0.09);
+  border-radius: 24px;
+  background: rgba(255,255,255,0.68);
+  box-shadow: 0 18px 48px rgba(31,64,42,0.05);
+}
+.pedido-card--main { padding: clamp(1.35rem, 3vw, 2rem); }
+.pedido-number {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.35rem;
+  border-bottom: 1px solid rgba(31,64,42,0.1);
+}
+.pedido-number span {
+  color: #8a8e8a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pedido-number strong {
   color: var(--green);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
 }
-
-.pedido-items {
-  margin-top: 18px;
+.pedido-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 0.8rem;
+  padding: 1.35rem 0;
 }
-
+.pedido-facts > div {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 0.2rem 0.65rem;
+  align-items: start;
+  padding: 1rem;
+  border-radius: 16px;
+  background: #f5f6f2;
+  color: var(--green-light);
+}
+.pedido-facts svg { grid-row: 1 / span 2; }
+.pedido-facts span {
+  color: #878b87;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.pedido-facts strong {
+  color: #333834;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-transform: capitalize;
+}
+.pedido-payment-box {
+  margin-top: 0.2rem;
+  padding: 1.2rem;
+  border: 1px solid rgba(201,120,51,0.2);
+  border-radius: 18px;
+  background: #fbf5ed;
+}
+.pedido-payment-box__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--orange);
+}
+.pedido-payment-box__heading span {
+  color: #9a7658;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pedido-payment-box__heading h2 {
+  margin: 0.12rem 0 0;
+  color: #54351f;
+  font-size: 1.15rem;
+}
+.pedido-payment-box > p {
+  margin: 0.9rem 0 0;
+  color: #75685e;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+.pedido-payment-details {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+.pedido-payment-details p {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  color: #776b62;
+  font-size: 0.78rem;
+}
+.pedido-payment-details strong {
+  color: #4c3423;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.pedido-payment-details small { color: #8b7d72; font-size: 0.7rem; }
+.pedido-summary-card {
+  position: sticky;
+  top: 110px;
+  overflow: hidden;
+}
+.pedido-summary-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 1.35rem 1.4rem 0.7rem;
+  color: var(--green-light);
+}
+.pedido-summary-heading h2 { margin: 0; color: #2b302c; font-size: 1.35rem; }
+.pedido-items { padding: 0 1.4rem; }
 .pedido-item {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 11px 0;
-  border-bottom: 1px solid #eee;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(31,64,42,0.08);
 }
-
-.pedido-item span {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.pedido-item > div { display: grid; gap: 0.1rem; min-width: 0; }
+.pedido-item > div strong {
+  overflow: hidden;
+  color: #393e3a;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.pedido-item strong {
-  flex-shrink: 0;
+.pedido-item span,
+.pedido-item small { color: #8b8f8b; font-size: 0.68rem; }
+.pedido-item > strong { color: #333834; font-size: 0.76rem; white-space: nowrap; }
+.pedido-notes {
+  margin: 1rem 1.4rem 0;
+  padding: 0.8rem;
+  border-radius: 13px;
+  background: #f6f4ef;
 }
-
+.pedido-notes span {
+  color: #878b87;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.pedido-notes p { margin: 0.25rem 0 0; color: #666b67; font-size: 0.72rem; line-height: 1.45; }
 .pedido-totals {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  margin-top: 18px;
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.2rem 1.4rem 1.4rem;
 }
-
-.pedido-total-row {
+.pedido-totals > div {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1rem;
+  color: #777b77;
+  font-size: 0.76rem;
 }
-
-.pedido-total-row.final {
-  margin-top: 4px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e5e5;
-  color: var(--green);
-  font-size: 1.08rem;
+.pedido-totals strong { color: #333834; }
+.pedido-total-row--final {
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(31,64,42,0.14);
+  color: #202521 !important;
+  font-size: 0.9rem !important;
+  font-weight: 800;
 }
-
-.payment-box {
-  margin-top: 24px;
-  padding: 18px;
-  border-radius: 16px;
-  background: #f5f7f5;
+.pedido-total-row--final strong { color: var(--green); font-size: 1.2rem; }
+.pedido-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.7rem;
 }
-
-.payment-box h3 {
-  margin-top: 0;
-}
-
-.payment-box p {
-  margin-bottom: 6px;
-}
-
-.pedido-back-link {
+.pedido-primary-action {
   display: inline-flex;
+  min-height: 48px;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  margin-top: 22px;
-  padding: 10px 16px;
-  border: 1px solid var(--green);
-  border-radius: 10px;
-  color: var(--green);
-  font-weight: 600;
+  padding: 0.8rem 1.2rem;
+  border-radius: 13px;
+  background: var(--green);
+  color: var(--white);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+.pedido-primary-action:hover { background: var(--green-light); }
+@media (max-width: 900px) {
+  .pedido-layout { grid-template-columns: 1fr; }
+  .pedido-summary-card { position: static; }
+}
+@media (max-width: 580px) {
+  .pedido-page { padding-top: 1.4rem; }
+  .pedido-facts { grid-template-columns: 1fr; }
+  .pedido-number { align-items: flex-start; flex-direction: column; }
+  .pedido-payment-details p { align-items: flex-start; flex-direction: column; gap: 0.15rem; }
+  .pedido-payment-details strong { text-align: left; }
 }
 
-@media (max-width: 520px) {
-  .pedido-page {
-    padding-top: 24px;
-  }
-
-  .success-card {
-    border-radius: 18px;
-  }
-
-  .pedido-item,
-  .pedido-total-row {
-    font-size: 0.9rem;
-  }
+.pedido-proof-reminder {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(201,120,51,0.18);
+  color: var(--orange);
 }
-
-.pedido-delivery-date {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin: 1rem 0;
-  padding: 0.9rem 1rem;
-  border-radius: 12px;
-  background: #f3f7f1;
-  color: var(--green);
-}
-
-.pedido-delivery-date span {
-  font-size: 0.78rem;
-  font-weight: 700;
+.pedido-proof-reminder > div { display: grid; gap: 0.3rem; }
+.pedido-proof-reminder span {
+  color: #9a7658;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
-
-.pedido-delivery-date strong {
-  text-transform: capitalize;
+.pedido-proof-reminder h3 {
+  margin: 0;
+  color: #4c3423;
+  font-size: 1rem;
+}
+.pedido-proof-reminder p {
+  margin: 0;
+  color: #75685e;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.pedido-proof-reminder small {
+  color: #8b7d72;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.pedido-whatsapp-action {
+  display: inline-flex;
+  min-height: 46px;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: var(--green);
+  color: var(--white);
+  font-size: 0.8rem;
+  font-weight: 800;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.pedido-whatsapp-action:hover {
+  background: var(--green-light);
+  transform: translateY(-1px);
+}
+@media (max-width: 580px) {
+  .pedido-whatsapp-action { width: 100%; }
 }

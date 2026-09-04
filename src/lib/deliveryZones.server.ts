@@ -16,6 +16,19 @@ type DeliveryZoneRow = {
   sort_order: number | null;
 };
 
+const CURRENT_PUBLIC_INCLUDE_ZONE_NAMES = new Set([
+  "alajuela",
+  "alajuela central",
+  "cantón de alajuela",
+  "canton de alajuela",
+]);
+
+function isCurrentPublicIncludeZone(zone: DeliveryZone) {
+  return CURRENT_PUBLIC_INCLUDE_ZONE_NAMES.has(
+    zone.name.trim().toLocaleLowerCase("es-CR")
+  );
+}
+
 function legacyZones(): DeliveryZone[] {
   return DELIVERY_COVERAGE_ZONES.map((zone, index) => ({
     id: zone.id,
@@ -41,7 +54,7 @@ export async function getDeliveryZones(): Promise<DeliveryZone[]> {
     throw error;
   }
 
-  return ((data ?? []) as DeliveryZoneRow[]).flatMap((row) => {
+  const parsedZones = ((data ?? []) as DeliveryZoneRow[]).flatMap((row) => {
     if (!Array.isArray(row.polygon)) return [];
     const polygon = row.polygon
       .filter((point): point is [number, number] =>
@@ -59,6 +72,17 @@ export async function getDeliveryZones(): Promise<DeliveryZone[]> {
       sortOrder: row.sort_order ?? 0,
     }];
   });
+
+  // Lanzamiento: solo se publica la zona de Alajuela.
+  // Las demás pueden conservarse en admin desactivadas o preparadas para una expansión futura.
+  const exclusions = parsedZones.filter((zone) => zone.type === "exclude");
+  const alajuelaZones = parsedZones.filter(
+    (zone) => zone.type === "include" && isCurrentPublicIncludeZone(zone)
+  );
+
+  return alajuelaZones.length > 0
+    ? [...alajuelaZones, ...exclusions]
+    : [...legacyZones(), ...exclusions];
 }
 
 export async function evaluateStoredDeliveryLocation(

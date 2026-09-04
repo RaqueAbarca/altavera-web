@@ -7,6 +7,12 @@ import { DELIVERY_UNAVAILABLE_MESSAGE } from "@/lib/deliveryCoverage";
 import { evaluateDeliveryLocation } from "@/lib/deliveryAvailability.server";
 import { syncDeliveryCycles } from "@/lib/deliveryCycles.server";
 import { invokeNewOrderPush } from "@/lib/invokeNewOrderPush.server";
+import {
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+  hasCurrentLegalConsent,
+} from "@/lib/legalConsent";
+import { isPaymentMethod } from "@/lib/paymentMethods";
 
 export const runtime = "nodejs";
 
@@ -25,6 +31,9 @@ type IncomingOrder = {
   address_description?: unknown;
   customer_notes?: unknown;
   delivery_cycle_id?: unknown;
+  legal_accepted?: unknown;
+  marketing_opt_in?: unknown;
+  payment_method?: unknown;
 };
 
 type IncomingBody = {
@@ -57,6 +66,66 @@ function cleanText(value: unknown, maxLength: number) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+
+async function subscribeMarketing({
+  userId,
+  email,
+  phone,
+  source,
+  consentedAt,
+}: {
+  userId: string | null;
+  email: string | null;
+  phone: string;
+  source: "account_checkout" | "guest_checkout";
+  consentedAt: string;
+}) {
+  const rows: Array<{
+    user_id: string | null;
+    channel: "email" | "whatsapp";
+    destination: string;
+    status: "subscribed";
+    consented_at: string;
+    revoked_at: null;
+    source: string;
+    updated_at: string;
+  }> = [];
+
+  if (email) {
+    rows.push({
+      user_id: userId,
+      channel: "email",
+      destination: email.toLowerCase(),
+      status: "subscribed",
+      consented_at: consentedAt,
+      revoked_at: null,
+      source,
+      updated_at: consentedAt,
+    });
+  }
+
+  if (phone) {
+    rows.push({
+      user_id: userId,
+      channel: "whatsapp",
+      destination: phone,
+      status: "subscribed",
+      consented_at: consentedAt,
+      revoked_at: null,
+      source,
+      updated_at: consentedAt,
+    });
+  }
+
+  if (rows.length === 0) return;
+
+  const { error } = await supabaseAdmin
+    .from("marketing_subscriptions")
+    .upsert(rows, { onConflict: "channel,destination" });
+
+  if (error) throw error;
 }
 
 function isQuantityValid(quantity: number, unit: string) {
@@ -145,6 +214,132 @@ export async function POST(request: Request) {
         { error: "Ingresa un correo válido" },
         { status: 400 }
       );
+    }
+
+    const legalAcceptedInput = incomingOrder.legal_accepted === true;
+    const marketingOptIn = incomingOrder.marketing_opt_in === true;
+    const paymentMethod = cleanText(incomingOrder.payment_method, 40);
+
+    if (!isPaymentMethod(paymentMethod)) {
+      return NextResponse.json(
+        { error: "Selecciona un método de pago válido" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let accountConsent: {
+      terms_version: string | null;
+      terms_accepted_at: string | null;
+      privacy_version: string | null;
+      privacy_acknowledged_at: string | null;
+      marketing_opt_in: boolean;
+      marketing_opt_in_at: string | null;
+    } | null = null;
+
+    if (user) {
+      const { data, error } = await supabaseAdmin
+        .from("customer_consents")
+        .select(
+          "terms_version,terms_accepted_at,privacy_version,privacy_acknowledged_at,marketing_opt_in,marketing_opt_in_at"
+        )
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("ERROR LEYENDO CONSENTIMIENTO DEL CLIENTE:", error);
+      } else {
+        accountConsent = data;
+      }
+    }
+
+    const metadataTermsVersion =
+      typeof user?.user_metadata?.terms_version === "string"
+        ? user.user_metadata.terms_version
+        : null;
+    const metadataPrivacyVersion =
+      typeof user?.user_metadata?.privacy_version === "string"
+        ? user.user_metadata.privacy_version
+        : null;
+
+    const accountHasCurrentLegalConsent = Boolean(
+      user &&
+        hasCurrentLegalConsent({
+          termsVersion:
+            accountConsent?.terms_version ?? metadataTermsVersion,
+          privacyVersion:
+            accountConsent?.privacy_version ?? metadataPrivacyVersion,
+        })
+    );
+
+    const accountMarketingOptIn =
+      accountConsent?.marketing_opt_in === true ||
+      user?.user_metadata?.marketing_opt_in === true;
+    const effectiveMarketingOptIn =
+      accountMarketingOptIn || marketingOptIn;
+
+    if (!accountHasCurrentLegalConsent && !legalAcceptedInput) {
+      return NextResponse.json(
+        {
+          error:
+            "Debes aceptar los Términos y Condiciones para continuar con el pedido",
+        },
+        { status: 400 }
+      );
+    }
+
+    const consentedNow = new Date().toISOString();
+    const termsAcceptedAt = accountHasCurrentLegalConsent
+      ? accountConsent?.terms_accepted_at ??
+        (typeof user?.user_metadata?.terms_accepted_at === "string"
+          ? user.user_metadata.terms_accepted_at
+          : consentedNow)
+      : consentedNow;
+    const privacyAcknowledgedAt = accountHasCurrentLegalConsent
+      ? accountConsent?.privacy_acknowledged_at ??
+        (typeof user?.user_metadata?.privacy_acknowledged_at === "string"
+          ? user.user_metadata.privacy_acknowledged_at
+          : consentedNow)
+      : consentedNow;
+
+    if (user && (!accountHasCurrentLegalConsent || !accountConsent)) {
+      const mergedMarketingOptIn = effectiveMarketingOptIn;
+
+      const { error: consentError } = await supabaseAdmin
+        .from("customer_consents")
+        .upsert(
+          {
+            user_id: user.id,
+            terms_version: TERMS_VERSION,
+            terms_accepted_at: termsAcceptedAt,
+            privacy_version: PRIVACY_VERSION,
+            privacy_acknowledged_at: privacyAcknowledgedAt,
+            marketing_opt_in: mergedMarketingOptIn,
+            marketing_opt_in_at: mergedMarketingOptIn
+              ? accountConsent?.marketing_opt_in_at ?? consentedNow
+              : null,
+            updated_at: consentedNow,
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (consentError) {
+        throw consentError;
+      }
+    }
+
+    if (marketingOptIn) {
+      await subscribeMarketing({
+        userId: user?.id ?? null,
+        email: guestEmailRaw || user?.email || null,
+        phone: phoneDigits,
+        source: user ? "account_checkout" : "guest_checkout",
+        consentedAt: consentedNow,
+      });
     }
 
     const latitude = Number(incomingOrder.latitude);
@@ -351,11 +546,6 @@ export async function POST(request: Request) {
     const shipping = roundMoney(configuredShipping);
     const total = roundMoney(subtotal + shipping);
 
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     const accessToken = randomUUID();
 
     const {
@@ -375,7 +565,7 @@ export async function POST(request: Request) {
         p_subtotal: subtotal,
         p_shipping: shipping,
         p_total: total,
-        p_payment_method: "SINPE",
+        p_payment_method: paymentMethod,
         p_status: "pending_payment",
         p_order_access_token: accessToken,
         p_items: authoritativeItems.map((item) => ({
@@ -406,6 +596,29 @@ export async function POST(request: Request) {
     }
 
     const orderResult = createdOrder as CreatedOrderRpcRow;
+
+    const { error: legalRecordError } = await supabaseAdmin
+      .from("orders")
+      .update({
+        terms_version: TERMS_VERSION,
+        terms_accepted_at: termsAcceptedAt,
+        privacy_version: PRIVACY_VERSION,
+        privacy_acknowledged_at: privacyAcknowledgedAt,
+        marketing_opt_in: effectiveMarketingOptIn,
+        marketing_opt_in_at: effectiveMarketingOptIn
+          ? accountConsent?.marketing_opt_in_at ?? consentedNow
+          : null,
+      })
+      .eq("id", orderResult.order_id);
+
+    if (legalRecordError) {
+      // El pedido ya fue creado. No devolvemos error para evitar duplicarlo
+      // si el cliente intenta pagar otra vez, pero dejamos trazabilidad en logs.
+      console.error(
+        "ERROR GUARDANDO ACEPTACIÓN LEGAL DEL PEDIDO:",
+        legalRecordError
+      );
+    }
 
     try {
       await invokeNewOrderPush({

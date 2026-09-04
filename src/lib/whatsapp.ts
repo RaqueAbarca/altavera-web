@@ -38,3 +38,18 @@ export function buildWhatsAppUrl(input: {
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(input.message)}`;
 }
+
+export function buildPaymentProofMessage(input: {
+  orderId: string;
+  total: string;
+  paymentMethod: string;
+}) {
+  const shortOrderId = input.orderId.slice(0, 8).toUpperCase();
+
+  return [
+    "Hola, Altavera.",
+    `Adjunto el comprobante de pago de mi pedido #${shortOrderId} por ${input.total}.`,
+    `Método de pago: ${input.paymentMethod}.`,
+    "Por favor, confirmen cuando el pago haya sido verificado.",
+  ].join("\n\n");
+}
