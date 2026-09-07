@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bell, BellOff, CheckCircle2, Play, Smartphone, TriangleAlert, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, CheckCircle2, Play, Save, Smartphone, TriangleAlert, Truck, Volume2, VolumeX, WalletCards } from "lucide-react";
 import {
   ADMIN_SOUNDS,
   getAdminSoundsEnabled,
@@ -11,8 +11,29 @@ import {
   setAdminSoundsEnabled,
   setAdminSoundsVolume,
 } from "@/lib/adminSounds";
+import type { AdminAppSettings, BankAccountSettings } from "@/lib/appSettings";
 import "../admin.css";
 import "./configuracion.css";
+
+
+const EMPTY_BANK_ACCOUNT: BankAccountSettings = {
+  bankName: "",
+  accountHolder: "",
+  accountNumber: "",
+  iban: "",
+};
+
+const EMPTY_OPERATIONAL_SETTINGS: AdminAppSettings = {
+  deliveryFlatFeeCrc: null,
+  sinpePhone: "",
+  sinpeHolder: "",
+  bankAccounts: [
+    { ...EMPTY_BANK_ACCOUNT },
+    { ...EMPTY_BANK_ACCOUNT },
+  ],
+  whatsappPhone: "",
+  contactEmail: "",
+};
 
 type PushState =
   | "checking"
@@ -52,6 +73,12 @@ export default function AdminConfiguracionPage() {
   const [soundsEnabled, setSoundsEnabledState] = useState(true);
   const [soundVolume, setSoundVolumeState] = useState(0.85);
   const [soundMessage, setSoundMessage] = useState("");
+  const [operationalSettings, setOperationalSettings] = useState<AdminAppSettings>(
+    EMPTY_OPERATIONAL_SETTINGS
+  );
+  const [operationalLoading, setOperationalLoading] = useState(true);
+  const [operationalSaving, setOperationalSaving] = useState(false);
+  const [operationalMessage, setOperationalMessage] = useState("");
 
   const stateCopy = useMemo(() => {
     switch (state) {
@@ -96,9 +123,88 @@ export default function AdminConfiguracionPage() {
 
   useEffect(() => {
     void checkPushState();
+    void loadOperationalSettings();
     setSoundsEnabledState(getAdminSoundsEnabled());
     setSoundVolumeState(getAdminSoundsVolume());
   }, []);
+
+  async function loadOperationalSettings() {
+    setOperationalLoading(true);
+    setOperationalMessage("");
+
+    try {
+      const response = await fetch("/api/admin/settings", { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo cargar la configuración operativa");
+      }
+
+      setOperationalSettings(data as AdminAppSettings);
+    } catch (error) {
+      setOperationalMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo cargar la configuración operativa"
+      );
+    } finally {
+      setOperationalLoading(false);
+    }
+  }
+
+  function updateOperationalSetting<K extends keyof AdminAppSettings>(
+    key: K,
+    value: AdminAppSettings[K]
+  ) {
+    setOperationalSettings((current) => ({ ...current, [key]: value }));
+    setOperationalMessage("");
+  }
+
+  function updateBankAccount(
+    index: number,
+    key: keyof BankAccountSettings,
+    value: string
+  ) {
+    setOperationalSettings((current) => {
+      const bankAccounts = [...current.bankAccounts];
+      bankAccounts[index] = {
+        ...(bankAccounts[index] ?? EMPTY_BANK_ACCOUNT),
+        [key]: value,
+      };
+      return { ...current, bankAccounts };
+    });
+    setOperationalMessage("");
+  }
+
+  async function saveOperationalSettings() {
+    setOperationalSaving(true);
+    setOperationalMessage("");
+
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(operationalSettings),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo guardar la configuración");
+      }
+
+      const { ok: _ok, ...saved } = data as AdminAppSettings & { ok?: boolean };
+      setOperationalSettings(saved);
+      setOperationalMessage("Configuración guardada. Los cambios ya están activos en la tienda.");
+    } catch (error) {
+      setOperationalMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar la configuración"
+      );
+    } finally {
+      setOperationalSaving(false);
+    }
+  }
 
   async function getRegistration() {
     return navigator.serviceWorker.register("/admin-push-sw.js", { scope: "/" });
@@ -316,6 +422,210 @@ export default function AdminConfiguracionPage() {
           <p>Ajustes del panel administrativo de Altavera.</p>
         </div>
       </header>
+
+      <section className="admin-setting-card admin-business-card">
+        <div className="admin-setting-icon" aria-hidden="true">
+          <Truck size={24} strokeWidth={1.8} />
+        </div>
+
+        <div className="admin-setting-content">
+          <span className="admin-setting-kicker">Entregas</span>
+          <h2>Tarifa de envío</h2>
+          <p>
+            Este monto se usa automáticamente en carrito, checkout y al crear el pedido.
+            Ya no depende de una variable de Vercel.
+          </p>
+
+          <div className="admin-business-fields admin-business-fields--compact">
+            <label className="admin-business-field">
+              <span>Tarifa fija actual</span>
+              <div className="admin-money-input">
+                <span>₡</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={operationalSettings.deliveryFlatFeeCrc ?? ""}
+                  onChange={(event) =>
+                    updateOperationalSetting(
+                      "deliveryFlatFeeCrc",
+                      event.target.value === "" ? null : Number(event.target.value)
+                    )
+                  }
+                  placeholder="Ej: 1500"
+                  disabled={operationalLoading}
+                />
+              </div>
+              <small>Puede ser ₡0 si decidís ofrecer envío gratuito.</small>
+            </label>
+          </div>
+
+          <div className="admin-setting-note">
+            Por ahora Altavera usa tarifa fija. La configuración quedó guardada en Supabase para que más adelante podamos cambiarla a cálculo por distancia usando la ubicación del cliente, sin volver a depender de Vercel.
+          </div>
+
+          {operationalMessage && (
+            <div className="admin-setting-message">{operationalMessage}</div>
+          )}
+
+          <div className="admin-setting-actions">
+            <button
+              type="button"
+              className="admin-setting-button"
+              onClick={saveOperationalSettings}
+              disabled={operationalLoading || operationalSaving}
+            >
+              <Save size={18} />
+              {operationalSaving ? "Guardando..." : "Guardar tarifa"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="admin-setting-card admin-business-card">
+        <div className="admin-setting-icon" aria-hidden="true">
+          <WalletCards size={24} strokeWidth={1.8} />
+        </div>
+
+        <div className="admin-setting-content">
+          <span className="admin-setting-kicker">Pagos y contacto</span>
+          <h2>Datos públicos de Altavera</h2>
+          <p>
+            Estos datos pueden mostrarse al cliente. Guardarlos aquí permite cambiarlos sin hacer un deployment.
+          </p>
+
+          <div className="admin-business-subsection">
+            <h3>SINPE Móvil</h3>
+            <div className="admin-business-fields">
+              <label className="admin-business-field">
+                <span>Número SINPE</span>
+                <input
+                  type="text"
+                  value={operationalSettings.sinpePhone}
+                  onChange={(event) => updateOperationalSetting("sinpePhone", event.target.value)}
+                  placeholder="Ej: 8888 8888"
+                  disabled={operationalLoading}
+                />
+              </label>
+              <label className="admin-business-field">
+                <span>Titular</span>
+                <input
+                  type="text"
+                  value={operationalSettings.sinpeHolder}
+                  onChange={(event) => updateOperationalSetting("sinpeHolder", event.target.value)}
+                  placeholder="Nombre del titular"
+                  disabled={operationalLoading}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="admin-business-subsection">
+            <h3>Transferencia bancaria</h3>
+            <p className="admin-business-help">
+              Puedes configurar hasta dos cuentas. En Banco Nacional, el número de cuenta es útil para transferencias entre cuentas BN; el IBAN sirve para transferencias desde otros bancos.
+            </p>
+
+            <div className="admin-bank-accounts">
+              {operationalSettings.bankAccounts.map((account, index) => (
+                <div className="admin-bank-account-card" key={index}>
+                  <div className="admin-bank-account-card__heading">
+                    <strong>Cuenta bancaria {index + 1}</strong>
+                    {index === 1 && <span>Opcional</span>}
+                  </div>
+
+                  <div className="admin-business-fields">
+                    <label className="admin-business-field">
+                      <span>Banco</span>
+                      <input
+                        type="text"
+                        value={account.bankName}
+                        onChange={(event) => updateBankAccount(index, "bankName", event.target.value)}
+                        placeholder={index === 0 ? "Ej: Banco Nacional" : "Ej: BAC"}
+                        disabled={operationalLoading}
+                      />
+                    </label>
+                    <label className="admin-business-field">
+                      <span>Titular de la cuenta</span>
+                      <input
+                        type="text"
+                        value={account.accountHolder}
+                        onChange={(event) => updateBankAccount(index, "accountHolder", event.target.value)}
+                        placeholder="Nombre del titular"
+                        disabled={operationalLoading}
+                      />
+                    </label>
+                    <label className="admin-business-field">
+                      <span>Número de cuenta</span>
+                      <input
+                        type="text"
+                        value={account.accountNumber}
+                        onChange={(event) => updateBankAccount(index, "accountNumber", event.target.value)}
+                        placeholder="Ej: 200-01-..."
+                        disabled={operationalLoading}
+                      />
+                    </label>
+                    <label className="admin-business-field">
+                      <span>Cuenta IBAN</span>
+                      <input
+                        type="text"
+                        value={account.iban}
+                        onChange={(event) => updateBankAccount(index, "iban", event.target.value)}
+                        placeholder="CR..."
+                        disabled={operationalLoading}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="admin-business-subsection">
+            <h3>Atención al cliente</h3>
+            <div className="admin-business-fields">
+              <label className="admin-business-field">
+                <span>WhatsApp de Altavera</span>
+                <input
+                  type="tel"
+                  value={operationalSettings.whatsappPhone}
+                  onChange={(event) => updateOperationalSetting("whatsappPhone", event.target.value)}
+                  placeholder="Ej: 8888 8888"
+                  disabled={operationalLoading}
+                />
+                <small>Se usa también para recibir comprobantes de pago.</small>
+              </label>
+              <label className="admin-business-field">
+                <span>Correo de atención</span>
+                <input
+                  type="email"
+                  value={operationalSettings.contactEmail}
+                  onChange={(event) => updateOperationalSetting("contactEmail", event.target.value)}
+                  placeholder="Ej: hola@altaveraenlinea.com"
+                  disabled={operationalLoading}
+                />
+              </label>
+            </div>
+          </div>
+
+          {operationalMessage && (
+            <div className="admin-setting-message">{operationalMessage}</div>
+          )}
+
+          <div className="admin-setting-actions">
+            <button
+              type="button"
+              className="admin-setting-button"
+              onClick={saveOperationalSettings}
+              disabled={operationalLoading || operationalSaving}
+            >
+              <Save size={18} />
+              {operationalSaving ? "Guardando..." : "Guardar datos"}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="admin-setting-card">
         <div className={`admin-setting-icon admin-setting-icon--${state}`} aria-hidden="true">

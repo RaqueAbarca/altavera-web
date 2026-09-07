@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import "./contacto.css";
 import CoverageMap from "@/components/coverage/CoverageMap";
+import { usePublicAppSettings } from "@/hooks/usePublicAppSettings";
+import { buildWhatsAppUrl, normalizeWhatsAppPhone } from "@/lib/whatsapp";
 import {
   FaWhatsapp,
   FaPhoneAlt,
@@ -12,12 +16,6 @@ import {
   FaQuestionCircle,
   FaArrowRight,
 } from "react-icons/fa";
-
-const WHATSAPP_NUMBER = "50686526792";
-
-function whatsappUrl(message: string) {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-}
 
 const quickQuestions = [
   {
@@ -42,7 +40,27 @@ const quickQuestions = [
   },
 ];
 
+function displayPhone(value: string) {
+  const normalized = normalizeWhatsAppPhone(value);
+  if (!normalized) return value;
+  const local = normalized.startsWith("506") && normalized.length === 11
+    ? normalized.slice(3)
+    : normalized;
+  return local.length === 8 ? `${local.slice(0, 4)} ${local.slice(4)}` : value;
+}
+
 export default function ContactPage() {
+  const { settings, loading } = usePublicAppSettings();
+  const whatsappPhone = settings.contact.whatsappPhone;
+  const contactEmail = settings.contact.email;
+  const normalizedPhone = normalizeWhatsAppPhone(whatsappPhone);
+
+  function whatsappUrl(message: string) {
+    return buildWhatsAppUrl({ phone: whatsappPhone, message });
+  }
+
+  const generalWhatsappUrl = whatsappUrl("Hola, tengo una consulta sobre Altavera.");
+
   return (
     <main className="contact-page container">
       <section className="contact-hero">
@@ -61,43 +79,49 @@ export default function ContactPage() {
           </nav>
 
           <div className="info-list">
-            <a
-              className="info-item info-item-link"
-              href={whatsappUrl("Hola, tengo una consulta sobre Altavera.")}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Escribir a Altavera por WhatsApp"
-            >
-              <FaWhatsapp />
-              <div>
-                <strong>WhatsApp</strong>
-                <p>8652 6792</p>
-              </div>
-            </a>
+            {generalWhatsappUrl && (
+              <a
+                className="info-item info-item-link"
+                href={generalWhatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Escribir a Altavera por WhatsApp"
+              >
+                <FaWhatsapp />
+                <div>
+                  <strong>WhatsApp</strong>
+                  <p>{displayPhone(whatsappPhone)}</p>
+                </div>
+              </a>
+            )}
 
-            <a
-              className="info-item info-item-link"
-              href="tel:+50686526792"
-              aria-label="Llamar a Altavera"
-            >
-              <FaPhoneAlt />
-              <div>
-                <strong>Teléfono</strong>
-                <p>8652 6792</p>
-              </div>
-            </a>
+            {normalizedPhone && (
+              <a
+                className="info-item info-item-link"
+                href={`tel:+${normalizedPhone}`}
+                aria-label="Llamar a Altavera"
+              >
+                <FaPhoneAlt />
+                <div>
+                  <strong>Teléfono</strong>
+                  <p>{displayPhone(whatsappPhone)}</p>
+                </div>
+              </a>
+            )}
 
-            <a
-              className="info-item info-item-link"
-              href="mailto:hola@altavera.cr"
-              aria-label="Enviar correo a Altavera"
-            >
-              <FaEnvelope />
-              <div>
-                <strong>Correo</strong>
-                <p>hola@altavera.cr</p>
-              </div>
-            </a>
+            {contactEmail && (
+              <a
+                className="info-item info-item-link"
+                href={`mailto:${contactEmail}`}
+                aria-label="Enviar correo a Altavera"
+              >
+                <FaEnvelope />
+                <div>
+                  <strong>Correo</strong>
+                  <p>{contactEmail}</p>
+                </div>
+              </a>
+            )}
 
             <a className="info-item info-item-link" href="#coverage-map">
               <FaMapMarkerAlt />
@@ -107,6 +131,12 @@ export default function ContactPage() {
               </div>
             </a>
           </div>
+
+          {!loading && !generalWhatsappUrl && !contactEmail && (
+            <p className="contact-actions-note">
+              Nuestros canales oficiales de atención se publicarán aquí cuando estén habilitados.
+            </p>
+          )}
         </div>
 
         <div className="contact-actions-card">
@@ -117,43 +147,53 @@ export default function ContactPage() {
             <div>
               <h2>¿En qué podemos ayudarte?</h2>
               <p>
-                Elige una opción y te llevamos directo a WhatsApp con el mensaje
-                listo para enviar.
+                {generalWhatsappUrl
+                  ? "Elige una opción y te llevamos directo a WhatsApp con el mensaje listo para enviar."
+                  : "Cuando habilitemos nuestro WhatsApp oficial podrás iniciar una consulta desde aquí."}
               </p>
             </div>
           </div>
 
-          <div className="quick-question-list">
-            {quickQuestions.map(({ title, message, icon: Icon }) => (
+          {generalWhatsappUrl && (
+            <>
+              <div className="quick-question-list">
+                {quickQuestions.map(({ title, message, icon: Icon }) => {
+                  const href = whatsappUrl(message);
+                  if (!href) return null;
+
+                  return (
+                    <a
+                      key={title}
+                      className="quick-question"
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="quick-question-icon" aria-hidden="true">
+                        <Icon />
+                      </span>
+                      <span>{title}</span>
+                      <FaArrowRight className="quick-question-arrow" aria-hidden="true" />
+                    </a>
+                  );
+                })}
+              </div>
+
               <a
-                key={title}
-                className="quick-question"
-                href={whatsappUrl(message)}
+                className="whatsapp-main-button"
+                href={generalWhatsappUrl}
                 target="_blank"
                 rel="noreferrer"
               >
-                <span className="quick-question-icon" aria-hidden="true">
-                  <Icon />
-                </span>
-                <span>{title}</span>
-                <FaArrowRight className="quick-question-arrow" aria-hidden="true" />
+                <FaWhatsapp aria-hidden="true" />
+                Escribir por WhatsApp
               </a>
-            ))}
-          </div>
 
-          <a
-            className="whatsapp-main-button"
-            href={whatsappUrl("Hola, tengo una consulta sobre Altavera.")}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <FaWhatsapp aria-hidden="true" />
-            Escribir por WhatsApp
-          </a>
-
-          <p className="contact-actions-note">
-            Se abrirá una conversación con Altavera en WhatsApp.
-          </p>
+              <p className="contact-actions-note">
+                Se abrirá una conversación con Altavera en WhatsApp.
+              </p>
+            </>
+          )}
         </div>
 
         <div className="contact-image">
@@ -181,17 +221,21 @@ export default function ContactPage() {
             <h3>¿Todavía no llegamos hasta tu zona?</h3>
             <p>Contanos dónde te gustaría que Altavera amplíe sus entregas.</p>
           </div>
-          <a
-            className="coverage-suggestion-button"
-            href={whatsappUrl(
-              "Hola, me gustaría proponer una nueva zona de entrega para Altavera. La ubicación es:"
-            )}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <FaMapMarkerAlt aria-hidden="true" />
-            Proponer una nueva zona
-          </a>
+          {whatsappUrl(
+            "Hola, me gustaría proponer una nueva zona de entrega para Altavera. La ubicación es:"
+          ) ? (
+            <a
+              className="coverage-suggestion-button"
+              href={whatsappUrl(
+                "Hola, me gustaría proponer una nueva zona de entrega para Altavera. La ubicación es:"
+              )!}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <FaMapMarkerAlt aria-hidden="true" />
+              Proponer una nueva zona
+            </a>
+          ) : null}
         </div>
       </section>
     </main>

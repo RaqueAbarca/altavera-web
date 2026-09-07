@@ -318,3 +318,39 @@
 @media (max-width: 580px) {
   .pedido-whatsapp-action { width: 100%; }
 }
+
+.pedido-bank-accounts {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.95rem;
+}
+
+.pedido-bank-accounts__intro {
+  margin: 0 !important;
+  color: #75685e;
+  font-size: 0.78rem;
+}
+
+.pedido-bank-account {
+  padding: 0.85rem 0.9rem;
+  border: 1px solid rgba(93, 67, 47, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.pedido-bank-account__title {
+  display: block;
+  margin-bottom: 0.6rem;
+  color: #54351f;
+  font-size: 0.84rem;
+}
+
+.pedido-bank-account .pedido-payment-details {
+  margin-top: 0;
+}
+
+.pedido-payment-details--total {
+  margin-top: 0.1rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(93, 67, 47, 0.12);
+}

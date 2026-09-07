@@ -240,3 +240,155 @@
     grid-template-columns: auto 1fr 42px;
   }
 }
+
+.admin-business-card {
+  margin-bottom: 18px;
+}
+
+.admin-business-subsection {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid #edf0ed;
+}
+
+.admin-business-subsection h3 {
+  margin: 0 0 12px;
+  color: #26352b;
+  font-size: 0.98rem;
+}
+
+.admin-business-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.admin-business-fields--compact {
+  grid-template-columns: minmax(220px, 360px);
+}
+
+.admin-business-field {
+  display: grid;
+  gap: 7px;
+  color: #445348;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.admin-business-field--wide {
+  grid-column: 1 / -1;
+}
+
+.admin-business-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #ccd7cf;
+  border-radius: 10px;
+  background: #fff;
+  color: #223128;
+  font: inherit;
+  font-weight: 550;
+  outline: none;
+}
+
+.admin-business-field input:focus {
+  border-color: #6aa777;
+  box-shadow: 0 0 0 3px rgba(67, 123, 78, 0.11);
+}
+
+.admin-business-field input:disabled {
+  background: #f4f6f4;
+  color: #7b857d;
+}
+
+.admin-business-field small {
+  color: #778179;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.admin-money-input {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #ccd7cf;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.admin-money-input:focus-within {
+  border-color: #6aa777;
+  box-shadow: 0 0 0 3px rgba(67, 123, 78, 0.11);
+}
+
+.admin-money-input > span {
+  padding-left: 12px;
+  color: #536157;
+  font-weight: 800;
+}
+
+.admin-money-input input {
+  border: 0;
+  box-shadow: none;
+}
+
+.admin-money-input input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .admin-business-fields,
+  .admin-business-fields--compact {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-business-field--wide {
+    grid-column: auto;
+  }
+}
+
+.admin-business-help {
+  margin: -4px 0 14px;
+  color: #6f7a72;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.admin-bank-accounts {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-bank-account-card {
+  padding: 16px;
+  border: 1px solid #e1e8e2;
+  border-radius: 14px;
+  background: #fafcf9;
+}
+
+.admin-bank-account-card__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.admin-bank-account-card__heading strong {
+  color: #2e3d32;
+  font-size: 0.88rem;
+}
+
+.admin-bank-account-card__heading span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #edf3ed;
+  color: #6b786d;
+  font-size: 0.68rem;
+  font-weight: 750;
+}

@@ -1,11 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import "./footer.css";
 import { FaInstagram, FaWhatsapp } from "react-icons/fa";
+import { usePublicAppSettings } from "@/hooks/usePublicAppSettings";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 const INSTAGRAM_URL = "https://www.instagram.com/altavera.cr/?hl=es-la";
-const WHATSAPP_URL = "https://wa.me/50686526792";
 
 export default function Footer() {
+  const { settings } = usePublicAppSettings();
+  const whatsappUrl = buildWhatsAppUrl({
+    phone: settings.contact.whatsappPhone,
+    message: "Hola, tengo una consulta sobre Altavera.",
+  });
+
   return (
     <footer className="footer">
       <div className="container footer-content">
@@ -28,15 +37,17 @@ export default function Footer() {
               <FaInstagram size={24} />
             </a>
 
-            <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="WhatsApp de Altavera"
-              title="WhatsApp"
-            >
-              <FaWhatsapp size={24} />
-            </a>
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp de Altavera"
+                title="WhatsApp"
+              >
+                <FaWhatsapp size={24} />
+              </a>
+            )}
           </div>
         </div>
 
@@ -62,7 +73,6 @@ export default function Footer() {
           <Link href="/terminos-y-condiciones">Términos y condiciones</Link>
           <Link href="/privacidad">Política de privacidad</Link>
         </div>
-
       </div>
 
       <div className="footer-bottom">

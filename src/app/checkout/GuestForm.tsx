@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/hooks/useCart";
+import { usePublicAppSettings } from "@/hooks/usePublicAppSettings";
 import LocationPicker from "@/components/checkout/LocationPicker";
 import DeliveryDateSelector from "@/components/checkout/DeliveryDateSelector";
 import CheckoutStepper from "@/components/checkout/CheckoutStepper";
@@ -28,19 +29,24 @@ import {
   type DeliveryCycleSummary,
 } from "@/lib/deliverySchedule";
 import { getMaturityLabel } from "@/lib/maturity";
-import { DELIVERY_FEE_CRC, formatCRC } from "@/lib/deliveryFee";
+import { formatCRC } from "@/lib/deliveryFee";
 import type { PaymentMethod } from "@/lib/paymentMethods";
-
-const SINPE_PHONE = process.env.NEXT_PUBLIC_SINPE_PHONE?.trim() ?? "";
-const SINPE_HOLDER = process.env.NEXT_PUBLIC_SINPE_HOLDER?.trim() ?? "";
-const BANK_NAME = process.env.NEXT_PUBLIC_BANK_NAME?.trim() ?? "";
-const BANK_HOLDER = process.env.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER?.trim() ?? "";
-const BANK_IBAN = process.env.NEXT_PUBLIC_BANK_IBAN?.trim() ?? "";
 
 export default function GuestForm() {
   const { cart, totalPrice, clearCart } = useCart();
   const router = useRouter();
-  const checkoutTotal = totalPrice + DELIVERY_FEE_CRC;
+  const { settings, loading: settingsLoading, error: settingsError } =
+    usePublicAppSettings();
+  const deliveryFee = settings.delivery.flatFeeCrc;
+  const deliveryConfigured = settings.delivery.configured;
+  const checkoutTotal = totalPrice + (deliveryFee ?? 0);
+  const SINPE_PHONE = settings.payment.sinpePhone;
+  const SINPE_HOLDER = settings.payment.sinpeHolder;
+  const BANK_ACCOUNTS = settings.payment.bankAccounts.filter(
+    (account) => account.accountNumber || account.iban
+  );
+  const sinpeAvailable = Boolean(SINPE_PHONE);
+  const bankTransferAvailable = BANK_ACCOUNTS.length > 0;
 
   const [step, setStep] = useState<1 | 2>(1);
   const [stepError, setStepError] = useState("");
@@ -236,8 +242,23 @@ export default function GuestForm() {
       return;
     }
 
+    if (!deliveryConfigured || deliveryFee === null) {
+      setStepError(
+        "La tarifa de envío todavía no está disponible. Intenta nuevamente en unos minutos."
+      );
+      return;
+    }
+
     if (!paymentMethod) {
       setStepError("Selecciona cómo quieres realizar el pago.");
+      return;
+    }
+
+    if (
+      (paymentMethod === "SINPE" && !sinpeAvailable) ||
+      (paymentMethod === "BANK_TRANSFER" && !bankTransferAvailable)
+    ) {
+      setStepError("El método de pago seleccionado no está disponible en este momento.");
       return;
     }
 
@@ -288,8 +309,24 @@ export default function GuestForm() {
     }
   }
 
-  if (checkingAuth) {
+  if (checkingAuth || settingsLoading) {
     return <div className="checkout-loading">Preparando tu compra...</div>;
+  }
+
+  if (settingsError || !deliveryConfigured || deliveryFee === null) {
+    return (
+      <div className="checkout-empty">
+        <h1>El checkout está temporalmente pausado</h1>
+        <p>
+          {settingsError
+            ? "No pudimos cargar la configuración de la tienda. Intenta nuevamente en unos minutos."
+            : "La tarifa de envío todavía no está configurada. Altavera debe definirla antes de recibir pedidos."}
+        </p>
+        <Link href="/carrito" className="checkout-primary-action">
+          Volver al carrito
+        </Link>
+      </div>
+    );
   }
 
   if (cart.length === 0) {
@@ -342,7 +379,7 @@ export default function GuestForm() {
         </div>
         <div>
           <span>Envío</span>
-          <strong>{formatCRC(DELIVERY_FEE_CRC)}</strong>
+          <strong>{formatCRC(deliveryFee)}</strong>
         </div>
         <div className="checkout-summary__grand-total">
           <span>Total</span>
@@ -521,12 +558,13 @@ export default function GuestForm() {
               </div>
 
               <div className="payment-methods">
-                <label className={`payment-method ${paymentMethod === "SINPE" ? "payment-method--selected" : ""}`}>
+                <label className={`payment-method ${paymentMethod === "SINPE" ? "payment-method--selected" : ""} ${!sinpeAvailable ? "payment-method--disabled" : ""}`}>
                   <input
                     type="radio"
                     name="payment_method"
                     value="SINPE"
                     checked={paymentMethod === "SINPE"}
+                    disabled={!sinpeAvailable}
                     onChange={() => {
                       setPaymentMethod("SINPE");
                       setStepError("");
@@ -535,17 +573,22 @@ export default function GuestForm() {
                   <span className="payment-method__icon"><Smartphone size={22} /></span>
                   <span className="payment-method__copy">
                     <strong>SINPE Móvil</strong>
-                    <small>Te mostraremos el número, titular y monto para realizar el pago.</small>
+                    <small>
+                      {sinpeAvailable
+                        ? "Te mostraremos el número, titular y monto para realizar el pago."
+                        : "No disponible temporalmente."}
+                    </small>
                   </span>
                   <span className="payment-method__radio" aria-hidden="true" />
                 </label>
 
-                <label className={`payment-method ${paymentMethod === "BANK_TRANSFER" ? "payment-method--selected" : ""}`}>
+                <label className={`payment-method ${paymentMethod === "BANK_TRANSFER" ? "payment-method--selected" : ""} ${!bankTransferAvailable ? "payment-method--disabled" : ""}`}>
                   <input
                     type="radio"
                     name="payment_method"
                     value="BANK_TRANSFER"
                     checked={paymentMethod === "BANK_TRANSFER"}
+                    disabled={!bankTransferAvailable}
                     onChange={() => {
                       setPaymentMethod("BANK_TRANSFER");
                       setStepError("");
@@ -554,11 +597,21 @@ export default function GuestForm() {
                   <span className="payment-method__icon"><Building2 size={22} /></span>
                   <span className="payment-method__copy">
                     <strong>Transferencia bancaria</strong>
-                    <small>Te mostraremos la cuenta IBAN y los datos necesarios para transferir.</small>
+                    <small>
+                      {bankTransferAvailable
+                        ? "Elige la cuenta bancaria que te resulte más conveniente para transferir."
+                        : "No disponible temporalmente."}
+                    </small>
                   </span>
                   <span className="payment-method__radio" aria-hidden="true" />
                 </label>
               </div>
+
+              {!sinpeAvailable && !bankTransferAvailable && (
+                <div className="checkout-error" role="status">
+                  Los métodos de pago todavía no están configurados. Intenta nuevamente más tarde.
+                </div>
+              )}
 
               {paymentMethod && (
                 <div className="payment-details-card" aria-live="polite">
@@ -595,28 +648,49 @@ export default function GuestForm() {
                       </>
                     ) : (
                       <>
-                        {BANK_NAME ? (
-                          <div className="payment-detail-row payment-detail-row--plain">
-                            <div><span>Banco</span><strong>{BANK_NAME}</strong></div>
+                        {BANK_ACCOUNTS.length > 0 ? (
+                          <div className="payment-bank-accounts">
+                            {BANK_ACCOUNTS.map((account, index) => (
+                              <section className="payment-bank-account" key={`${account.bankName}-${index}`}>
+                                <div className="payment-bank-account__heading">
+                                  <Building2 size={18} />
+                                  <div>
+                                    <span>Cuenta {index + 1}</span>
+                                    <strong>{account.bankName || `Cuenta bancaria ${index + 1}`}</strong>
+                                  </div>
+                                </div>
+
+                                {account.accountHolder ? (
+                                  <div className="payment-detail-row payment-detail-row--plain">
+                                    <div><span>Titular</span><strong>{account.accountHolder}</strong></div>
+                                  </div>
+                                ) : null}
+
+                                {account.accountNumber ? (
+                                  <div className="payment-detail-row">
+                                    <div><span>Número de cuenta</span><strong>{account.accountNumber}</strong></div>
+                                    <button type="button" onClick={() => copyPaymentValue(`account-${index}`, account.accountNumber)}>
+                                      {copiedPaymentField === `account-${index}` ? <Check size={16} /> : <Copy size={16} />}
+                                      {copiedPaymentField === `account-${index}` ? "Copiado" : "Copiar"}
+                                    </button>
+                                  </div>
+                                ) : null}
+
+                                {account.iban ? (
+                                  <div className="payment-detail-row">
+                                    <div><span>IBAN</span><strong>{account.iban}</strong></div>
+                                    <button type="button" onClick={() => copyPaymentValue(`iban-${index}`, account.iban)}>
+                                      {copiedPaymentField === `iban-${index}` ? <Check size={16} /> : <Copy size={16} />}
+                                      {copiedPaymentField === `iban-${index}` ? "Copiado" : "Copiar"}
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </section>
+                            ))}
                           </div>
-                        ) : null}
-                        {BANK_HOLDER ? (
-                          <div className="payment-detail-row payment-detail-row--plain">
-                            <div><span>Titular</span><strong>{BANK_HOLDER}</strong></div>
-                          </div>
-                        ) : null}
-                        {BANK_IBAN ? (
-                          <div className="payment-detail-row">
-                            <div><span>IBAN</span><strong>{BANK_IBAN}</strong></div>
-                            <button type="button" onClick={() => copyPaymentValue("iban", BANK_IBAN)}>
-                              {copiedPaymentField === "iban" ? <Check size={16} /> : <Copy size={16} />}
-                              {copiedPaymentField === "iban" ? "Copiado" : "Copiar"}
-                            </button>
-                          </div>
-                        ) : null}
-                        {!BANK_NAME && !BANK_HOLDER && !BANK_IBAN && (
+                        ) : (
                           <p className="payment-details-card__pending">
-                            Los datos de la cuenta bancaria todavía están pendientes de configurar.
+                            Los datos de las cuentas bancarias todavía están pendientes de configurar.
                           </p>
                         )}
                       </>

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/useCart";
+import { usePublicAppSettings } from "@/hooks/usePublicAppSettings";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { supabase } from "@/lib/supabase"; // 👈 Importamos supabase
 import DeliveryNotice from "./DeliveryNotice";
 import {
@@ -23,8 +25,13 @@ export default function Header() {
   const [profile, setProfile] = useState<any>(null);
 
   const { cart } = useCart();
+  const { settings } = usePublicAppSettings();
 
   const cartCount = cart.length;
+  const whatsappUrl = buildWhatsAppUrl({
+    phone: settings.contact.whatsappPhone,
+    message: "Hola, tengo una consulta sobre Altavera.",
+  });
 
   // Escuchar el estado de autenticación de Supabase
   useEffect(() => {
@@ -158,15 +165,22 @@ export default function Header() {
           )}
 
           {/* WhatsApp */}
-          <a
-            href="https://wa.me/50600000000"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary whatsapp-btn"
-          >
-            <MessageCircle size={18} />
-            <span>WhatsApp</span>
-          </a>
+          {whatsappUrl ? (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary whatsapp-btn"
+            >
+              <MessageCircle size={18} />
+              <span>WhatsApp</span>
+            </a>
+          ) : (
+            <Link href="/contacto" className="btn btn-primary whatsapp-btn">
+              <MessageCircle size={18} />
+              <span>Contacto</span>
+            </Link>
+          )}
 
           {/* Carrito */}
           <Link

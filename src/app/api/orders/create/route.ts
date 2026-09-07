@@ -13,6 +13,7 @@ import {
   hasCurrentLegalConsent,
 } from "@/lib/legalConsent";
 import { isPaymentMethod } from "@/lib/paymentMethods";
+import { getDeliveryFeeForOrder } from "@/lib/appSettings.server";
 
 export const runtime = "nodejs";
 
@@ -535,15 +536,9 @@ export async function POST(request: Request) {
       )
     );
 
-    const configuredShipping = Number(
-      process.env.NEXT_PUBLIC_DELIVERY_FEE_CRC ?? 0
+    const shipping = roundMoney(
+      await getDeliveryFeeForOrder({ latitude, longitude })
     );
-
-    if (!Number.isFinite(configuredShipping) || configuredShipping < 0) {
-      throw new Error("La tarifa de envío configurada no es válida");
-    }
-
-    const shipping = roundMoney(configuredShipping);
     const total = roundMoney(subtotal + shipping);
 
     const accessToken = randomUUID();

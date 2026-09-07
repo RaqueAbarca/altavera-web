@@ -16,6 +16,7 @@ import { formatDeliveryDate } from "@/lib/deliverySchedule";
 import { formatCRC } from "@/lib/deliveryFee";
 import { getPaymentMethodLabel } from "@/lib/paymentMethods";
 import { buildPaymentProofMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { usePublicAppSettings } from "@/hooks/usePublicAppSettings";
 import "./pedido.css";
 
 type OrderItem = {
@@ -48,6 +49,7 @@ export default function PedidoPage({
   const { id } = use(params);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const { settings, loading: settingsLoading } = usePublicAppSettings();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -105,14 +107,13 @@ export default function PedidoPage({
     );
   }
 
-  const sinpePhone = process.env.NEXT_PUBLIC_SINPE_PHONE?.trim();
-  const bankName = process.env.NEXT_PUBLIC_BANK_NAME?.trim();
-  const bankIban = process.env.NEXT_PUBLIC_BANK_IBAN?.trim();
-  const bankHolder = process.env.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER?.trim();
+  const sinpePhone = settings.payment.sinpePhone;
+  const bankAccounts = settings.payment.bankAccounts.filter(
+    (account) => account.accountNumber || account.iban
+  );
   const isBankTransfer = order.payment_method === "BANK_TRANSFER";
   const paymentMethodLabel = getPaymentMethodLabel(order.payment_method);
-  const receiptWhatsAppPhone =
-    process.env.NEXT_PUBLIC_ALTAVERA_WHATSAPP?.trim() || "50686526792";
+  const receiptWhatsAppPhone = settings.contact.whatsappPhone;
   const paymentProofUrl = buildWhatsAppUrl({
     phone: receiptWhatsAppPhone,
     message: buildPaymentProofMessage({
@@ -177,13 +178,29 @@ export default function PedidoPage({
               </div>
             </div>
 
-            {isBankTransfer ? (
-              bankIban || bankName || bankHolder ? (
-                <div className="pedido-payment-details">
-                  {bankName && <p><span>Banco</span><strong>{bankName}</strong></p>}
-                  {bankHolder && <p><span>Titular</span><strong>{bankHolder}</strong></p>}
-                  {bankIban && <p><span>IBAN</span><strong>{bankIban}</strong></p>}
-                  <p><span>Monto</span><strong>{formatCRC(order.total)}</strong></p>
+            {settingsLoading ? (
+              <p>Cargando los datos para completar el pago...</p>
+            ) : isBankTransfer ? (
+              bankAccounts.length > 0 ? (
+                <div className="pedido-bank-accounts">
+                  <p className="pedido-bank-accounts__intro">
+                    Puedes transferir a cualquiera de estas cuentas:
+                  </p>
+                  {bankAccounts.map((account, index) => (
+                    <div className="pedido-bank-account" key={`${account.bankName}-${index}`}>
+                      <strong className="pedido-bank-account__title">
+                        {account.bankName || `Cuenta bancaria ${index + 1}`}
+                      </strong>
+                      <div className="pedido-payment-details">
+                        {account.accountHolder && <p><span>Titular</span><strong>{account.accountHolder}</strong></p>}
+                        {account.accountNumber && <p><span>Número de cuenta</span><strong>{account.accountNumber}</strong></p>}
+                        {account.iban && <p><span>IBAN</span><strong>{account.iban}</strong></p>}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pedido-payment-details pedido-payment-details--total">
+                    <p><span>Monto</span><strong>{formatCRC(order.total)}</strong></p>
+                  </div>
                 </div>
               ) : (
                 <p>
@@ -206,23 +223,29 @@ export default function PedidoPage({
               <div>
                 <span>Último paso</span>
                 <h3>Envíanos el comprobante por WhatsApp</h3>
-                <p>
-                  Tu pedido ya fue creado, pero el pago continúa pendiente. Adjunta la captura del comprobante en WhatsApp y lo verificaremos antes de preparar el pedido.
-                </p>
-                {paymentProofUrl && (
-                  <a
-                    href={paymentProofUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pedido-whatsapp-action"
-                  >
-                    <MessageCircle size={18} />
-                    Enviar comprobante por WhatsApp
-                  </a>
+                {paymentProofUrl ? (
+                  <>
+                    <p>
+                      Tu pedido ya fue creado, pero el pago continúa pendiente. Adjunta la captura del comprobante en WhatsApp y lo verificaremos antes de preparar el pedido.
+                    </p>
+                    <a
+                      href={paymentProofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pedido-whatsapp-action"
+                    >
+                      <MessageCircle size={18} />
+                      Enviar comprobante por WhatsApp
+                    </a>
+                    <small>
+                      El mensaje llevará listo tu número de pedido, monto y método de pago. Solo tendrás que adjuntar la captura y enviarla.
+                    </small>
+                  </>
+                ) : (
+                  <p>
+                    El WhatsApp oficial de Altavera todavía no está configurado. Tu pedido seguirá como pago pendiente hasta que podamos habilitar el canal de comprobantes.
+                  </p>
                 )}
-                <small>
-                  El mensaje llevará listo tu número de pedido, monto y método de pago. Solo tendrás que adjuntar la captura y enviarla.
-                </small>
               </div>
             </div>
           </div>
