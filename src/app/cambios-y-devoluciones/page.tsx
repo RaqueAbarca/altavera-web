@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import InfoPage from "@/components/info/InfoPage";
 import { legalInfo } from "@/data/legalInfo";
 
-export const metadata: Metadata = {
-  title: "Cambios y Devoluciones | Altavera",
+export const metadata = createPageMetadata({
+  title: "Cambios y Devoluciones",
   description: "Consulta cómo reportar productos faltantes, incorrectos o en malas condiciones.",
-};
+  path: "/cambios-y-devoluciones",
+});
 
 export default function ReturnsPage() {
   return (

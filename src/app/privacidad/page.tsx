@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import InfoPage from "@/components/info/InfoPage";
 import { legalInfo } from "@/data/legalInfo";
 
-export const metadata: Metadata = {
-  title: "Política de Privacidad | Altavera",
+export const metadata = createPageMetadata({
+  title: "Política de Privacidad",
   description: "Conoce cómo Altavera recopila, utiliza y protege tus datos personales.",
-};
+  path: "/privacidad",
+});
 
 export default function PrivacyPage() {
   return (

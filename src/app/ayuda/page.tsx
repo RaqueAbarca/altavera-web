@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import InfoPage from "@/components/info/InfoPage";
 
-export const metadata: Metadata = {
-  title: "Centro de Ayuda | Altavera",
+export const metadata = createPageMetadata({
+  title: "Centro de Ayuda",
   description: "Encuentra ayuda con pedidos, entregas, productos, pagos y tu cuenta de Altavera.",
-};
+  path: "/ayuda",
+});
 
 export default function HelpPage() {
   return (

@@ -5,6 +5,14 @@ export const metadata: Metadata = {
   applicationName: "Altavera Admin",
   description: "Panel de administración de Altavera.",
   manifest: "/admin-manifest.webmanifest",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 export const viewport: Viewport = {

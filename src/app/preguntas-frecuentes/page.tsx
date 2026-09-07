@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import InfoPage from "@/components/info/InfoPage";
 
-export const metadata: Metadata = {
-  title: "Preguntas Frecuentes | Altavera",
+export const metadata = createPageMetadata({
+  title: "Preguntas Frecuentes",
   description: "Respuestas rápidas sobre compras, entregas, cobertura y productos de Altavera.",
-};
+  path: "/preguntas-frecuentes",
+});
 
 const faqs = [
   ["¿Necesito una cuenta para comprar?", "No necesariamente. Cuando la opción esté habilitada podrás comprar como invitado. Crear una cuenta puede facilitar futuras compras y la gestión de información asociada a tus pedidos."],

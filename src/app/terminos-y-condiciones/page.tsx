@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import InfoPage from "@/components/info/InfoPage";
 import { legalInfo } from "@/data/legalInfo";
 
-export const metadata: Metadata = {
-  title: "Términos y Condiciones | Altavera",
+export const metadata = createPageMetadata({
+  title: "Términos y Condiciones",
   description: "Condiciones de uso y compra en Altavera.",
-};
+  path: "/terminos-y-condiciones",
+});
 
 export default function TermsPage() {
   return (
