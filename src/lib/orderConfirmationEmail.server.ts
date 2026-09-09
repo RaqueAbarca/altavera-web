@@ -187,7 +187,7 @@ export async function sendOrderConfirmationEmail(
 
   const shortOrderId = input.orderId.slice(0, 8).toUpperCase();
   const siteOrigin = normalizeSiteOrigin(input.requestOrigin);
-  const orderUrl = `${siteOrigin}/pedido/${encodeURIComponent(input.orderId)}#token=${encodeURIComponent(input.accessToken)}`;
+  const trackingUrl = `${siteOrigin}/seguimiento/${encodeURIComponent(input.orderId)}#token=${encodeURIComponent(input.accessToken)}`;
   const paymentMethodLabel = getPaymentMethodLabel(input.paymentMethod);
   const proofUrl = buildWhatsAppUrl({
     phone: input.settings.contact.whatsappPhone,
@@ -286,7 +286,7 @@ export async function sendOrderConfirmationEmail(
                   ${proofButton}
                 </div>
                 <div style="text-align:center;margin-top:22px;">
-                  <a href="${escapeHtml(orderUrl)}" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#1f402a;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Ver mi pedido</a>
+                  <a href="${escapeHtml(trackingUrl)}" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#1f402a;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Seguir mi pedido</a>
                 </div>
                 <p style="margin:22px 0 0;color:#777e78;font-size:11px;line-height:1.55;text-align:center;">Este correo corresponde a tu pedido en Altavera y no depende de que hayas aceptado recibir promociones.</p>
               </td>
@@ -325,7 +325,7 @@ export async function sendOrderConfirmationEmail(
     paymentText,
     proofUrl ? `Enviar comprobante: ${proofUrl}` : "",
     "",
-    `Ver pedido: ${orderUrl}`,
+    `Seguir pedido: ${trackingUrl}`,
     "",
     "Este es un correo transaccional relacionado con tu pedido en Altavera.",
   ]

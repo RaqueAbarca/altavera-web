@@ -6,16 +6,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/useCart";
-import { usePublicAppSettings } from "@/hooks/usePublicAppSettings";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { supabase } from "@/lib/supabase"; // 👈 Importamos supabase
 import DeliveryNotice from "./DeliveryNotice";
 import {
   Menu,
   X,
   ShoppingCart,
-  MessageCircle,
   User, // 👈 Importamos icono de usuario
+  PackageSearch,
 } from "lucide-react";
 
 export default function Header() {
@@ -25,14 +23,7 @@ export default function Header() {
   const [profile, setProfile] = useState<any>(null);
 
   const { cart } = useCart();
-  const { settings } = usePublicAppSettings();
-
   const cartCount = cart.length;
-  const whatsappUrl = buildWhatsAppUrl({
-    phone: settings.contact.whatsappPhone,
-    message: "Hola, tengo una consulta sobre Altavera.",
-  });
-
   // Escuchar el estado de autenticación de Supabase
   useEffect(() => {
     // 1. Obtener sesión actual
@@ -88,6 +79,18 @@ export default function Header() {
 
   // Extraemos el primer nombre del usuario para mostrarlo en el botón
   const clientName = user?.user_metadata?.full_name?.split(" ")[0] || "Mi Perfil";
+  const trackingHref =
+    profile?.role === "admin"
+      ? "/admin/pedidos"
+      : profile?.role === "customer"
+        ? "/pedidos"
+        : "/seguimiento";
+  const trackingLabel =
+    profile?.role === "admin"
+      ? "Pedidos"
+      : profile?.role === "customer"
+        ? "Mis pedidos"
+        : "Seguir mi pedido";
 
   return (
     <header className="header">
@@ -126,12 +129,21 @@ export default function Header() {
        {/* Acciones */}
         <div className="header-actions">
 
+          <Link
+            href={trackingHref}
+            className="header-utility-link"
+            title={trackingLabel}
+          >
+            <PackageSearch size={18} />
+            <span>{trackingLabel}</span>
+          </Link>
+
           {/* Botón dinámico con clase única e independiente */}
           {profile?.role === "admin" ? (
 
             <Link
               href="/admin/dashboard"
-              className="header-auth-btn"
+              className="header-utility-link"
               title="Ir al panel administrativo"
             >
               <User size={18} />
@@ -143,7 +155,7 @@ export default function Header() {
 
             <Link
               href="/profile"
-              className="header-auth-btn"
+              className="header-utility-link"
               title="Ir a mi perfil"
             >
               <User size={18} />
@@ -155,7 +167,7 @@ export default function Header() {
 
             <Link
               href="/login"
-              className="header-auth-btn"
+              className="header-utility-link"
               title="Iniciar sesión"
             >
               <User size={18} />
@@ -164,31 +176,14 @@ export default function Header() {
 
           )}
 
-          {/* WhatsApp */}
-          {whatsappUrl ? (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary whatsapp-btn"
-            >
-              <MessageCircle size={18} />
-              <span>WhatsApp</span>
-            </a>
-          ) : (
-            <Link href="/contacto" className="btn btn-primary whatsapp-btn">
-              <MessageCircle size={18} />
-              <span>Contacto</span>
-            </Link>
-          )}
-
           {/* Carrito */}
           <Link
             href="/carrito"
             className="cart-button"
             aria-label="Mi carrito"
           >
-            <ShoppingCart size={30} />
+            <ShoppingCart size={21} />
+            <span className="cart-button-label">Carrito</span>
 
             {cartCount > 0 && (
               <span className="cart-badge">
@@ -227,6 +222,18 @@ export default function Header() {
               </Link>
             );
           })}
+
+          <Link
+            href={trackingHref}
+            className={`mobile-link ${
+              pathname === "/seguimiento" || pathname === "/pedidos"
+                ? "active"
+                : ""
+            }`}
+            onClick={() => setOpen(false)}
+          >
+            {trackingLabel}
+          </Link>
 
           {/* Opción de cuenta en el menú móvil */}
           <div className="mobile-auth-section">

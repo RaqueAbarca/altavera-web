@@ -681,3 +681,38 @@
     flex-wrap: wrap;
   }
 }
+
+.pedido-actions {
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.pedido-secondary-action {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.8rem 1.2rem;
+  border: 1px solid rgba(31, 64, 42, 0.16);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--green);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.pedido-secondary-action:hover {
+  background: #f7f8f5;
+}
+
+@media (max-width: 580px) {
+  .pedido-actions {
+    flex-direction: column;
+  }
+
+  .pedido-primary-action,
+  .pedido-secondary-action {
+    width: 100%;
+  }
+}

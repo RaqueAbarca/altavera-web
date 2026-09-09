@@ -10,6 +10,7 @@ import {
   Mail,
   MessageCircle,
   ShoppingBag,
+  Truck,
   WalletCards,
 } from "lucide-react";
 import CheckoutStepper from "@/components/checkout/CheckoutStepper";
@@ -156,12 +157,14 @@ export default function PedidoPage({
   const { settings, loading: settingsLoading } = usePublicAppSettings();
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState("");
 
   useEffect(() => {
     async function loadOrder() {
       try {
         const hash = window.location.hash.replace(/^#token=/, "");
         const accessToken = hash ? decodeURIComponent(hash) : "";
+        setAccessToken(accessToken);
 
         const response = await fetch(`/api/orders/${encodeURIComponent(id)}`, {
           headers: accessToken
@@ -233,6 +236,9 @@ export default function PedidoPage({
   const isBankTransfer = order.payment_method === "BANK_TRANSFER";
   const paymentMethodLabel = getPaymentMethodLabel(order.payment_method);
   const receiptWhatsAppPhone = settings.contact.whatsappPhone;
+  const trackingUrl = `/seguimiento/${encodeURIComponent(order.id)}${
+    accessToken ? `#token=${encodeURIComponent(accessToken)}` : ""
+  }`;
   const paymentProofUrl = paymentPending
     ? buildWhatsAppUrl({
         phone: receiptWhatsAppPhone,
@@ -477,6 +483,10 @@ export default function PedidoPage({
       </div>
 
       <div className="pedido-actions">
+        <Link href={trackingUrl} className="pedido-secondary-action">
+          <Truck size={17} aria-hidden="true" />
+          Seguir mi pedido
+        </Link>
         <Link href="/productos" className="pedido-primary-action">
           Seguir comprando
         </Link>

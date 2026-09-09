@@ -282,37 +282,57 @@ export default function AdminOrdersPage() {
       ? window.open("about:blank", "_blank")
       : null;
 
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update({ status })
-      .eq("id", order.id);
+    try {
+      const response = await fetch(
+        `/api/admin/orders/${encodeURIComponent(order.id)}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      );
+      const data = await response.json().catch(() => ({}));
 
-    if (updateError) {
-      whatsappWindow?.close();
-      alert("No se pudo cambiar el estado del pedido.");
-      console.error("ERROR CAMBIANDO ESTADO:", updateError);
-      return;
-    }
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo cambiar el estado del pedido.");
+      }
 
-    // Para "En camino" no dependemos de ninguna API paga: abrimos
-    // WhatsApp con el mensaje listo y la persona administradora solo envía.
-    if (status === "confirmed") {
-      void playAdminSound("payment-confirmed");
-    }
-
-    if (isGoingOnTheWay) {
-      if (whatsappUrl && whatsappWindow) {
-        whatsappWindow.opener = null;
-        whatsappWindow.location.href = whatsappUrl;
-      } else if (!whatsappUrl) {
-        alert(
-          "El pedido quedó marcado como En camino, pero no tiene un teléfono válido para abrir WhatsApp."
-        );
-      } else {
-        alert(
-          "El pedido quedó marcado como En camino, pero el navegador bloqueó la ventana de WhatsApp."
+      if (data.email?.status === "failed") {
+        console.warn(
+          "El estado cambió, pero no se pudo enviar el correo:",
+          data.email.reason
         );
       }
+
+      if (status === "confirmed") {
+        void playAdminSound("payment-confirmed");
+      }
+
+      // Para "En camino" mantenemos WhatsApp como apoyo inmediato. El correo
+      // de estado se envía automáticamente desde la ruta del servidor.
+      if (isGoingOnTheWay) {
+        if (whatsappUrl && whatsappWindow) {
+          whatsappWindow.opener = null;
+          whatsappWindow.location.href = whatsappUrl;
+        } else if (!whatsappUrl) {
+          alert(
+            "El pedido quedó marcado como En camino, pero no tiene un teléfono válido para abrir WhatsApp."
+          );
+        } else {
+          alert(
+            "El pedido quedó marcado como En camino, pero el navegador bloqueó la ventana de WhatsApp."
+          );
+        }
+      }
+    } catch (updateError) {
+      whatsappWindow?.close();
+      alert(
+        updateError instanceof Error
+          ? updateError.message
+          : "No se pudo cambiar el estado del pedido."
+      );
+      console.error("ERROR CAMBIANDO ESTADO:", updateError);
+      return;
     }
 
     await loadData();
