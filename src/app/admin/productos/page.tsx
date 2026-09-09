@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import "./productos-admin.css";
+import { formatProductEquivalence } from "@/lib/productUnits";
 
 type Product = {
   id: number;
@@ -16,6 +17,9 @@ type Product = {
   is_active: boolean;
   is_seasonal: boolean;
   maturity_selection_enabled: boolean;
+  average_unit_weight_g: number | null;
+  approx_units_per_kg_min: number | null;
+  approx_units_per_kg_max: number | null;
 };
 
 type Filter = "all" | "active" | "inactive" | "seasonal";
@@ -30,6 +34,9 @@ type ProductForm = {
   isActive: boolean;
   isSeasonal: boolean;
   maturitySelectionEnabled: boolean;
+  averageUnitWeightGrams: string;
+  unitsPerKgMin: string;
+  unitsPerKgMax: string;
 };
 
 const EMPTY_FORM: ProductForm = {
@@ -42,6 +49,9 @@ const EMPTY_FORM: ProductForm = {
   isActive: false,
   isSeasonal: false,
   maturitySelectionEnabled: false,
+  averageUnitWeightGrams: "",
+  unitsPerKgMin: "",
+  unitsPerKgMax: "",
 };
 
 function formatPrice(value: number | null) {
@@ -202,6 +212,12 @@ export default function AdminProductosPage() {
       isActive: product.is_active,
       isSeasonal: product.is_seasonal,
       maturitySelectionEnabled: product.maturity_selection_enabled,
+      averageUnitWeightGrams:
+        product.average_unit_weight_g?.toString() ?? "",
+      unitsPerKgMin:
+        product.approx_units_per_kg_min?.toString() ?? "",
+      unitsPerKgMax:
+        product.approx_units_per_kg_max?.toString() ?? "",
     });
     setMessage("");
     setError("");
@@ -245,6 +261,15 @@ export default function AdminProductosPage() {
             isActive: form.isActive,
             isSeasonal: form.isSeasonal,
             maturitySelectionEnabled: form.maturitySelectionEnabled,
+            averageUnitWeightGrams: form.averageUnitWeightGrams
+              ? Number(form.averageUnitWeightGrams)
+              : null,
+            unitsPerKgMin: form.unitsPerKgMin
+              ? Number(form.unitsPerKgMin)
+              : null,
+            unitsPerKgMax: form.unitsPerKgMax
+              ? Number(form.unitsPerKgMax)
+              : null,
           }
         : {
             name: form.name,
@@ -255,6 +280,15 @@ export default function AdminProductosPage() {
             isActive: form.isActive,
             isSeasonal: form.isSeasonal,
             maturitySelectionEnabled: form.maturitySelectionEnabled,
+            averageUnitWeightGrams: form.averageUnitWeightGrams
+              ? Number(form.averageUnitWeightGrams)
+              : null,
+            unitsPerKgMin: form.unitsPerKgMin
+              ? Number(form.unitsPerKgMin)
+              : null,
+            unitsPerKgMax: form.unitsPerKgMax
+              ? Number(form.unitsPerKgMax)
+              : null,
           };
 
       const response = await fetch(endpoint, {
@@ -440,6 +474,21 @@ export default function AdminProductosPage() {
                         {product.unit || "Sin unidad"}
                       </p>
                       <strong>{formatPrice(product.price)}</strong>
+                      {formatProductEquivalence(
+                        product.unit ?? "",
+                        product.average_unit_weight_g,
+                        product.approx_units_per_kg_min,
+                        product.approx_units_per_kg_max
+                      ) && (
+                        <small className="products-admin-equivalence">
+                          {formatProductEquivalence(
+                            product.unit ?? "",
+                            product.average_unit_weight_g,
+                            product.approx_units_per_kg_min,
+                            product.approx_units_per_kg_max
+                          )}
+                        </small>
+                      )}
                     </div>
                   </div>
 
@@ -607,6 +656,94 @@ export default function AdminProductosPage() {
                   />
                 </label>
               </div>
+
+              <div className="products-admin-form-grid">
+                <label>
+                  Mín. unidades por kg
+                  <input
+                    type="number"
+                    min="0.1"
+                    max="1000"
+                    step="0.1"
+                    placeholder="Ej: 5"
+                    value={form.unitsPerKgMin}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        unitsPerKgMin: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  Máx. unidades por kg
+                  <input
+                    type="number"
+                    min="0.1"
+                    max="1000"
+                    step="0.1"
+                    placeholder="Ej: 8"
+                    value={form.unitsPerKgMax}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        unitsPerKgMax: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+
+              <label>
+                Peso aprox. por unidad o presentación (gramos)
+                <input
+                  type="number"
+                  min="1"
+                  max="100000"
+                  step="1"
+                  placeholder="Ej: 450"
+                  value={form.averageUnitWeightGrams}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      averageUnitWeightGrams: event.target.value,
+                    }))
+                  }
+                />
+                <small>
+                  La tienda prioriza el rango de unidades por kg cuando está
+                  disponible. Si no hay rango, usa este peso para calcular una
+                  equivalencia aproximada. También sirve para presentaciones
+                  como un rollo de espárragos.
+                </small>
+                {(form.averageUnitWeightGrams ||
+                  form.unitsPerKgMin ||
+                  form.unitsPerKgMax) &&
+                  formatProductEquivalence(
+                    form.unit,
+                    form.averageUnitWeightGrams
+                      ? Number(form.averageUnitWeightGrams)
+                      : null,
+                    form.unitsPerKgMin ? Number(form.unitsPerKgMin) : null,
+                    form.unitsPerKgMax ? Number(form.unitsPerKgMax) : null
+                  ) && (
+                    <span className="products-admin-equivalence-preview">
+                      Vista previa: {formatProductEquivalence(
+                        form.unit,
+                        form.averageUnitWeightGrams
+                          ? Number(form.averageUnitWeightGrams)
+                          : null,
+                        form.unitsPerKgMin
+                          ? Number(form.unitsPerKgMin)
+                          : null,
+                        form.unitsPerKgMax
+                          ? Number(form.unitsPerKgMax)
+                          : null
+                      )}
+                    </span>
+                  )}
+              </label>
 
               {showCreate ? (
                 <label>

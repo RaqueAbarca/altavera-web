@@ -7,6 +7,7 @@ import ProductCard from "../ui/ProductCard";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/hooks/useCart";
 import { Product } from "@/types/product";
+import type { MaturityPreference } from "@/lib/maturity";
 
 type SupabaseProduct = {
   id: number;
@@ -15,6 +16,9 @@ type SupabaseProduct = {
   unit: string;
   image_url: string;
   maturity_selection_enabled?: boolean;
+  average_unit_weight_g?: number | null;
+  approx_units_per_kg_min?: number | null;
+  approx_units_per_kg_max?: number | null;
   is_seasonal?: boolean;
 };
 
@@ -53,6 +57,12 @@ export default function FeaturedProducts() {
           category: "",
           maturity_selection_enabled:
             product.maturity_selection_enabled ?? false,
+          average_unit_weight_g:
+            product.average_unit_weight_g ?? null,
+          approx_units_per_kg_min:
+            product.approx_units_per_kg_min ?? null,
+          approx_units_per_kg_max:
+            product.approx_units_per_kg_max ?? null,
           is_seasonal: product.is_seasonal ?? false,
         })
       );
@@ -92,13 +102,16 @@ export default function FeaturedProducts() {
               maturitySelectionEnabled={
                 product.maturity_selection_enabled ?? false
               }
+              maturityPreference={cartItem?.maturity_preference ?? null}
+              averageUnitWeightGrams={product.average_unit_weight_g ?? null}
+              unitsPerKgMin={product.approx_units_per_kg_min ?? null}
+              unitsPerKgMax={product.approx_units_per_kg_max ?? null}
               isSeasonal={product.is_seasonal ?? false}
-              onAdd={(quantity) =>
+              onAdd={(quantity, maturityPreference: MaturityPreference | null) =>
                 addToCart({
                   ...product,
                   quantity,
-                  maturity_preference:
-                    cartItem?.maturity_preference ?? null,
+                  maturity_preference: maturityPreference,
                 })
               }
               onIncrease={() =>

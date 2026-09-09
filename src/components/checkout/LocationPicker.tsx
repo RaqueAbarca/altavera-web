@@ -19,7 +19,7 @@ type Props = {
   onChange: (
     lat: number,
     lng: number,
-    availability: DeliveryAvailability
+    availability: DeliveryAvailability | null
   ) => void;
 };
 

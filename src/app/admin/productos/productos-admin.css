@@ -583,3 +583,22 @@
     border-radius: 20px 20px 0 0;
   }
 }
+
+
+.products-admin-equivalence {
+  display: block;
+  margin-top: 5px;
+  color: #7a817a;
+  font-size: 12px;
+}
+
+.products-admin-equivalence-preview {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #f3f6f3;
+  color: #355843;
+  font-size: 12px;
+  font-weight: 700;
+}

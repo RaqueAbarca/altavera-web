@@ -450,3 +450,51 @@
   color:var(--green);
   font-weight:600;
 }
+
+
+.product-equivalence{
+  margin:.15rem 0 .55rem;
+  color:#777;
+  font-size:.8rem;
+  line-height:1.35;
+}
+
+.product-maturity-picker{
+  display:grid;
+  gap:6px;
+  margin-top:12px;
+  color:var(--green);
+  font-size:.82rem;
+  font-weight:700;
+}
+
+.product-maturity-picker select{
+  width:100%;
+  padding:10px 11px;
+  border:1px solid #d8dfd8;
+  border-radius:10px;
+  background:white;
+  color:var(--text);
+  font:inherit;
+  font-weight:500;
+}
+
+.product-maturity-picker select:focus{
+  outline:none;
+  border-color:var(--orange);
+  box-shadow:0 0 0 3px rgba(201,120,51,.12);
+}
+
+.product-maturity-picker small{
+  color:#777;
+  font-size:.72rem;
+  font-weight:400;
+  line-height:1.35;
+}
+
+.selected-maturity-note{
+  margin:-4px 0 6px;
+  color:#667269;
+  font-size:.76rem;
+  text-align:center;
+}

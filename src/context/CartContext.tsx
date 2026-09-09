@@ -11,6 +11,7 @@ import {
 import { CartItem } from "@/types/cart";
 import type { MaturityPreference } from "@/lib/maturity";
 import { getCart, saveCart } from "@/lib/cartStorage";
+import { isKilogramUnit } from "@/lib/productUnits";
 
 type CartContextType = {
   cart: CartItem[];
@@ -45,7 +46,7 @@ export function CartProvider({
   }, [cart]);
 
   function getStep(unit: string) {
-    return unit.trim().toLowerCase() === "kg" ? 0.5 : 1;
+    return isKilogramUnit(unit) ? 0.5 : 1;
   }
 
   function addToCart(product: CartItem) {
@@ -61,9 +62,12 @@ export function CartProvider({
                 ...item,
                 ...product,
                 maturity_preference:
-                  item.maturity_preference ??
-                  product.maturity_preference ??
-                  null,
+                  Object.prototype.hasOwnProperty.call(
+                    product,
+                    "maturity_preference"
+                  )
+                    ? product.maturity_preference ?? null
+                    : item.maturity_preference ?? null,
               }
             : item
         );

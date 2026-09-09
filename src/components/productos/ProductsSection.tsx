@@ -4,6 +4,7 @@ import "./productos.css";
 import ProductCard from "../ui/ProductCard";
 import { useCart } from "@/hooks/useCart";
 import { SEASONAL_CATEGORY } from "./productFilters";
+import type { MaturityPreference } from "@/lib/maturity";
 
 type Product = {
   id: number;
@@ -14,6 +15,9 @@ type Product = {
   unit: string;
   image_url: string;
   maturity_selection_enabled?: boolean;
+  average_unit_weight_g?: number | null;
+  approx_units_per_kg_min?: number | null;
+  approx_units_per_kg_max?: number | null;
   is_seasonal?: boolean;
 };
 
@@ -70,8 +74,12 @@ export default function ProductsSection({
             maturitySelectionEnabled={
               product.maturity_selection_enabled ?? false
             }
+            maturityPreference={cartItem?.maturity_preference ?? null}
+            averageUnitWeightGrams={product.average_unit_weight_g ?? null}
+            unitsPerKgMin={product.approx_units_per_kg_min ?? null}
+            unitsPerKgMax={product.approx_units_per_kg_max ?? null}
             isSeasonal={product.is_seasonal ?? false}
-            onAdd={(quantity) =>
+            onAdd={(quantity, maturityPreference: MaturityPreference | null) =>
               addToCart({
                 id: product.id,
                 name: product.name,
@@ -83,8 +91,7 @@ export default function ProductsSection({
                 quantity,
                 maturity_selection_enabled:
                   product.maturity_selection_enabled ?? false,
-                maturity_preference:
-                  cartItem?.maturity_preference ?? null,
+                maturity_preference: maturityPreference,
               })
             }
             onIncrease={() =>

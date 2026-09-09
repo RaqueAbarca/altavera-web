@@ -81,9 +81,11 @@ export default function GuestForm() {
     [deliveryCycles, selectedDeliveryCycleId]
   );
 
-  async function loadDeliveryCycles() {
-    setDeliveryCyclesLoading(true);
-    setDeliveryCyclesError("");
+  async function loadDeliveryCycles(silent = false) {
+    if (!silent) {
+      setDeliveryCyclesLoading(true);
+      setDeliveryCyclesError("");
+    }
 
     try {
       const response = await fetch("/api/delivery-cycles/available", {
@@ -102,22 +104,29 @@ export default function GuestForm() {
           ? current
           : cycles[0]?.id ?? ""
       );
+      setDeliveryCyclesError("");
     } catch (error) {
-      setDeliveryCycles([]);
-      setSelectedDeliveryCycleId("");
-      setDeliveryCyclesError(
-        error instanceof Error
-          ? error.message
-          : "No se pudieron cargar las próximas entregas"
-      );
+      if (!silent) {
+        setDeliveryCycles([]);
+        setSelectedDeliveryCycleId("");
+        setDeliveryCyclesError(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar las próximas entregas"
+        );
+      } else {
+        console.error("ERROR ACTUALIZANDO FECHAS DE ENTREGA:", error);
+      }
     } finally {
-      setDeliveryCyclesLoading(false);
+      if (!silent) setDeliveryCyclesLoading(false);
     }
   }
 
   useEffect(() => {
     void loadDeliveryCycles();
-    const timer = window.setInterval(loadDeliveryCycles, 60_000);
+    const timer = window.setInterval(() => {
+      void loadDeliveryCycles(true);
+    }, 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -496,7 +505,7 @@ export default function GuestForm() {
               />
             </div>
 
-            <div className="checkout-section">
+            <div className="checkout-section checkout-section--address-card">
               <div className="checkout-section__title">
                 <h2>Dirección de entrega</h2>
                 <p>Marca el punto exacto en el mapa. Por ahora entregamos en Alajuela.</p>
@@ -518,7 +527,9 @@ export default function GuestForm() {
                   placeholder="Condominio, número de casa, color del portón, 100 m norte de..."
                 />
               </label>
+            </div>
 
+            <div className="checkout-section checkout-section--order-notes">
               <label className="checkout-textarea-field">
                 <span>Notas para tu pedido <em>Opcional</em></span>
                 <textarea
@@ -527,7 +538,7 @@ export default function GuestForm() {
                   maxLength={1000}
                   placeholder="Ej: si falta un producto no sustituirlo, dejar en recepción..."
                 />
-                <small>La maduración de cada producto se selecciona desde el carrito.</small>
+                <small>La maduración se puede elegir al agregar el producto y también ajustarla desde el carrito.</small>
               </label>
             </div>
 
@@ -536,7 +547,12 @@ export default function GuestForm() {
                 type="button"
                 className="checkout-primary-action"
                 onClick={handleContinueToPayment}
-                disabled={deliveryCyclesLoading}
+                disabled={
+                  deliveryCyclesLoading ||
+                  location.lat === 0 ||
+                  location.lng === 0 ||
+                  deliveryAvailability?.available !== true
+                }
               >
                 Continuar al pago
                 <ArrowRight size={18} />

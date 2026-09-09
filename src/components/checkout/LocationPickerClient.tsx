@@ -75,7 +75,7 @@ type Props = {
   onChange: (
     lat: number,
     lng: number,
-    availability: DeliveryAvailability
+    availability: DeliveryAvailability | null
   ) => void;
 };
 
@@ -227,6 +227,7 @@ export default function LocationPickerClient({
     setAvailability(null);
     setValidationError("");
     setChecking(true);
+    onChange(lat, lng, null);
 
     try {
       const nextAvailability =
@@ -440,9 +441,9 @@ export default function LocationPickerClient({
         </div>
       )}
 
-      <div className="map-title">
-        Selecciona tu ubicación de entrega
-      </div>
+      <p className="map-instruction">
+        Selecciona el punto exacto en el mapa o usa <strong>“Usar mi ubicación”</strong>.
+      </p>
 
       <MapContainer
         center={[10.016, -84.214]}
@@ -495,7 +496,7 @@ export default function LocationPickerClient({
               : "coverage-status--neutral"
         }`}
       >
-        {checking && "Validando ubicación..."}
+        {checking && "Validando cobertura..."}
 
         {!checking &&
           validationError && (
@@ -508,18 +509,14 @@ export default function LocationPickerClient({
         {!checking &&
           !validationError &&
           !availability &&
-          "Marca tu ubicación en el mapa para confirmar si realizamos entregas."}
+          "Selecciona un punto para confirmar la cobertura."}
 
         {!checking &&
           !validationError &&
           availability?.available && (
             <>
-              <strong>
-                Ubicación dentro de cobertura.
-              </strong>
-              {availability.zone
-                ? ` Zona: ${availability.zone}.`
-                : ""}
+              <strong>Ubicación dentro de cobertura</strong>
+              {availability.zone ? ` · ${availability.zone}` : ""}
             </>
           )}
 

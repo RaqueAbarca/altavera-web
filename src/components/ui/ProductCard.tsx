@@ -1,7 +1,16 @@
 "use client";
 
 import "../productos/productos.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  MATURITY_OPTIONS,
+  getMaturityLabel,
+  type MaturityPreference,
+} from "@/lib/maturity";
+import {
+  formatProductEquivalence,
+  isKilogramUnit,
+} from "@/lib/productUnits";
 
 type ProductCardProps = {
   image: string;
@@ -10,8 +19,15 @@ type ProductCardProps = {
   unit: string;
   quantity: number;
   maturitySelectionEnabled?: boolean;
+  maturityPreference?: MaturityPreference | null;
+  averageUnitWeightGrams?: number | null;
+  unitsPerKgMin?: number | null;
+  unitsPerKgMax?: number | null;
   isSeasonal?: boolean;
-  onAdd: (quantity: number) => void;
+  onAdd: (
+    quantity: number,
+    maturityPreference: MaturityPreference | null
+  ) => void;
   onIncrease: () => void;
   onDecrease: () => void;
   onRemove: () => void;
@@ -24,6 +40,10 @@ export default function ProductCard({
   unit,
   quantity,
   maturitySelectionEnabled = false,
+  maturityPreference = null,
+  averageUnitWeightGrams = null,
+  unitsPerKgMin = null,
+  unitsPerKgMax = null,
   isSeasonal = false,
   onAdd,
   onIncrease,
@@ -32,11 +52,26 @@ export default function ProductCard({
 }: ProductCardProps) {
   const [selecting, setSelecting] = useState(false);
   const [tempQuantity, setTempQuantity] = useState(
-    unit.toLowerCase() === "kg" ? 0.5 : 1
+    isKilogramUnit(unit) ? 0.5 : 1
+  );
+  const [tempMaturity, setTempMaturity] =
+    useState<MaturityPreference | null>(maturityPreference);
+
+  const equivalence = formatProductEquivalence(
+    unit,
+    averageUnitWeightGrams,
+    unitsPerKgMin,
+    unitsPerKgMax
   );
 
+  useEffect(() => {
+    if (!selecting) {
+      setTempMaturity(maturityPreference ?? null);
+    }
+  }, [maturityPreference, selecting]);
+
   function getStep() {
-    return unit.toLowerCase() === "kg" ? 0.5 : 1;
+    return isKilogramUnit(unit) ? 0.5 : 1;
   }
 
   function increaseTemp() {
@@ -60,7 +95,7 @@ export default function ProductCard({
   }
 
   function confirmAdd() {
-    onAdd(tempQuantity);
+    onAdd(tempQuantity, tempMaturity);
     setSelecting(false);
   }
 
@@ -94,9 +129,13 @@ export default function ProductCard({
           <span> / {unit}</span>
         </p>
 
-        {maturitySelectionEnabled && (
+        {equivalence && (
+          <p className="product-equivalence">{equivalence}</p>
+        )}
+
+        {maturitySelectionEnabled && !selecting && (
           <p className="maturity-card-note">
-            Puedes elegir maduración en el carrito
+            Puedes elegir la maduración antes de agregarlo
           </p>
         )}
 
@@ -131,6 +170,32 @@ export default function ProductCard({
               </button>
             </div>
 
+            {maturitySelectionEnabled && (
+              <label className="product-maturity-picker">
+                <span>Maduración</span>
+                <select
+                  value={tempMaturity ?? ""}
+                  onChange={(event) =>
+                    setTempMaturity(
+                      event.target.value
+                        ? (event.target.value as MaturityPreference)
+                        : null
+                    )
+                  }
+                >
+                  <option value="">Sin preferencia</option>
+                  {MATURITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  Haremos lo posible por respetarla según disponibilidad.
+                </small>
+              </label>
+            )}
+
             <button
               className="add-btn"
               onClick={confirmAdd}
@@ -146,10 +211,17 @@ export default function ProductCard({
               ✓ En carrito: {quantity} {unit}
             </p>
 
+            {maturitySelectionEnabled && maturityPreference && (
+              <p className="selected-maturity-note">
+                Maduración: {getMaturityLabel(maturityPreference)}
+              </p>
+            )}
+
             <button
               className="modify-btn"
               onClick={() => {
                 setTempQuantity(quantity);
+                setTempMaturity(maturityPreference ?? null);
                 setSelecting(true);
               }}
             >
