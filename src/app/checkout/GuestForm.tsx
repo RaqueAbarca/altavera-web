@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,6 +11,7 @@ import {
   Copy,
   MessageCircle,
   Smartphone,
+  MapPin,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/hooks/useCart";
@@ -31,6 +32,7 @@ import {
 import { getMaturityLabel } from "@/lib/maturity";
 import { formatCRC } from "@/lib/deliveryFee";
 import type { PaymentMethod } from "@/lib/paymentMethods";
+import type { SavedAddress } from "@/types/address";
 
 export default function GuestForm() {
   const { cart, totalPrice, clearCart } = useCart();
@@ -74,12 +76,55 @@ export default function GuestForm() {
   const [selectedDeliveryCycleId, setSelectedDeliveryCycleId] = useState("");
   const [deliveryCyclesLoading, setDeliveryCyclesLoading] = useState(true);
   const [deliveryCyclesError, setDeliveryCyclesError] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState("");
+  const [showLocationPicker, setShowLocationPicker] = useState(true);
+  const [savedAddressChecking, setSavedAddressChecking] = useState(false);
+  const [savedAddressValidationError, setSavedAddressValidationError] = useState("");
+  const [newAddressLabel, setNewAddressLabel] = useState("Casa");
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressFeedback, setAddressFeedback] = useState("");
+  const savedAddressCheckIdRef = useRef(0);
 
   const selectedCycle = useMemo(
     () =>
       deliveryCycles.find((cycle) => cycle.id === selectedDeliveryCycleId) ?? null,
     [deliveryCycles, selectedDeliveryCycleId]
   );
+
+  async function loadSavedAddresses(selectDefault = false) {
+    try {
+      const response = await fetch("/api/addresses", { cache: "no-store" });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudieron cargar tus direcciones");
+      }
+
+      const addresses = (data.addresses ?? []) as SavedAddress[];
+      setSavedAddresses(addresses);
+
+      if (selectDefault && addresses.length > 0) {
+        const preferred = addresses.find((address) => address.is_default) ?? addresses[0];
+        setSelectedSavedAddressId(preferred.id);
+        setShowLocationPicker(false);
+        setLocation({ lat: Number(preferred.latitude), lng: Number(preferred.longitude) });
+        setCustomer((current) => ({
+          ...current,
+          address: preferred.address_description ?? "",
+        }));
+        void validateSavedAddress(preferred);
+      } else if (selectDefault) {
+        setShowLocationPicker(true);
+      }
+
+      return addresses;
+    } catch (error) {
+      console.error("ERROR CARGANDO DIRECCIONES GUARDADAS:", error);
+      setSavedAddresses([]);
+      return [] as SavedAddress[];
+    }
+  }
 
   async function loadDeliveryCycles(silent = false) {
     if (!silent) {
@@ -145,6 +190,8 @@ export default function GuestForm() {
           email: session.user.email || current.email,
         }));
 
+        await loadSavedAddresses(true);
+
         try {
           const response = await fetch("/api/consents/status", {
             cache: "no-store",
@@ -170,6 +217,123 @@ export default function GuestForm() {
   function updateCustomer(field: keyof typeof customer, value: string) {
     setCustomer((current) => ({ ...current, [field]: value }));
     if (stepError) setStepError("");
+  }
+
+  async function validateSavedAddress(address: SavedAddress) {
+    const requestId = ++savedAddressCheckIdRef.current;
+    setDeliveryAvailability(null);
+    setSavedAddressChecking(true);
+    setSavedAddressValidationError("");
+
+    try {
+      const response = await fetch("/api/delivery/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          latitude: Number(address.latitude),
+          longitude: Number(address.longitude),
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo validar la ubicación");
+      }
+
+      if (requestId !== savedAddressCheckIdRef.current) return;
+
+      setDeliveryAvailability({
+        available: Boolean(data.available),
+        status: data.available ? "covered" : "outside",
+        zone: data.available && typeof data.zone === "string" ? data.zone : null,
+      });
+    } catch (error) {
+      if (requestId !== savedAddressCheckIdRef.current) return;
+
+      setDeliveryAvailability({
+        available: false,
+        status: "outside",
+        zone: null,
+      });
+      setSavedAddressValidationError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo validar esta dirección."
+      );
+    } finally {
+      if (requestId === savedAddressCheckIdRef.current) {
+        setSavedAddressChecking(false);
+      }
+    }
+  }
+
+  function selectSavedAddress(address: SavedAddress) {
+    const nextLocation = {
+      lat: Number(address.latitude),
+      lng: Number(address.longitude),
+    };
+
+    setSelectedSavedAddressId(address.id);
+    setShowLocationPicker(false);
+    setLocation(nextLocation);
+    void validateSavedAddress(address);
+    setCustomer((current) => ({
+      ...current,
+      address: address.address_description ?? "",
+    }));
+    setAddressFeedback("");
+    setStepError("");
+  }
+
+  function useNewAddress() {
+    savedAddressCheckIdRef.current += 1;
+    setSelectedSavedAddressId("");
+    setShowLocationPicker(true);
+    setSavedAddressChecking(false);
+    setSavedAddressValidationError("");
+    setLocation({ lat: 0, lng: 0 });
+    setDeliveryAvailability(null);
+    setCustomer((current) => ({ ...current, address: "" }));
+    setAddressFeedback("");
+    setStepError("");
+  }
+
+  async function saveCurrentAddress() {
+    if (!user || !deliveryAvailability?.available || savingAddress) return;
+
+    setSavingAddress(true);
+    setAddressFeedback("");
+
+    try {
+      const response = await fetch("/api/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: newAddressLabel.trim() || "Mi dirección",
+          latitude: location.lat,
+          longitude: location.lng,
+          address_description: customer.address.trim() || null,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo guardar la dirección");
+      }
+
+      await loadSavedAddresses(false);
+      setSelectedSavedAddressId(data.address.id);
+      setShowLocationPicker(false);
+      setSavedAddressValidationError("");
+      setNewAddressLabel("Casa");
+      setAddressFeedback("Dirección guardada para tus próximos pedidos.");
+    } catch (error) {
+      setAddressFeedback(
+        error instanceof Error ? error.message : "No se pudo guardar la dirección."
+      );
+    } finally {
+      setSavingAddress(false);
+    }
   }
 
   function goToTop() {
@@ -508,25 +672,161 @@ export default function GuestForm() {
             <div className="checkout-section checkout-section--address-card">
               <div className="checkout-section__title">
                 <h2>Dirección de entrega</h2>
-                <p>Marca el punto exacto en el mapa. Por ahora entregamos en Alajuela.</p>
+                <p>
+                  {user && savedAddresses.length > 0 && !showLocationPicker
+                    ? "Elige una dirección guardada para este pedido."
+                    : "Marca el punto exacto en el mapa. Por ahora entregamos en Alajuela."}
+                </p>
               </div>
 
-              <LocationPicker
-                onChange={(lat, lng, availability) => {
-                  setLocation({ lat, lng });
-                  setDeliveryAvailability(availability);
-                  setStepError("");
-                }}
-              />
+              {user && savedAddresses.length > 0 && (
+                <div className="checkout-saved-addresses">
+                  <div className="checkout-saved-addresses__heading">
+                    <div>
+                      <strong>Tus direcciones guardadas</strong>
+                      <span>Elige una o marca una ubicación nueva.</span>
+                    </div>
+                    <Link href="/profile#direcciones">Administrar</Link>
+                  </div>
 
-              <label className="checkout-textarea-field">
-                <span>Descripción de la ubicación <em>Opcional</em></span>
-                <textarea
-                  value={customer.address}
-                  onChange={(event) => updateCustomer("address", event.target.value)}
-                  placeholder="Condominio, número de casa, color del portón, 100 m norte de..."
-                />
-              </label>
+                  <div className="checkout-saved-addresses__list">
+                    {savedAddresses.map((address) => (
+                      <button
+                        type="button"
+                        key={address.id}
+                        className={`checkout-saved-address ${
+                          selectedSavedAddressId === address.id
+                            ? "checkout-saved-address--selected"
+                            : ""
+                        }`}
+                        onClick={() => selectSavedAddress(address)}
+                      >
+                        <MapPin size={17} aria-hidden="true" />
+                        <span>
+                          <strong>{address.label}</strong>
+                          <small>
+                            {address.address_description || "Ubicación guardada en el mapa"}
+                          </small>
+                        </span>
+                        {address.is_default && <em>Principal</em>}
+                      </button>
+                    ))}
+
+                    <button
+                      type="button"
+                      className={`checkout-saved-address checkout-saved-address--new ${
+                        showLocationPicker && !selectedSavedAddressId
+                          ? "checkout-saved-address--selected"
+                          : ""
+                      }`}
+                      onClick={useNewAddress}
+                    >
+                      <span className="checkout-saved-address__plus">+</span>
+                      <span>
+                        <strong>Agregar otra ubicación</strong>
+                        <small>Abrir el mapa y marcar un punto</small>
+                      </span>
+                    </button>
+                  </div>
+
+                  {selectedSavedAddressId && !showLocationPicker && (
+                    <div
+                      className={`checkout-saved-address-status ${
+                        deliveryAvailability?.available
+                          ? "checkout-saved-address-status--available"
+                          : deliveryAvailability
+                            ? "checkout-saved-address-status--unavailable"
+                            : "checkout-saved-address-status--checking"
+                      }`}
+                      role="status"
+                    >
+                      {savedAddressChecking
+                        ? "Validando cobertura de esta dirección..."
+                        : savedAddressValidationError
+                          ? savedAddressValidationError
+                          : deliveryAvailability?.available
+                            ? `Dirección dentro de cobertura${
+                                deliveryAvailability.zone ? ` · ${deliveryAvailability.zone}` : ""
+                              }`
+                            : "Esta dirección ya no está dentro de nuestra cobertura. Elige otra ubicación."}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(!user || savedAddresses.length === 0 || showLocationPicker) && (
+                <>
+                  <LocationPicker
+                    value={
+                      location.lat === 0 && location.lng === 0
+                        ? null
+                        : location
+                    }
+                    autoLocate={!user || savedAddresses.length === 0}
+                    onChange={(lat, lng, availability) => {
+                      setLocation({ lat, lng });
+                      setDeliveryAvailability(availability);
+
+                      if (selectedSavedAddressId) {
+                        const selectedAddress = savedAddresses.find(
+                          (address) => address.id === selectedSavedAddressId
+                        );
+                        const stillSelected =
+                          selectedAddress &&
+                          Math.abs(Number(selectedAddress.latitude) - lat) < 0.0000001 &&
+                          Math.abs(Number(selectedAddress.longitude) - lng) < 0.0000001;
+
+                        if (!stillSelected) setSelectedSavedAddressId("");
+                      }
+
+                      setAddressFeedback("");
+                      setStepError("");
+                    }}
+                  />
+
+                  <label className="checkout-textarea-field">
+                    <span>Descripción de la ubicación <em>Opcional</em></span>
+                    <textarea
+                      value={customer.address}
+                      onChange={(event) => updateCustomer("address", event.target.value)}
+                      placeholder="Condominio, número de casa, color del portón, 100 m norte de..."
+                    />
+                  </label>
+
+                  {user && deliveryAvailability?.available && !selectedSavedAddressId && (
+                    <div className="checkout-save-address">
+                      <div className="checkout-save-address__copy">
+                        <strong>Guardar para la próxima</strong>
+                        <span>Ponle un nombre como Casa, Trabajo o Apartamento.</span>
+                      </div>
+                      <div className="checkout-save-address__actions">
+                        <input
+                          type="text"
+                          value={newAddressLabel}
+                          onChange={(event) => setNewAddressLabel(event.target.value)}
+                          maxLength={50}
+                          placeholder="Ej: Casa"
+                          aria-label="Nombre para guardar la dirección"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void saveCurrentAddress()}
+                          disabled={savingAddress}
+                        >
+                          {savingAddress ? "Guardando..." : "Guardar dirección"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                </>
+              )}
+
+              {user && addressFeedback && (
+                <p className="checkout-address-feedback" role="status">
+                  {addressFeedback}
+                </p>
+              )}
             </div>
 
             <div className="checkout-section checkout-section--order-notes">

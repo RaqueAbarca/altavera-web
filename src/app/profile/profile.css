@@ -243,3 +243,203 @@
     justify-content: center;
   }
 }
+
+/* Saved addresses */
+.profile-addresses-heading p {
+  margin: 0.35rem 0 0;
+  color: #666d68;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.profile-muted {
+  margin: 0;
+  color: #666d68;
+}
+.profile-address-empty {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 18px;
+  border: 1px dashed #d5dbd5;
+  border-radius: 14px;
+  background: #fafbf9;
+  color: var(--green-light);
+}
+.profile-address-empty strong {
+  color: #293c30;
+}
+.profile-address-empty p {
+  margin: 5px 0 0;
+  color: #666d68;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.profile-address-list {
+  display: grid;
+  gap: 10px;
+}
+.profile-address-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e2e5e1;
+  border-radius: 14px;
+  background: #fbfcfa;
+}
+.profile-address-item__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: #eef3ed;
+  color: var(--green-light);
+}
+.profile-address-item__content {
+  min-width: 0;
+}
+.profile-address-item__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.profile-address-item__title strong {
+  color: #273c2e;
+  font-size: 0.98rem;
+}
+.profile-address-item__title span {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e8efe7;
+  color: #42644c;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+.profile-address-item__content > p {
+  margin: 5px 0 0;
+  color: #68706a;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.profile-address-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.profile-address-icon-btn {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #dce1dc;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #4d6755;
+  cursor: pointer;
+}
+.profile-address-icon-btn:hover {
+  border-color: #bfc9c0;
+  background: #f4f7f3;
+}
+.profile-address-icon-btn--danger {
+  color: #a44d43;
+}
+.profile-address-icon-btn:disabled,
+.profile-address-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.profile-address-edit {
+  display: grid;
+  gap: 10px;
+}
+.profile-address-edit label {
+  display: grid;
+  gap: 5px;
+}
+.profile-address-edit label > span {
+  color: #5b625d;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.profile-address-edit input,
+.profile-address-edit textarea {
+  width: 100%;
+  border: 1px solid #d8ded8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #222;
+  font: inherit;
+  font-size: 0.88rem;
+}
+.profile-address-edit input {
+  min-height: 42px;
+  padding: 0 11px;
+}
+.profile-address-edit textarea {
+  min-height: 78px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+.profile-address-edit input:focus,
+.profile-address-edit textarea:focus {
+  outline: none;
+  border-color: var(--green-light);
+  box-shadow: 0 0 0 3px rgba(53, 88, 67, 0.08);
+}
+.profile-address-edit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.profile-address-action {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid #d8ded8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #4e6254;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+.profile-address-action--primary {
+  border-color: var(--green-light);
+  background: var(--green-light);
+  color: #ffffff;
+}
+.profile-address-feedback {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f2f5f1;
+  color: #496451;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.profile-address-hint {
+  margin: 0;
+  color: #737a75;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .profile-address-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+  .profile-address-item__icon {
+    width: 38px;
+    height: 38px;
+  }
+  .profile-address-item__actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}

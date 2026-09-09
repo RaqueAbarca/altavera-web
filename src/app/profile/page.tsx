@@ -2,6 +2,7 @@
 
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import UserInfo from "@/components/profile/UserInfo";
+import AddressCard from "@/components/profile/AddressCard";
 import RecentOrders from "@/components/profile/RecentOrders";
 import AccountActions from "@/components/profile/AccountActions";
 
@@ -16,6 +17,8 @@ export default function ProfilePage() {
       <ProfileHeader />
 
       <UserInfo />
+
+      <AddressCard />
 
       <RecentOrders />
 

@@ -21,14 +21,20 @@ type Props = {
     lng: number,
     availability: DeliveryAvailability | null
   ) => void;
+  value?: { lat: number; lng: number } | null;
+  autoLocate?: boolean;
 };
 
 export default function LocationPicker({
   onChange,
+  value = null,
+  autoLocate = true,
 }: Props) {
   return (
     <LocationPickerClient
       onChange={onChange}
+      value={value}
+      autoLocate={autoLocate}
     />
   );
 }

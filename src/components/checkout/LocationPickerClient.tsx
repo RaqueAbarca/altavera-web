@@ -77,6 +77,8 @@ type Props = {
     lng: number,
     availability: DeliveryAvailability | null
   ) => void;
+  value?: { lat: number; lng: number } | null;
+  autoLocate?: boolean;
 };
 
 type LocationMarkerProps = {
@@ -175,6 +177,8 @@ async function checkDeliveryAvailability(
 
 export default function LocationPickerClient({
   onChange,
+  value = null,
+  autoLocate = true,
 }: Props) {
   const [position, setPosition] =
     useState<Position | null>(null);
@@ -264,6 +268,27 @@ export default function LocationPickerClient({
     }
   }
 
+  useEffect(() => {
+    if (!value) {
+      requestIdRef.current += 1;
+      setPosition(null);
+      setAvailability(null);
+      setValidationError("");
+      setChecking(false);
+      return;
+    }
+
+    const current = position;
+    const samePosition =
+      current &&
+      Math.abs(current[0] - value.lat) < 0.0000001 &&
+      Math.abs(current[1] - value.lng) < 0.0000001;
+
+    if (!samePosition) {
+      void selectLocation(value.lat, value.lng);
+    }
+  }, [value?.lat, value?.lng]);
+
   function requestCurrentLocation() {
     setLocationPermissionError("");
     setShowLocationIntro(false);
@@ -349,7 +374,7 @@ export default function LocationPickerClient({
     let cancelled = false;
 
     async function prepareLocation() {
-      if (!("geolocation" in navigator)) {
+      if (!autoLocate || !("geolocation" in navigator)) {
         return;
       }
 
@@ -374,7 +399,7 @@ export default function LocationPickerClient({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [autoLocate]);
 
   return (
     <div className="map-wrapper">
