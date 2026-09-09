@@ -2,6 +2,7 @@
 
 import "../productos/productos.css";
 import { useEffect, useState } from "react";
+import { Heart } from "lucide-react";
 import {
   MATURITY_OPTIONS,
   getMaturityLabel,
@@ -24,6 +25,9 @@ type ProductCardProps = {
   unitsPerKgMin?: number | null;
   unitsPerKgMax?: number | null;
   isSeasonal?: boolean;
+  isFavorite?: boolean;
+  favoritePending?: boolean;
+  onToggleFavorite?: () => void;
   onAdd: (
     quantity: number,
     maturityPreference: MaturityPreference | null
@@ -45,6 +49,9 @@ export default function ProductCard({
   unitsPerKgMin = null,
   unitsPerKgMax = null,
   isSeasonal = false,
+  isFavorite = false,
+  favoritePending = false,
+  onToggleFavorite,
   onAdd,
   onIncrease,
   onDecrease,
@@ -113,6 +120,28 @@ export default function ProductCard({
           alt={name}
           className="product-image"
         />
+
+        {onToggleFavorite && (
+          <button
+            type="button"
+            className={`product-favorite-btn ${isFavorite ? "product-favorite-btn--active" : ""}`}
+            onClick={onToggleFavorite}
+            disabled={favoritePending}
+            aria-pressed={isFavorite}
+            aria-label={
+              isFavorite
+                ? `Quitar ${name} de favoritos`
+                : `Guardar ${name} en favoritos`
+            }
+            title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+          >
+            <Heart
+              size={20}
+              strokeWidth={2.2}
+              fill={isFavorite ? "currentColor" : "none"}
+            />
+          </button>
+        )}
 
         {isSeasonal && (
           <span className="seasonal-badge">

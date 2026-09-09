@@ -78,11 +78,14 @@ export default function ClientLoginPage() {
         // Redirección nativa para garantizar que las cookies viajen de inmediato al Middleware
         const params = new URLSearchParams(window.location.search);
         const redirect = params.get("redirect");
-
-        window.location.href =
+        const safeRedirect =
           redirect === "checkout"
             ? "/checkout"
-            : "/profile";
+            : redirect?.startsWith("/") && !redirect.startsWith("//")
+              ? redirect
+              : "/profile";
+
+        window.location.href = safeRedirect;
       }
     } catch (err: any) {
       setError(err.message || "Ocurrió un error inesperado");

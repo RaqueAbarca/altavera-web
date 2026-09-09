@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import ProductsSection from "@/components/productos/ProductsSection";
 import ProductFilters from "@/components/productos/productFilters";
@@ -49,11 +50,18 @@ export default function ProductosPage() {
 
   return (
     <main className="container">
-      <div className="header-productos">
-        <h1>Nuestros productos</h1>
-        <p>
-          <Link href="/">Inicio</Link> {" >"} Productos
-        </p>
+      <div className="header-productos products-page-heading">
+        <div>
+          <h1>Nuestros productos</h1>
+          <p>
+            <Link href="/">Inicio</Link> {" >"} Productos
+          </p>
+        </div>
+
+        <Link href="/favoritos" className="products-favorites-link">
+          <Heart size={18} />
+          Mis favoritos
+        </Link>
       </div>
 
       <LoginPromo />

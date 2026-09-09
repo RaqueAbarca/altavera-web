@@ -24,6 +24,8 @@ type CartContextType = {
     preference: MaturityPreference | null
   ) => void;
   clearCart: () => void;
+  replaceCart: (items: CartItem[]) => void;
+  mergeCart: (items: CartItem[]) => void;
   totalItems: number;
   totalPrice: number;
 };
@@ -142,6 +144,50 @@ export function CartProvider({
     setCart([]);
   }
 
+  function replaceCart(items: CartItem[]) {
+    setCart(
+      items.map((item) => ({
+        ...item,
+        maturity_preference: item.maturity_preference ?? null,
+      }))
+    );
+  }
+
+  function mergeCart(items: CartItem[]) {
+    setCart((current) => {
+      const merged = [...current];
+
+      items.forEach((incoming) => {
+        const index = merged.findIndex(
+          (item) => item.id === incoming.id
+        );
+
+        if (index === -1) {
+          merged.push({
+            ...incoming,
+            maturity_preference:
+              incoming.maturity_preference ?? null,
+          });
+          return;
+        }
+
+        const existing = merged[index];
+
+        merged[index] = {
+          ...existing,
+          ...incoming,
+          quantity: existing.quantity + incoming.quantity,
+          maturity_preference:
+            existing.maturity_preference ??
+            incoming.maturity_preference ??
+            null,
+        };
+      });
+
+      return merged;
+    });
+  }
+
   const totalItems = cart.length;
 
   const totalPrice = cart.reduce(
@@ -159,6 +205,8 @@ export function CartProvider({
         decreaseQuantity,
         setMaturityPreference,
         clearCart,
+        replaceCart,
+        mergeCart,
         totalItems,
         totalPrice,
       }}

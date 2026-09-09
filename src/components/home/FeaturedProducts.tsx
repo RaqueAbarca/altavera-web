@@ -3,9 +3,12 @@
 import "./home.css";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import ProductCard from "../ui/ProductCard";
+import FavoriteLoginPrompt from "../ui/FavoriteLoginPrompt";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/hooks/useCart";
+import { useFavorites } from "@/hooks/useFavorites";
 import { Product } from "@/types/product";
 import type { MaturityPreference } from "@/lib/maturity";
 
@@ -23,7 +26,10 @@ type SupabaseProduct = {
 };
 
 export default function FeaturedProducts() {
+  const pathname = usePathname();
   const [products, setProducts] = useState<Product[]>([]);
+  const [showFavoriteLoginPrompt, setShowFavoriteLoginPrompt] = useState(false);
+  const { favoriteIds, pendingIds, toggleFavorite } = useFavorites();
 
   const {
     cart,
@@ -73,6 +79,14 @@ export default function FeaturedProducts() {
     loadProducts();
   }, []);
 
+  async function handleToggleFavorite(productId: number) {
+    const result = await toggleFavorite(productId);
+
+    if (result === "requires-login") {
+      setShowFavoriteLoginPrompt(true);
+    }
+  }
+
   return (
     <section className="container section">
       <div className="section-header">
@@ -107,6 +121,9 @@ export default function FeaturedProducts() {
               unitsPerKgMin={product.approx_units_per_kg_min ?? null}
               unitsPerKgMax={product.approx_units_per_kg_max ?? null}
               isSeasonal={product.is_seasonal ?? false}
+              isFavorite={favoriteIds.has(product.id)}
+              favoritePending={pendingIds.has(product.id)}
+              onToggleFavorite={() => void handleToggleFavorite(product.id)}
               onAdd={(quantity, maturityPreference: MaturityPreference | null) =>
                 addToCart({
                   ...product,
@@ -125,6 +142,12 @@ export default function FeaturedProducts() {
           );
         })}
       </div>
+
+      <FavoriteLoginPrompt
+        open={showFavoriteLoginPrompt}
+        returnTo={pathname}
+        onClose={() => setShowFavoriteLoginPrompt(false)}
+      />
     </section>
   );
 }
