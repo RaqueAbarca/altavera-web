@@ -16,6 +16,7 @@ type Props = {
   title?: string;
   subtitle?: string;
   printContext?: string;
+  emptyMessage?: string;
 };
 
 function categoryLabel(category?: string | null) {
@@ -28,6 +29,7 @@ export default function ShoppingList({
   title = "Lista de compras",
   subtitle,
   printContext,
+  emptyMessage = "No hay productos para esta entrega.",
 }: Props) {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
@@ -87,7 +89,7 @@ export default function ShoppingList({
       </div>
 
       {products.length === 0 ? (
-        <p className="empty">No hay productos para esta entrega.</p>
+        <p className="empty">{emptyMessage}</p>
       ) : (
         <>
           <div className="shopping-list-progress" aria-live="polite">

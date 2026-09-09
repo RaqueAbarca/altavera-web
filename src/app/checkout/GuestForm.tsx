@@ -652,6 +652,9 @@ export default function GuestForm() {
                     autoComplete="email"
                     placeholder="correo@email.com"
                   />
+                  <small className="checkout-field-help">
+                    Si agregas un correo, te enviaremos automáticamente la confirmación y el resumen de este pedido.
+                  </small>
                 </label>
               </div>
             </div>

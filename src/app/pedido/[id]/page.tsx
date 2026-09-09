@@ -4,8 +4,10 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
+  Check,
   CheckCircle2,
-  MapPin,
+  Copy,
+  Mail,
   MessageCircle,
   ShoppingBag,
   WalletCards,
@@ -24,12 +26,14 @@ type OrderItem = {
   product_name: string;
   price: number | string;
   quantity: number | string;
+  unit: string | null;
   maturity_preference: string | null;
 };
 
 type Order = {
   id: string;
   customer_notes: string | null;
+  has_email: boolean;
   address_description: string | null;
   subtotal: number;
   shipping: number;
@@ -41,6 +45,106 @@ type Order = {
   order_item: OrderItem[];
 };
 
+type OrderStatusTone = "pending" | "progress" | "success" | "cancelled";
+
+type OrderStatusMeta = {
+  label: string;
+  description: string;
+  tone: OrderStatusTone;
+};
+
+const ORDER_STATUS_META: Record<string, OrderStatusMeta> = {
+  pending: {
+    label: "Pago por confirmar",
+    description: "Completa el pago y envíanos el comprobante para poder verificarlo.",
+    tone: "pending",
+  },
+  pending_payment: {
+    label: "Pago por confirmar",
+    description: "Completa el pago y envíanos el comprobante para poder verificarlo.",
+    tone: "pending",
+  },
+  confirmed: {
+    label: "Pago confirmado",
+    description: "El pago ya fue verificado y tu pedido quedó confirmado.",
+    tone: "success",
+  },
+  preparing: {
+    label: "Preparando",
+    description: "Estamos preparando tu pedido para la fecha de entrega seleccionada.",
+    tone: "progress",
+  },
+  ready: {
+    label: "En camino",
+    description: "Tu pedido ya salió para entrega.",
+    tone: "progress",
+  },
+  delivered: {
+    label: "Entregado",
+    description: "Tu pedido ya fue marcado como entregado.",
+    tone: "success",
+  },
+  cancelled: {
+    label: "Cancelado",
+    description: "Este pedido fue cancelado.",
+    tone: "cancelled",
+  },
+};
+
+function getOrderStatusMeta(status: string): OrderStatusMeta {
+  return (
+    ORDER_STATUS_META[status] ?? {
+      label: status,
+      description: "Consulta el estado actual de tu pedido.",
+      tone: "progress",
+    }
+  );
+}
+
+function formatQuantity(quantity: number, unit: string | null) {
+  const amount = quantity.toLocaleString("es-CR", {
+    maximumFractionDigits: 2,
+  });
+
+  return unit ? `${amount} ${unit}` : amount;
+}
+
+type CopyableValueProps = {
+  label: string;
+  value: string;
+  copyKey: string;
+  copiedKey: string | null;
+  onCopy: (copyKey: string, value: string) => void;
+};
+
+function CopyableValue({
+  label,
+  value,
+  copyKey,
+  copiedKey,
+  onCopy,
+}: CopyableValueProps) {
+  const copied = copiedKey === copyKey;
+
+  return (
+    <p className="pedido-payment-row">
+      <span>{label}</span>
+      <span className="pedido-copy-value">
+        <strong>{value}</strong>
+        <button
+          type="button"
+          onClick={() => onCopy(copyKey, value)}
+          aria-label={`Copiar ${label.toLowerCase()}`}
+          title={`Copiar ${label.toLowerCase()}`}
+        >
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+          <span>{copied ? "Copiado" : "Copiar"}</span>
+        </button>
+      </span>
+    </p>
+  );
+}
+
 export default function PedidoPage({
   params,
 }: {
@@ -51,6 +155,7 @@ export default function PedidoPage({
   const [loading, setLoading] = useState(true);
   const { settings, loading: settingsLoading } = usePublicAppSettings();
   const [error, setError] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadOrder() {
@@ -85,6 +190,17 @@ export default function PedidoPage({
     void loadOrder();
   }, [id]);
 
+  function copyValue(copyKey: string, value: string) {
+    if (!navigator.clipboard) return;
+
+    void navigator.clipboard.writeText(value).then(() => {
+      setCopiedKey(copyKey);
+      window.setTimeout(() => {
+        setCopiedKey((current) => (current === copyKey ? null : current));
+      }, 1600);
+    });
+  }
+
   if (loading) {
     return (
       <main className="container pedido-page pedido-state">
@@ -107,6 +223,9 @@ export default function PedidoPage({
     );
   }
 
+  const shortOrderId = order.id.slice(0, 8).toUpperCase();
+  const statusMeta = getOrderStatusMeta(order.status);
+  const paymentPending = order.status === "pending" || order.status === "pending_payment";
   const sinpePhone = settings.payment.sinpePhone;
   const bankAccounts = settings.payment.bankAccounts.filter(
     (account) => account.accountNumber || account.iban
@@ -114,14 +233,16 @@ export default function PedidoPage({
   const isBankTransfer = order.payment_method === "BANK_TRANSFER";
   const paymentMethodLabel = getPaymentMethodLabel(order.payment_method);
   const receiptWhatsAppPhone = settings.contact.whatsappPhone;
-  const paymentProofUrl = buildWhatsAppUrl({
-    phone: receiptWhatsAppPhone,
-    message: buildPaymentProofMessage({
-      orderId: order.id,
-      total: formatCRC(order.total),
-      paymentMethod: paymentMethodLabel,
-    }),
-  });
+  const paymentProofUrl = paymentPending
+    ? buildWhatsAppUrl({
+        phone: receiptWhatsAppPhone,
+        message: buildPaymentProofMessage({
+          orderId: order.id,
+          total: formatCRC(order.total),
+          paymentMethod: paymentMethodLabel,
+        }),
+      })
+    : null;
 
   return (
     <main className="container pedido-page">
@@ -131,130 +252,189 @@ export default function PedidoPage({
         <div className="pedido-confirmation-icon" aria-hidden="true">
           <CheckCircle2 size={32} />
         </div>
-        <span>Paso 3 de 3</span>
         <h1>¡Pedido recibido!</h1>
         <p>
-          Tu pedido quedó registrado correctamente. Ahora solo falta completar y verificar el pago.
+          {paymentPending
+            ? "Tu pedido quedó registrado correctamente."
+            : statusMeta.description}
         </p>
+
+        <div className="pedido-hero-order">
+          <span>Número de pedido</span>
+          <div className="pedido-number__value">
+            <strong>#{shortOrderId}</strong>
+            <button
+              type="button"
+              className="pedido-copy-order"
+              onClick={() => copyValue("order", `#${shortOrderId}`)}
+              aria-label="Copiar número de pedido"
+            >
+              {copiedKey === "order" ? <Check size={15} /> : <Copy size={15} />}
+              {copiedKey === "order" ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+        </div>
+
+        {order.has_email && (
+          <div className="pedido-email-notice">
+            <Mail size={18} aria-hidden="true" />
+            <span>Te enviamos un correo de confirmación con el resumen de tu pedido.</span>
+          </div>
+        )}
+
+        <div className="pedido-hero-facts">
+          {order.delivery_cycle?.delivery_date && (
+            <div>
+              <CalendarDays size={18} aria-hidden="true" />
+              <span>Entrega</span>
+              <strong>{formatDeliveryDate(order.delivery_cycle.delivery_date)}</strong>
+            </div>
+          )}
+          <div>
+            <ShoppingBag size={18} aria-hidden="true" />
+            <span>Total</span>
+            <strong>{formatCRC(order.total)}</strong>
+          </div>
+        </div>
       </section>
 
       <div className="pedido-layout">
         <section className="pedido-card pedido-card--main">
-          <div className="pedido-number">
-            <span>Número de pedido</span>
-            <strong>#{order.id.slice(0, 8).toUpperCase()}</strong>
-          </div>
-
-          <div className="pedido-facts">
-            {order.delivery_cycle?.delivery_date && (
-              <div>
-                <CalendarDays size={20} />
-                <span>Entrega</span>
-                <strong>{formatDeliveryDate(order.delivery_cycle.delivery_date)}</strong>
-              </div>
-            )}
-
-            <div>
-              <WalletCards size={20} />
-              <span>Método de pago</span>
-              <strong>{paymentMethodLabel}</strong>
-            </div>
-
-            {order.address_description && (
-              <div>
-                <MapPin size={20} />
-                <span>Referencia</span>
-                <strong>{order.address_description}</strong>
-              </div>
-            )}
-          </div>
-
-          <div className="pedido-payment-box">
-            <div className="pedido-payment-box__heading">
-              <WalletCards size={20} />
-              <div>
-                <span>Pago pendiente</span>
-                <h2>{paymentMethodLabel}</h2>
-              </div>
-            </div>
-
-            {settingsLoading ? (
-              <p>Cargando los datos para completar el pago...</p>
-            ) : isBankTransfer ? (
-              bankAccounts.length > 0 ? (
-                <div className="pedido-bank-accounts">
-                  <p className="pedido-bank-accounts__intro">
-                    Puedes transferir a cualquiera de estas cuentas:
-                  </p>
-                  {bankAccounts.map((account, index) => (
-                    <div className="pedido-bank-account" key={`${account.bankName}-${index}`}>
-                      <strong className="pedido-bank-account__title">
-                        {account.bankName || `Cuenta bancaria ${index + 1}`}
-                      </strong>
-                      <div className="pedido-payment-details">
-                        {account.accountHolder && <p><span>Titular</span><strong>{account.accountHolder}</strong></p>}
-                        {account.accountNumber && <p><span>Número de cuenta</span><strong>{account.accountNumber}</strong></p>}
-                        {account.iban && <p><span>IBAN</span><strong>{account.iban}</strong></p>}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pedido-payment-details pedido-payment-details--total">
-                    <p><span>Monto</span><strong>{formatCRC(order.total)}</strong></p>
+          {paymentPending ? (
+            <div className="pedido-payment-box pedido-payment-box--primary">
+              <div className="pedido-payment-box__heading pedido-payment-box__heading--split">
+                <div className="pedido-payment-title">
+                  <WalletCards size={20} />
+                  <div>
+                    <span>Completa el pago</span>
+                    <h2>{paymentMethodLabel}</h2>
                   </div>
+                </div>
+                <span className="pedido-status-badge pedido-status-badge--pending">
+                  Pago por confirmar
+                </span>
+              </div>
+
+              {settingsLoading ? (
+                <p>Cargando los datos para completar el pago...</p>
+              ) : isBankTransfer ? (
+                bankAccounts.length > 0 ? (
+                  <div className="pedido-bank-accounts">
+                    <p className="pedido-bank-accounts__intro">
+                      Puedes transferir a cualquiera de estas cuentas:
+                    </p>
+                    {bankAccounts.map((account, index) => (
+                      <div className="pedido-bank-account" key={`${account.bankName}-${index}`}>
+                        <strong className="pedido-bank-account__title">
+                          {account.bankName || `Cuenta bancaria ${index + 1}`}
+                        </strong>
+                        <div className="pedido-payment-details">
+                          {account.accountHolder && (
+                            <p className="pedido-payment-row">
+                              <span>Titular</span>
+                              <strong>{account.accountHolder}</strong>
+                            </p>
+                          )}
+                          {account.accountNumber && (
+                            <CopyableValue
+                              label="Número de cuenta"
+                              value={account.accountNumber}
+                              copyKey={`account-${index}`}
+                              copiedKey={copiedKey}
+                              onCopy={copyValue}
+                            />
+                          )}
+                          {account.iban && (
+                            <CopyableValue
+                              label="IBAN"
+                              value={account.iban}
+                              copyKey={`iban-${index}`}
+                              copiedKey={copiedKey}
+                              onCopy={copyValue}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="pedido-payment-details pedido-payment-details--total">
+                      <p className="pedido-payment-row">
+                        <span>Monto</span>
+                        <strong>{formatCRC(order.total)}</strong>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p>
+                    Los datos de la transferencia todavía están pendientes de configurar. Tu pedido seguirá como pago pendiente hasta que Altavera lo verifique.
+                  </p>
+                )
+              ) : sinpePhone ? (
+                <div className="pedido-payment-details">
+                  <CopyableValue
+                    label="SINPE Móvil"
+                    value={sinpePhone}
+                    copyKey="sinpe"
+                    copiedKey={copiedKey}
+                    onCopy={copyValue}
+                  />
+                  <p className="pedido-payment-row">
+                    <span>Monto</span>
+                    <strong>{formatCRC(order.total)}</strong>
+                  </p>
                 </div>
               ) : (
                 <p>
-                  Los datos de la transferencia todavía están pendientes de configurar. Tu pedido seguirá como pago pendiente hasta que Altavera lo verifique.
+                  Los datos del SINPE Móvil todavía están pendientes de configurar. Tu pedido seguirá como pago pendiente hasta que Altavera lo verifique.
                 </p>
-              )
-            ) : sinpePhone ? (
-              <div className="pedido-payment-details">
-                <p><span>SINPE Móvil</span><strong>{sinpePhone}</strong></p>
-                <p><span>Monto</span><strong>{formatCRC(order.total)}</strong></p>
-              </div>
-            ) : (
-              <p>
-                Los datos del SINPE Móvil todavía están pendientes de configurar. Tu pedido seguirá como pago pendiente hasta que Altavera lo verifique.
-              </p>
-            )}
+              )}
 
-            <div className="pedido-proof-reminder">
-              <MessageCircle size={22} />
-              <div>
-                <span>Último paso</span>
-                <h3>Envíanos el comprobante por WhatsApp</h3>
-                {paymentProofUrl ? (
-                  <>
+              <div className="pedido-proof-reminder">
+                <MessageCircle size={22} />
+                <div>
+                  <span>Después de pagar</span>
+                  <h3>Envíanos el comprobante</h3>
+                  {paymentProofUrl ? (
+                    <>
+                      <p>
+                        Adjunta la captura en WhatsApp. El mensaje ya incluye tu número de pedido, monto y método de pago.
+                      </p>
+                      <a
+                        href={paymentProofUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="pedido-whatsapp-action"
+                      >
+                        <MessageCircle size={18} />
+                        Abrir WhatsApp y enviar comprobante
+                      </a>
+                      <small>
+                        Cuando verifiquemos el comprobante, tu pedido pasará a confirmado.
+                      </small>
+                    </>
+                  ) : (
                     <p>
-                      Tu pedido ya fue creado, pero el pago continúa pendiente. Adjunta la captura del comprobante en WhatsApp y lo verificaremos antes de preparar el pedido.
+                      El WhatsApp oficial de Altavera todavía no está configurado. Tu pedido seguirá como pago pendiente hasta que podamos habilitar el canal de comprobantes.
                     </p>
-                    <a
-                      href={paymentProofUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="pedido-whatsapp-action"
-                    >
-                      <MessageCircle size={18} />
-                      Enviar comprobante por WhatsApp
-                    </a>
-                    <small>
-                      El mensaje llevará listo tu número de pedido, monto y método de pago. Solo tendrás que adjuntar la captura y enviarla.
-                    </small>
-                  </>
-                ) : (
-                  <p>
-                    El WhatsApp oficial de Altavera todavía no está configurado. Tu pedido seguirá como pago pendiente hasta que podamos habilitar el canal de comprobantes.
-                  </p>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className={`pedido-current-status pedido-current-status--${statusMeta.tone}`}>
+              <CheckCircle2 size={22} aria-hidden="true" />
+              <div>
+                <span>Estado actual</span>
+                <h2>{statusMeta.label}</h2>
+                <p>{statusMeta.description}</p>
+              </div>
+            </div>
+          )}
         </section>
 
         <aside className="pedido-card pedido-summary-card">
           <div className="pedido-summary-heading">
             <ShoppingBag size={19} />
-            <h2>Resumen</h2>
+            <h2>Resumen de tu pedido</h2>
           </div>
 
           <div className="pedido-items">
@@ -268,7 +448,7 @@ export default function PedidoPage({
                   <div>
                     <strong>{item.product_name}</strong>
                     <span>
-                      {quantity} × {formatCRC(price)}
+                      {formatQuantity(quantity, item.unit)} × {formatCRC(price)}
                     </span>
                     {maturityLabel && <small>Maduración: {maturityLabel}</small>}
                   </div>

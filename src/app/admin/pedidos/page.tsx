@@ -87,6 +87,17 @@ const STATUS_TABS: Array<{ key: StatusTab; label: string }> = [
   { key: "delivered", label: "Entregados" },
 ];
 
+const PURCHASE_ELIGIBLE_STATUSES = new Set([
+  "confirmed",
+  "preparing",
+  "ready",
+  "delivered",
+]);
+
+function isPurchaseEligibleOrder(order: Order) {
+  return PURCHASE_ELIGIBLE_STATUSES.has(order.status);
+}
+
 function belongsToTab(status: string, tab: StatusTab) {
   if (tab === "pending") {
     return status === "pending" || status === "pending_payment";
@@ -126,11 +137,12 @@ function buildLiveShoppingList(orders: Order[]) {
   >();
 
   orders
-    .filter((order) => order.status !== "cancelled")
+    .filter(isPurchaseEligibleOrder)
     .forEach((order) => {
       order.order_item.forEach((item) => {
         const maturityPreference = item.maturity_preference ?? null;
-        const key = `${item.product_id ?? item.product_name}::${maturityPreference ?? "none"}`;
+        const unit = item.unit?.trim() || null;
+        const key = `${item.product_id ?? item.product_name}::${unit ?? "none"}::${maturityPreference ?? "none"}`;
         const current = map.get(key);
 
         map.set(key, {
@@ -138,7 +150,7 @@ function buildLiveShoppingList(orders: Order[]) {
           quantity: (current?.quantity ?? 0) + Number(item.quantity),
           maturityPreference,
           category: item.category ?? null,
-          unit: item.unit ?? null,
+          unit,
         });
       });
     });
@@ -232,20 +244,25 @@ export default function AdminOrdersPage() {
   const shoppingProducts = useMemo(() => {
     if (!selectedCycle) return [];
 
-    if (selectedCycle.shoppingList) {
-      return selectedCycle.shoppingList.shopping_list_items
-        .map((item) => ({
-          name: item.product_name,
-          quantity: Number(item.quantity),
-          unit: item.unit,
-          maturityPreference: item.maturity_preference,
-          category: item.category ?? null,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name, "es"));
-    }
-
+    // La lista visible e impresa se reconstruye siempre desde los pedidos del
+    // ciclo. Así una lista congelada antigua nunca vuelve a incluir pedidos
+    // pendientes de pago que pudieran haberse agregado antes de este cambio.
     return buildLiveShoppingList(selectedCycle.orders);
   }, [selectedCycle]);
+
+  const purchaseOrderCount = useMemo(
+    () =>
+      (selectedCycle?.orders ?? []).filter(isPurchaseEligibleOrder).length,
+    [selectedCycle]
+  );
+
+  const pendingPaymentOrderCount = useMemo(
+    () =>
+      (selectedCycle?.orders ?? []).filter((order) =>
+        belongsToTab(order.status, "pending")
+      ).length,
+    [selectedCycle]
+  );
 
   async function updateStatus(order: Order, status: string) {
     const isGoingOnTheWay = status === "ready";
@@ -416,11 +433,12 @@ export default function AdminOrdersPage() {
                     : "Vista previa de la lista de compra"
                 }
                 subtitle={
-                  selectedCycle.shoppingList
-                    ? "Esta lista quedó congelada al realizarse el corte."
-                    : "Se actualiza con los pedidos y se congela automáticamente al corte."
+                  purchaseOrderCount === 0
+                    ? "Todavía no hay pedidos con pago confirmado. Los pendientes y cancelados no se incluyen."
+                    : `${purchaseOrderCount} ${purchaseOrderCount === 1 ? "pedido con pago confirmado" : "pedidos con pago confirmado"} incluidos.${pendingPaymentOrderCount > 0 ? ` ${pendingPaymentOrderCount} ${pendingPaymentOrderCount === 1 ? "pendiente de pago queda fuera" : "pendientes de pago quedan fuera"}.` : ""} Los cancelados tampoco se incluyen.`
                 }
-                printContext={`Entrega: ${formatDeliveryDate(selectedCycle.delivery_date)} · Corte: ${formatCutoffLabel(selectedCycle.cutoff_at)}`}
+                emptyMessage="Todavía no hay productos de pedidos con pago confirmado para esta entrega."
+                printContext={`Entrega: ${formatDeliveryDate(selectedCycle.delivery_date)} · Corte: ${formatCutoffLabel(selectedCycle.cutoff_at)} · Pedidos incluidos: ${purchaseOrderCount} · Solo pagos confirmados`}
               />
 
               <section className="orders-section">
@@ -512,7 +530,11 @@ export default function AdminOrdersPage() {
                                       <small>Maduración: {maturityLabel}</small>
                                     )}
                                   </span>
-                                  <strong>x {Number(item.quantity).toLocaleString("es-CR")}</strong>
+                                  <strong>
+                                    {item.unit
+                                      ? `${Number(item.quantity).toLocaleString("es-CR")} ${item.unit}`
+                                      : `x ${Number(item.quantity).toLocaleString("es-CR")}`}
+                                  </strong>
                                 </li>
                               );
                             })}

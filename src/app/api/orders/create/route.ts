@@ -13,7 +13,8 @@ import {
   hasCurrentLegalConsent,
 } from "@/lib/legalConsent";
 import { isPaymentMethod } from "@/lib/paymentMethods";
-import { getDeliveryFeeForOrder } from "@/lib/appSettings.server";
+import { getDeliveryFeeForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
+import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
 
 export const runtime = "nodejs";
 
@@ -333,10 +334,12 @@ export async function POST(request: Request) {
       }
     }
 
+    const orderEmail = guestEmailRaw || user?.email || null;
+
     if (marketingOptIn) {
       await subscribeMarketing({
         userId: user?.id ?? null,
-        email: guestEmailRaw || user?.email || null,
+        email: orderEmail,
         phone: phoneDigits,
         source: user ? "account_checkout" : "guest_checkout",
         consentedAt: consentedNow,
@@ -522,6 +525,7 @@ export async function POST(request: Request) {
         product_name: product.name,
         price: roundMoney(price),
         quantity: item.quantity,
+        unit: product.unit?.trim() || null,
         maturity_preference:
           product.maturity_selection_enabled
             ? item.maturityPreference
@@ -550,7 +554,7 @@ export async function POST(request: Request) {
       .rpc("altavera_create_order_with_items", {
         p_customer_id: user?.id ?? null,
         p_guest_name: guestName,
-        p_guest_email: guestEmailRaw || null,
+        p_guest_email: orderEmail,
         p_guest_phone: phoneDigits,
         p_latitude: latitude,
         p_longitude: longitude,
@@ -624,6 +628,46 @@ export async function POST(request: Request) {
     } catch (pushError) {
       // La notificación nunca debe impedir que el pedido se confirme.
       console.error("ERROR ENVIANDO PUSH DE NUEVO PEDIDO:", pushError);
+    }
+
+    if (orderEmail) {
+      try {
+        const emailSettings = await getPublicAppSettings();
+        const emailResult = await sendOrderConfirmationEmail({
+          to: orderEmail,
+          customerName: guestName,
+          orderId: orderResult.order_id,
+          accessToken: orderResult.access_token,
+          deliveryDate: deliveryCycle.delivery_date,
+          subtotal: Number(orderResult.order_subtotal),
+          shipping: Number(orderResult.order_shipping),
+          total: Number(orderResult.order_total),
+          paymentMethod,
+          items: authoritativeItems.map((item) => ({
+            productName: item.product_name,
+            quantity: item.quantity,
+            unit: item.unit,
+            maturityPreference: item.maturity_preference,
+            price: item.price,
+          })),
+          settings: emailSettings,
+          requestOrigin: new URL(request.url).origin,
+        });
+
+        if (emailResult.status === "skipped") {
+          console.warn(
+            "CORREO DE CONFIRMACIÓN OMITIDO:",
+            emailResult.reason
+          );
+        }
+      } catch (emailError) {
+        // El correo es transaccional, pero nunca debe provocar que el cliente
+        // repita un pedido que sí quedó creado correctamente.
+        console.error(
+          "ERROR ENVIANDO CORREO DE CONFIRMACIÓN:",
+          emailError
+        );
+      }
     }
 
     return NextResponse.json({

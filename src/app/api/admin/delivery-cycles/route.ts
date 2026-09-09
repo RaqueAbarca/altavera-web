@@ -45,7 +45,8 @@ export async function GET() {
           product_name,
           price,
           quantity,
-          maturity_preference
+          maturity_preference,
+          unit
         )
       `)
       .order("created_at", { ascending: false });
@@ -77,7 +78,8 @@ export async function GET() {
           product_name,
           price,
           quantity,
-          maturity_preference
+          maturity_preference,
+          unit
         )
       `)
       .is("delivery_cycle_id", null)
@@ -155,9 +157,10 @@ export async function GET() {
             ? null
             : productMetaById.get(Number(item.product_id))?.category ?? null,
         unit:
-          item.product_id === null
+          item.unit?.trim() ||
+          (item.product_id === null
             ? null
-            : productMetaById.get(Number(item.product_id))?.unit ?? null,
+            : productMetaById.get(Number(item.product_id))?.unit ?? null),
       })),
     });
 

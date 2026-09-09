@@ -83,6 +83,16 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+
+.checkout-field-help {
+  color: #6b716c;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.45;
+  text-transform: none;
+}
+
 .checkout-field-grid input,
 .checkout-textarea-field textarea {
   width: 100%;
