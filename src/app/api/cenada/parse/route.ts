@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { parseCenadaPdf } from "@/lib/pricing/cenada/parseCenada";
 import { processCenada } from "@/lib/pricing/cenada/processCenada";
 import {
   getOrCreateCenadaCycleForSources,
@@ -65,14 +64,14 @@ function parseRequestedCycleId(
 export async function POST(
   request:Request
 ){
-  const auth=
-    await requireAdmin();
-
-  if(!auth.ok){
-    return auth.response;
-  }
-
   try{
+    const auth=
+      await requireAdmin();
+
+    if(!auth.ok){
+      return auth.response;
+    }
+
     const formData=
       await request.formData();
 
@@ -134,6 +133,17 @@ export async function POST(
         }
       );
     }
+
+    /*
+     * Cargamos el lector de PDF dentro de la petición.
+     * Si pdf-parse no puede inicializarse en Vercel, el error
+     * queda dentro de este try y podremos devolver JSON en vez
+     * de una página HTML de error.
+     */
+    const { parseCenadaPdf }=
+      await import(
+        "@/lib/pricing/cenada/parseCenada"
+      );
 
     const parsedFiles:
       ParsedFile[]=[];

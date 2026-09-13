@@ -123,6 +123,63 @@ function bulletinLabel(
     value;
 }
 
+type ApiErrorPayload={
+  error?:string;
+  details?:string;
+};
+
+async function readApiResponse<
+  T extends ApiErrorPayload
+>(
+  response:Response,
+  fallbackMessage:string
+):Promise<T>{
+  const raw=
+    await response.text();
+
+  let data:T|null=null;
+
+  if(raw){
+    try{
+      data=JSON.parse(raw) as T;
+    }catch(error){
+      console.error(
+        "Respuesta no JSON de la API:",
+        {
+          url:response.url,
+          status:response.status,
+          contentType:
+            response.headers.get(
+              "content-type"
+            ),
+          preview:raw.slice(0,300),
+          error
+        }
+      );
+    }
+  }
+
+  if(!response.ok){
+    const message=
+      data?.error??
+      `${fallbackMessage} (HTTP ${response.status})`;
+
+    throw new Error(
+      data?.details
+        ?`${message}: ${data.details}`
+        :message
+    );
+  }
+
+  if(!data){
+    throw new Error(
+      `${fallbackMessage}: el servidor devolvió una respuesta inválida`
+    );
+  }
+
+  return data;
+}
+
 export default function PreciosPage(){
   const [
     products,
@@ -476,16 +533,11 @@ export default function PreciosPage(){
           }
         );
 
-      const cenadaData:
-        PdfResponse=
-          await cenadaResponse.json();
-
-      if(!cenadaResponse.ok){
-        throw new Error(
-          cenadaData.error??
+      const cenadaData=
+        await readApiResponse<PdfResponse>(
+          cenadaResponse,
           "Error procesando boletines CENADA"
         );
-      }
 
       await loadPrices();
 
@@ -554,16 +606,11 @@ export default function PreciosPage(){
           }
         );
 
-      const walmartData:
-        WalmartResponse=
-          await walmartResponse.json();
-
-      if(!walmartResponse.ok){
-        throw new Error(
-          walmartData.error??
+      const walmartData=
+        await readApiResponse<WalmartResponse>(
+          walmartResponse,
           "CENADA quedó listo, pero Walmart no pudo actualizarse"
         );
-      }
 
       setResultadoPdf(
         `3/3 Walmart actualizado. Generando recomendaciones V2.4 para el ciclo #${cenadaData.cycleId}...`
@@ -586,16 +633,11 @@ export default function PreciosPage(){
           }
         );
 
-      const runData:
-        PricingRunResponse=
-          await runResponse.json();
-
-      if(!runResponse.ok){
-        throw new Error(
-          runData.error??
+      const runData=
+        await readApiResponse<PricingRunResponse>(
+          runResponse,
           "No se pudo generar la corrida de precios"
         );
-      }
 
       setResultadoPdf(
         `Listo. Ciclo #${cenadaData.cycleId} preparado con ${cenadaSummary}. Walmart sincronizó ${walmartData.prices?.saved??0} precios. Run #${runData.runId??"—"}${
