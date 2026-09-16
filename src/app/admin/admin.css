@@ -215,6 +215,16 @@
   background: #444;
 }
 
+.order-actions .order-cancel-button {
+  border: 1px solid #e7c6c1;
+  background: #fff7f5;
+  color: #9a3328;
+}
+
+.order-actions .order-cancel-button:hover {
+  background: #fbe8e4;
+}
+
 @media (max-width: 640px) {
   .admin-page-header {
     align-items: stretch;
@@ -405,7 +415,7 @@
 
 .order-status-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.55rem;
   margin-bottom: 1rem;
 }

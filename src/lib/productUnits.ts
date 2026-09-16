@@ -94,6 +94,19 @@ function formatKgPerUnitRange(unitsPerKgMin: number, unitsPerKgMax: number) {
   return `${formatDecimal(kgMin, 2)}–${formatDecimal(kgMax, 2)} kg`;
 }
 
+
+export function isValidProductQuantity(quantity: number, unit: string) {
+  if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1000) {
+    return false;
+  }
+
+  if (isKilogramUnit(unit)) {
+    return Math.abs(quantity * 2 - Math.round(quantity * 2)) < 1e-9;
+  }
+
+  return Number.isInteger(quantity);
+}
+
 export function formatProductEquivalence(
   unit: string,
   averageUnitWeightGrams?: number | null,

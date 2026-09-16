@@ -13,6 +13,7 @@ import {
   hasCurrentLegalConsent,
 } from "@/lib/legalConsent";
 import { isPaymentMethod } from "@/lib/paymentMethods";
+import { isValidProductQuantity } from "@/lib/productUnits";
 import { getDeliveryFeeForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
 import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
 
@@ -130,25 +131,6 @@ async function subscribeMarketing({
   if (error) throw error;
 }
 
-function isQuantityValid(quantity: number, unit: string) {
-  if (
-    !Number.isFinite(quantity) ||
-    quantity <= 0 ||
-    quantity > 1000
-  ) {
-    return false;
-  }
-
-  const normalizedUnit = unit.trim().toLowerCase();
-
-  if (normalizedUnit === "kg") {
-    return Math.abs(
-      quantity * 2 - Math.round(quantity * 2)
-    ) < 1e-9;
-  }
-
-  return Number.isInteger(quantity);
-}
 
 export async function POST(request: Request) {
   try {
@@ -488,7 +470,7 @@ export async function POST(request: Request) {
         throw new Error("Producto no encontrado");
       }
 
-      if (!isQuantityValid(item.quantity, product.unit)) {
+      if (!isValidProductQuantity(item.quantity, product.unit)) {
         throw new Error(
           `Cantidad inválida para ${product.name}`
         );

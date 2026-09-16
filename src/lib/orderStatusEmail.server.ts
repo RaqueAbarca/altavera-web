@@ -4,7 +4,8 @@ export type OrderStatusEmailStatus =
   | "confirmed"
   | "preparing"
   | "ready"
-  | "delivered";
+  | "delivered"
+  | "cancelled";
 
 type SendOrderStatusEmailInput = {
   to: string | null;
@@ -77,6 +78,16 @@ const STATUS_COPY: Record<OrderStatusEmailStatus, StatusCopy> = {
     preheader: (shortOrderId) =>
       `Tu pedido #${shortOrderId} fue marcado como entregado.`,
   },
+  cancelled: {
+    eyebrow: "Cancelado",
+    title: "Tu pedido fue cancelado",
+    description:
+      "Tu pedido fue marcado como cancelado. Si tienes alguna consulta sobre el pedido o el pago, puedes contactarnos y con gusto lo revisamos.",
+    subject: (shortOrderId) =>
+      `Pedido #${shortOrderId} cancelado | Altavera`,
+    preheader: (shortOrderId) =>
+      `Tu pedido #${shortOrderId} fue marcado como cancelado.`,
+  },
 };
 
 function escapeHtml(value: string) {
@@ -110,7 +121,8 @@ export function isOrderStatusEmailStatus(
   return value === "confirmed" ||
     value === "preparing" ||
     value === "ready" ||
-    value === "delivered";
+    value === "delivered" ||
+    value === "cancelled";
 }
 
 export async function sendOrderStatusEmail(

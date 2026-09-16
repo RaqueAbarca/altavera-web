@@ -5,6 +5,7 @@ import SiteHeader from "@/components/layout/SiteHeader";
 import Footer from "@/components/layout/Footer";
 import { CartProvider } from "@/context/CartContext";
 import { getSiteUrl } from "@/lib/seo";
+import AccountConsentSync from "@/components/auth/AccountConsentSync";
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="es-CR">
       <body suppressHydrationWarning>
         <CartProvider>
+          <AccountConsentSync />
           <SiteHeader />
           {children}
           <Footer />

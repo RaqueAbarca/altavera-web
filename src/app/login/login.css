@@ -189,3 +189,37 @@
   font-size: 0.72rem;
   font-weight: 600;
 }
+
+.forgot-password-button {
+  align-self: flex-end;
+  margin-top: -10px;
+  border: none;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.forgot-password-button:hover,
+.login-text-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.forgot-password-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.login-text-link {
+  color: var(--orange);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.login-helper-text {
+  margin: 22px 0 0;
+  color: var(--gray);
+  text-align: center;
+}

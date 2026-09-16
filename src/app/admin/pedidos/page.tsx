@@ -77,7 +77,7 @@ type AdminResponse = {
   error?: string;
 };
 
-type StatusTab = "pending" | "confirmed" | "preparing" | "ready" | "delivered";
+type StatusTab = "pending" | "confirmed" | "preparing" | "ready" | "delivered" | "cancelled";
 
 const STATUS_TABS: Array<{ key: StatusTab; label: string }> = [
   { key: "pending", label: "Pago por confirmar" },
@@ -85,6 +85,7 @@ const STATUS_TABS: Array<{ key: StatusTab; label: string }> = [
   { key: "preparing", label: "Preparando" },
   { key: "ready", label: "En camino" },
   { key: "delivered", label: "Entregados" },
+  { key: "cancelled", label: "Cancelados" },
 ];
 
 const PURCHASE_ELIGIBLE_STATUSES = new Set([
@@ -338,6 +339,15 @@ export default function AdminOrdersPage() {
     await loadData();
   }
 
+  async function cancelOrder(order: Order) {
+    const confirmed = window.confirm(
+      `¿Cancelar el pedido #${order.id.slice(0, 8)} de ${order.guest_name}? Esta acción lo sacará de la lista de compra.`
+    );
+
+    if (!confirmed) return;
+    await updateStatus(order, "cancelled");
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
     window.location.href = "/admin";
@@ -560,14 +570,25 @@ export default function AdminOrdersPage() {
                             })}
                           </ul>
 
-                          {action && (
+                          {(action || (order.status !== "delivered" && order.status !== "cancelled")) && (
                             <div className="order-actions">
-                              <button
-                                type="button"
-                                onClick={() => updateStatus(order, action.status)}
-                              >
-                                {action.label}
-                              </button>
+                              {action && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateStatus(order, action.status)}
+                                >
+                                  {action.label}
+                                </button>
+                              )}
+                              {order.status !== "delivered" && order.status !== "cancelled" && (
+                                <button
+                                  type="button"
+                                  className="order-cancel-button"
+                                  onClick={() => cancelOrder(order)}
+                                >
+                                  Cancelar pedido
+                                </button>
+                              )}
                             </div>
                           )}
                         </article>

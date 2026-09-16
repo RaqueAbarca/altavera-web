@@ -586,7 +586,7 @@ export default function AdminConfiguracionPage() {
             <h3>Atención al cliente</h3>
             <div className="admin-business-fields">
               <label className="admin-business-field">
-                <span>WhatsApp de Altavera</span>
+                <span>WhatsApp / teléfono de atención al cliente</span>
                 <input
                   type="tel"
                   value={operationalSettings.whatsappPhone}
@@ -594,7 +594,7 @@ export default function AdminConfiguracionPage() {
                   placeholder="Ej: 8888 8888"
                   disabled={operationalLoading}
                 />
-                <small>Se usa también para recibir comprobantes de pago.</small>
+                <small>Este es el número público de atención y el que usa Google/SEO. No es el número de SINPE. También recibe comprobantes de pago.</small>
               </label>
               <label className="admin-business-field">
                 <span>Correo de atención</span>

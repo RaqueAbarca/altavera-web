@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatProductEquivalence,
   isKilogramUnit,
+  isValidProductQuantity,
 } from "./productUnits";
 
 describe("productUnits", () => {
@@ -33,4 +34,12 @@ describe("productUnits", () => {
       "1 rollo ≈ 450 g"
     );
   });
+  it("valida cantidades de medio kilo para todas las variantes de unidad", () => {
+    expect(isValidProductQuantity(0.5, "kg")).toBe(true);
+    expect(isValidProductQuantity(1.5, "Kilo")).toBe(true);
+    expect(isValidProductQuantity(2.5, "Kilogramo")).toBe(true);
+    expect(isValidProductQuantity(0.25, "Kg")).toBe(false);
+    expect(isValidProductQuantity(1.5, "Und")).toBe(false);
+  });
+
 });

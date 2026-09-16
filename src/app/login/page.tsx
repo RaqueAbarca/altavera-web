@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legalConsent";
 import "./login.css";
 
 export default function ClientLoginPage() {
-  const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,7 +36,7 @@ export default function ClientLoginPage() {
         const acceptedAt = new Date().toISOString();
 
         // --- REGISTRO DE NUEVO CLIENTE CON DATOS DE PERFIL ---
-        const { error: signupError } = await supabase.auth.signUp({
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -59,7 +57,15 @@ export default function ClientLoginPage() {
 
         if (signupError) throw signupError;
 
-        setMessage("¡Registro exitoso! Ya puedes iniciar sesión con tus credenciales.");
+        if (signupData.session) {
+          await fetch("/api/marketing/sync-account", { method: "POST" }).catch(() => null);
+        }
+
+        setMessage(
+          signupData.session
+            ? "¡Registro exitoso! Tu cuenta ya está lista para usarse."
+            : "¡Registro exitoso! Revisa tu correo para confirmar la cuenta antes de iniciar sesión."
+        );
         setIsRegister(false);
         // Limpiamos los campos adicionales
         setName("");
@@ -75,6 +81,8 @@ export default function ClientLoginPage() {
 
         if (loginError) throw loginError;
 
+        await fetch("/api/marketing/sync-account", { method: "POST" }).catch(() => null);
+
         // Redirección nativa para garantizar que las cookies viajen de inmediato al Middleware
         const params = new URLSearchParams(window.location.search);
         const redirect = params.get("redirect");
@@ -89,6 +97,38 @@ export default function ClientLoginPage() {
       }
     } catch (err: any) {
       setError(err.message || "Ocurrió un error inesperado");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError("");
+    setMessage("");
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError("Escribe tu correo para enviarte el enlace de recuperación.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        cleanEmail,
+        { redirectTo: `${window.location.origin}/restablecer-contrasena` }
+      );
+
+      if (resetError) throw resetError;
+      setMessage(
+        "Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña."
+      );
+    } catch (resetError) {
+      setError(
+        resetError instanceof Error
+          ? resetError.message
+          : "No se pudo enviar el enlace de recuperación."
+      );
     } finally {
       setLoading(false);
     }
@@ -152,8 +192,21 @@ export default function ClientLoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="form-input"
             placeholder="••••••••"
+            autoComplete={isRegister ? "new-password" : "current-password"}
+            minLength={8}
           />
         </div>
+
+        {!isRegister && (
+          <button
+            type="button"
+            className="forgot-password-button"
+            onClick={handleForgotPassword}
+            disabled={loading}
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+        )}
 
         {isRegister && (
           <div className="consent-options">

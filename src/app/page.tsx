@@ -1,4 +1,5 @@
 import { createPageMetadata, getSiteUrl } from "@/lib/seo";
+import { getPublicAppSettings } from "@/lib/appSettings.server";
 import "@/components/home/home.css";
 import Hero from "@/components/home/Hero";
 import Features from "@/components/home/Features";
@@ -11,8 +12,10 @@ export const metadata = createPageMetadata({
   path: "/",
 });
 
-export default function Home() {
+export default async function Home() {
   const baseUrl = getSiteUrl().origin;
+  const settings = await getPublicAppSettings();
+  const customerServicePhone = settings.contact.whatsappPhone.trim();
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -35,14 +38,18 @@ export default function Home() {
           "@type": "AdministrativeArea",
           name: "Alajuela, Costa Rica",
         },
-        contactPoint: {
-          "@type": "ContactPoint",
-          telephone: "+50686526792",
-          contactType: "customer service",
-          areaServed: "CR",
-          availableLanguage: ["es"],
-        },
         sameAs: ["https://www.instagram.com/altavera.cr/"],
+        ...(customerServicePhone
+          ? {
+              telephone: customerServicePhone,
+              contactPoint: {
+                "@type": "ContactPoint",
+                telephone: customerServicePhone,
+                contactType: "customer service",
+                availableLanguage: ["es"],
+              },
+            }
+          : {}),
       },
     ],
   };
