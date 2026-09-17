@@ -16,6 +16,11 @@ import { isPaymentMethod } from "@/lib/paymentMethods";
 import { isValidProductQuantity } from "@/lib/productUnits";
 import { getDeliveryFeeForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
 import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
+import {
+  consumeRateLimit,
+  getClientFingerprint,
+  hashRateLimitValue,
+} from "@/lib/rateLimit.server";
 
 export const runtime = "nodejs";
 
@@ -134,6 +139,26 @@ async function subscribeMarketing({
 
 export async function POST(request: Request) {
   try {
+    const fingerprint = getClientFingerprint(request);
+    const ipLimit = await consumeRateLimit({
+      key: `order-create:ip:${fingerprint}`,
+      limit: 8,
+      windowSeconds: 10 * 60,
+    });
+
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        { error: "Has intentado crear varios pedidos en poco tiempo. Espera unos minutos e inténtalo de nuevo." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(ipLimit.retryAfterSeconds || 60),
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
     const body = (await request.json()) as IncomingBody;
     const incomingOrder = body.order ?? {};
     const incomingItems = Array.isArray(body.items)
@@ -197,6 +222,25 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Ingresa un correo válido" },
         { status: 400 }
+      );
+    }
+
+    const contactLimit = await consumeRateLimit({
+      key: `order-create:contact:${hashRateLimitValue(phoneDigits)}`,
+      limit: 10,
+      windowSeconds: 60 * 60,
+    });
+
+    if (!contactLimit.allowed) {
+      return NextResponse.json(
+        { error: "Se alcanzó el límite temporal de pedidos para este contacto. Inténtalo más tarde o contáctanos si necesitas ayuda." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(contactLimit.retryAfterSeconds || 300),
+            "Cache-Control": "no-store",
+          },
+        }
       );
     }
 
@@ -319,13 +363,43 @@ export async function POST(request: Request) {
     const orderEmail = guestEmailRaw || user?.email || null;
 
     if (marketingOptIn) {
-      await subscribeMarketing({
-        userId: user?.id ?? null,
-        email: orderEmail,
-        phone: phoneDigits,
-        source: user ? "account_checkout" : "guest_checkout",
-        consentedAt: consentedNow,
-      });
+      try {
+        await subscribeMarketing({
+          userId: user?.id ?? null,
+          email: orderEmail,
+          phone: phoneDigits,
+          source: user ? "account_checkout" : "guest_checkout",
+          consentedAt: consentedNow,
+        });
+
+        if (user && !accountMarketingOptIn) {
+          const { error: consentMarketingError } = await supabaseAdmin
+            .from("customer_consents")
+            .update({
+              marketing_opt_in: true,
+              marketing_opt_in_at: consentedNow,
+              marketing_opt_out_at: null,
+              updated_at: consentedNow,
+            })
+            .eq("user_id", user.id);
+
+          if (consentMarketingError) throw consentMarketingError;
+
+          const { error: metadataMarketingError } =
+            await supabaseAdmin.auth.admin.updateUserById(user.id, {
+              user_metadata: {
+                ...(user.user_metadata ?? {}),
+                marketing_opt_in: true,
+                marketing_opt_in_at: consentedNow,
+              },
+            });
+
+          if (metadataMarketingError) throw metadataMarketingError;
+        }
+      } catch (marketingError) {
+        // Una falla en la lista promocional no debe impedir que el pedido se cree.
+        console.error("ERROR GUARDANDO CONSENTIMIENTO DE MARKETING:", marketingError);
+      }
     }
 
     const latitude = Number(incomingOrder.latitude);

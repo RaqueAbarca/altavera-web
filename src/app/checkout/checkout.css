@@ -1128,3 +1128,112 @@
 .checkout-saved-address-status--checking { color: #686e69; }
 .checkout-saved-address-status--available { color: #2f6544; }
 .checkout-saved-address-status--unavailable { color: #9a4d28; }
+
+/* Search by place/address above checkout map */
+.place-search {
+  position: relative;
+  margin: 0 0 12px;
+}
+
+.place-search__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.place-search__controls input {
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid #d9ddd7;
+  border-radius: 12px;
+  background: #fff;
+  color: #26352b;
+  font: inherit;
+  outline: none;
+}
+
+.place-search__controls input:focus {
+  border-color: #52735d;
+  box-shadow: 0 0 0 3px rgba(53, 88, 67, 0.1);
+}
+
+.place-search__controls button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #355843;
+  border-radius: 12px;
+  background: #355843;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.place-search__controls button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.place-search__results {
+  position: absolute;
+  z-index: 1200;
+  right: 0;
+  left: 0;
+  top: calc(100% - 18px);
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #dde2dc;
+  border-radius: 14px;
+  background: #fffdf9;
+  box-shadow: 0 16px 35px rgba(31, 64, 42, 0.16);
+}
+
+.place-search__result {
+  padding: 11px 13px;
+  border: 0;
+  border-bottom: 1px solid #edf0eb;
+  background: transparent;
+  color: #344138;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-search__result:last-child {
+  border-bottom: 0;
+}
+
+.place-search__result:hover,
+.place-search__result:focus-visible {
+  background: #f2f5f0;
+  outline: none;
+}
+
+.place-search__error {
+  margin: 7px 0 0;
+  color: #87493f;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.place-search__attribution {
+  display: block;
+  margin-top: 6px;
+  color: #7c847e;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 520px) {
+  .place-search__controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+.place-search__attribution a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

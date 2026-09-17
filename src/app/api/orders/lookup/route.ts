@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { consumeRateLimit, getClientFingerprint } from "@/lib/rateLimit.server";
 
 export const runtime = "nodejs";
 
@@ -46,6 +47,26 @@ function genericNotFound() {
 
 export async function POST(request: Request) {
   try {
+    const fingerprint = getClientFingerprint(request);
+    const rateLimit = await consumeRateLimit({
+      key: `order-lookup:ip:${fingerprint}`,
+      limit: 20,
+      windowSeconds: 10 * 60,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Demasiados intentos de búsqueda. Espera unos minutos e inténtalo de nuevo." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds || 60),
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
     const body = (await request.json()) as {
       orderNumber?: unknown;
       contact?: unknown;

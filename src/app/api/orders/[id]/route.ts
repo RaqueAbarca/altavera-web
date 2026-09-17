@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { consumeRateLimit, getClientFingerprint } from "@/lib/rateLimit.server";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,26 @@ export async function GET(
   context: RouteContext
 ) {
   try {
+    const fingerprint = getClientFingerprint(request);
+    const rateLimit = await consumeRateLimit({
+      key: `order-read:ip:${fingerprint}`,
+      limit: 60,
+      windowSeconds: 10 * 60,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Demasiadas consultas. Espera un momento e inténtalo de nuevo." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds || 30),
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
     const { id } = await context.params;
     const accessToken = request.headers.get(
       "x-order-access-token"

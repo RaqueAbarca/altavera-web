@@ -71,6 +71,13 @@ function buildCoveragePolygons(zones: PublicDeliveryZone[]) {
 
 type Position = [number, number];
 
+type PlaceSearchResult = {
+  id: string;
+  displayName: string;
+  latitude: number;
+  longitude: number;
+};
+
 type Props = {
   onChange: (
     lat: number,
@@ -195,6 +202,10 @@ export default function LocationPickerClient({
 
   const [coverageZones, setCoverageZones] =
     useState<PublicDeliveryZone[]>(fallbackZones);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([]);
+  const [searchingPlace, setSearchingPlace] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const coverageMultiPolygon = useMemo(
     () => buildCoveragePolygons(coverageZones),
@@ -266,6 +277,59 @@ export default function LocationPickerClient({
         setChecking(false);
       }
     }
+  }
+
+  async function searchPlace() {
+    const query = searchQuery.trim();
+
+    setSearchError("");
+    setSearchResults([]);
+
+    if (query.length < 3) {
+      setSearchError("Escribe al menos 3 caracteres para buscar un lugar.");
+      return;
+    }
+
+    setSearchingPlace(true);
+
+    try {
+      const response = await fetch(
+        `/api/geocode/search?q=${encodeURIComponent(query)}`,
+        { cache: "no-store" }
+      );
+      const data = (await response.json()) as {
+        results?: PlaceSearchResult[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No pudimos buscar ese lugar.");
+      }
+
+      const results = Array.isArray(data.results) ? data.results : [];
+      setSearchResults(results);
+
+      if (results.length === 0) {
+        setSearchError(
+          "No encontramos coincidencias. Prueba con un nombre más específico o marca el punto manualmente."
+        );
+      }
+    } catch (error) {
+      setSearchError(
+        error instanceof Error
+          ? error.message
+          : "No pudimos buscar ese lugar."
+      );
+    } finally {
+      setSearchingPlace(false);
+    }
+  }
+
+  function chooseSearchResult(result: PlaceSearchResult) {
+    setSearchQuery(result.displayName);
+    setSearchResults([]);
+    setSearchError("");
+    void selectLocation(result.latitude, result.longitude);
   }
 
   useEffect(() => {
@@ -467,8 +531,64 @@ export default function LocationPickerClient({
       )}
 
       <p className="map-instruction">
-        Selecciona el punto exacto en el mapa o usa <strong>“Usar mi ubicación”</strong>.
+        Busca un lugar o punto de referencia, selecciona el punto exacto en el mapa o usa <strong>“Usar mi ubicación”</strong>.
       </p>
+
+      <div className="place-search">
+        <div className="place-search__controls">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void searchPlace();
+              }
+            }}
+            placeholder="Ej. Plaza Real Alajuela"
+            aria-label="Buscar un lugar o punto de referencia"
+          />
+          <button
+            type="button"
+            onClick={() => void searchPlace()}
+            disabled={searchingPlace}
+          >
+            {searchingPlace ? "Buscando..." : "Buscar"}
+          </button>
+        </div>
+
+        {searchResults.length > 0 && (
+          <div className="place-search__results" role="listbox" aria-label="Resultados de ubicación">
+            {searchResults.map((result) => (
+              <button
+                key={result.id}
+                type="button"
+                className="place-search__result"
+                onClick={() => chooseSearchResult(result)}
+              >
+                {result.displayName}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {searchError && (
+          <p className="place-search__error">{searchError}</p>
+        )}
+
+        <small className="place-search__attribution">
+          Búsqueda de lugares ©{" "}
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+          >
+            OpenStreetMap contributors
+          </a>
+          .
+        </small>
+      </div>
 
       <MapContainer
         center={[10.016, -84.214]}
