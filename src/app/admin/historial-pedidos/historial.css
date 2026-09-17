@@ -1,0 +1,208 @@
+.order-history-page .admin-page-header p {
+  margin: 0.35rem 0 0;
+  color: var(--gray);
+}
+
+.history-filters {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #e7ebe4;
+  border-radius: 16px;
+  background: #fbfcf9;
+}
+
+.history-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+  padding: 0.55rem 0.6rem 0.55rem 0.8rem;
+  border: 1px solid #dfe5dc;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--gray);
+}
+
+.history-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+.history-search button,
+.history-clear-button,
+.history-pagination button {
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.history-search button {
+  padding: 0.65rem 0.9rem;
+  background: var(--green);
+  color: #fff;
+}
+
+.history-filter-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr auto;
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.history-filter-grid label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--gray);
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.history-filter-grid select,
+.history-filter-grid input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #dfe5dc;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.history-clear-button {
+  min-height: 42px;
+  padding: 0.55rem 0.85rem;
+  background: #eef2ec;
+  color: var(--green);
+}
+
+.history-results-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem 0;
+  color: var(--gray);
+  font-size: 0.82rem;
+}
+
+.history-results-heading strong {
+  color: var(--text);
+}
+
+.history-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e6eae3;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.history-table {
+  width: 100%;
+  min-width: 1040px;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.8rem 0.75rem;
+  border-bottom: 1px solid #eef0ec;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.8rem;
+}
+
+.history-table th {
+  background: #f5f8f3;
+  color: var(--green);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.history-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.history-table td strong,
+.history-table td small {
+  display: block;
+}
+
+.history-table td small {
+  max-width: 220px;
+  margin-top: 0.18rem;
+  overflow: hidden;
+  color: var(--gray);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-status,
+.history-account-linked,
+.history-account-unlinked {
+  display: inline-flex;
+  padding: 0.3rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.history-status { background: #edf1eb; color: #445348; }
+.history-status--confirmed { background: #e8f4e7; color: #2d6534; }
+.history-status--preparing { background: #fff3d6; color: #8a620d; }
+.history-status--ready { background: #e8f0f7; color: #2f5f86; }
+.history-status--delivered { background: #e5f2ea; color: #24613a; }
+.history-status--cancelled { background: #f9e8e5; color: #9b3d35; }
+.history-account-linked { background: #e8f4e7; color: #2d6534; }
+.history-account-unlinked { background: #f1f1ef; color: #6b7280; }
+
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.history-pagination button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0.55rem 0.8rem;
+  background: var(--green);
+  color: #fff;
+}
+
+.history-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.history-pagination span {
+  color: var(--gray);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 780px) {
+  .history-filter-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .history-clear-button {
+    grid-column: 1 / -1;
+  }
+
+  .history-results-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

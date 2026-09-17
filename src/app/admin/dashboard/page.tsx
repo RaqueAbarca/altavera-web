@@ -6,6 +6,7 @@ import {
   BadgeDollarSign,
   ChartNoAxesCombined,
   ClipboardList,
+  History,
   MapPinned,
   PackageOpen,
   Settings,
@@ -28,6 +29,12 @@ const menuItems: AdminMenuItem[] = [
     description: "Ver pedidos recibidos, estados y listas de compra.",
     href: "/admin/pedidos",
     icon: ClipboardList,
+  },
+  {
+    title: "Historial de pedidos",
+    description: "Buscar y consultar todos los pedidos históricos de Altavera.",
+    href: "/admin/historial-pedidos",
+    icon: History,
   },
   {
     title: "Entregas",
