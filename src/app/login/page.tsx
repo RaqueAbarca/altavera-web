@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MailCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legalConsent";
 import { getAuthErrorMessage } from "@/lib/authMessages";
 import "./login.css";
+
+const ALTAVERA_PUBLIC_URL = "https://www.altaveraenlinea.com";
+
+function getAuthRedirectBase() {
+  if (typeof window === "undefined") return ALTAVERA_PUBLIC_URL;
+
+  const { hostname, origin } = window.location;
+  const isLocal = hostname === "localhost" || hostname === "127.0.0.1";
+  return isLocal ? ALTAVERA_PUBLIC_URL : origin;
+}
 
 export default function ClientLoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -25,14 +35,27 @@ export default function ClientLoginPage() {
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [pendingUserId, setPendingUserId] = useState("");
+  const [pendingEditToken, setPendingEditToken] = useState("");
+  const [editingPendingRegistration, setEditingPendingRegistration] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(60);
+  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [confirmationError, setConfirmationError] = useState("");
 
-  const resetRegistrationFields = () => {
-    setFirstName("");
-    setLastName("");
-    setPreferredName("");
-    setPhone("");
-    setLegalAccepted(false);
-    setMarketingOptIn(false);
+  useEffect(() => {
+    if (!awaitingConfirmation || resendCooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [awaitingConfirmation, resendCooldown]);
+
+  const resetPendingRegistration = () => {
+    setPendingUserId("");
+    setPendingEditToken("");
+    setEditingPendingRegistration(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,17 +70,40 @@ export default function ClientLoginPage() {
           throw new Error("Debes aceptar los Términos y Condiciones para crear tu cuenta.");
         }
 
+        if (editingPendingRegistration && pendingUserId && pendingEditToken) {
+          const cleanupResponse = await fetch("/api/auth/delete-unconfirmed-registration", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: pendingUserId,
+              email: confirmationEmail,
+              editToken: pendingEditToken,
+            }),
+          });
+
+          if (!cleanupResponse.ok) {
+            const cleanupPayload = await cleanupResponse.json().catch(() => ({}));
+            throw new Error(
+              cleanupPayload?.error ||
+                "No pudimos reemplazar el registro anterior. Intenta iniciar sesión o vuelve a cargar la página."
+            );
+          }
+
+          resetPendingRegistration();
+        }
+
         const acceptedAt = new Date().toISOString();
         const cleanFirstName = firstName.trim();
         const cleanLastName = lastName.trim();
         const cleanPreferredName = preferredName.trim() || cleanFirstName;
         const fullName = [cleanFirstName, cleanLastName].filter(Boolean).join(" ");
+        const editToken = crypto.randomUUID();
 
         const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/profile`,
+            emailRedirectTo: `${getAuthRedirectBase()}/profile`,
             data: {
               first_name: cleanFirstName,
               last_name: cleanLastName,
@@ -70,11 +116,18 @@ export default function ClientLoginPage() {
               privacy_acknowledged_at: acceptedAt,
               marketing_opt_in: marketingOptIn,
               marketing_opt_in_at: marketingOptIn ? acceptedAt : null,
+              registration_edit_token: editToken,
             },
           },
         });
 
         if (signupError) throw signupError;
+
+        if (signupData.user && Array.isArray(signupData.user.identities) && signupData.user.identities.length === 0) {
+          throw Object.assign(new Error("Ya existe una cuenta con este correo electrónico."), {
+            code: "user_already_exists",
+          });
+        }
 
         if (signupData.session) {
           await fetch("/api/marketing/sync-account", { method: "POST" }).catch(() => null);
@@ -83,9 +136,13 @@ export default function ClientLoginPage() {
         }
 
         setConfirmationEmail(email.trim());
+        setPendingUserId(signupData.user?.id || "");
+        setPendingEditToken(editToken);
+        setEditingPendingRegistration(false);
+        setResendCooldown(60);
+        setConfirmationMessage("");
+        setConfirmationError("");
         setAwaitingConfirmation(true);
-        resetRegistrationFields();
-        setPassword("");
         return;
       }
 
@@ -137,7 +194,7 @@ export default function ClientLoginPage() {
     setLoading(true);
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${window.location.origin}/restablecer-contrasena`,
+        redirectTo: `${getAuthRedirectBase()}/restablecer-contrasena`,
       });
 
       if (resetError) throw resetError;
@@ -154,6 +211,50 @@ export default function ClientLoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!confirmationEmail || resendCooldown > 0 || loading) return;
+
+    setConfirmationError("");
+    setConfirmationMessage("");
+    setLoading(true);
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: confirmationEmail,
+        options: {
+          emailRedirectTo: `${getAuthRedirectBase()}/profile`,
+        },
+      });
+
+      if (resendError) throw resendError;
+
+      setConfirmationMessage("Te enviamos un nuevo correo de confirmación.");
+      setResendCooldown(60);
+    } catch (resendError: unknown) {
+      setConfirmationError(
+        getAuthErrorMessage(
+          resendError as { message?: string; code?: string },
+          "No pudimos reenviar el correo. Espera un momento e inténtalo nuevamente."
+        )
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditPendingRegistration = () => {
+    setAwaitingConfirmation(false);
+    setIsRegister(true);
+    setEditingPendingRegistration(true);
+    setError("");
+    setMessage(
+      "Corrige tus datos y vuelve a registrarte. Reemplazaremos el registro pendiente anterior."
+    );
+    setConfirmationError("");
+    setConfirmationMessage("");
   };
 
   if (awaitingConfirmation) {
@@ -173,6 +274,36 @@ export default function ClientLoginPage() {
         <div className="confirmation-note">
           Si no lo ves en unos minutos, revisa también las carpetas de Spam, Social o Promociones.
         </div>
+
+        {confirmationError && <p className="error-message confirmation-feedback">{confirmationError}</p>}
+        {confirmationMessage && (
+          <p className="success-message confirmation-feedback">{confirmationMessage}</p>
+        )}
+
+        <div className="confirmation-actions">
+          <button
+            type="button"
+            className="submit-button confirmation-primary-action"
+            onClick={handleResendConfirmation}
+            disabled={loading || resendCooldown > 0}
+          >
+            {loading
+              ? "Enviando..."
+              : resendCooldown > 0
+                ? `Reenviar correo en ${resendCooldown} s`
+                : "Reenviar correo"}
+          </button>
+
+          <button
+            type="button"
+            className="confirmation-secondary-action"
+            onClick={handleEditPendingRegistration}
+            disabled={loading}
+          >
+            Corregir correo o datos
+          </button>
+        </div>
+
         <p className="confirmation-close">Puedes cerrar esta pestaña mientras confirmas tu correo.</p>
       </main>
     );

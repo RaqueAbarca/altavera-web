@@ -275,3 +275,41 @@
   color: var(--gray);
   font-size: 0.78rem;
 }
+
+.confirmation-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.confirmation-primary-action {
+  margin-top: 0;
+}
+
+.confirmation-secondary-action {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--green);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.confirmation-secondary-action:hover {
+  border-color: var(--green);
+  background: #fbfcf9;
+}
+
+.confirmation-secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.confirmation-feedback {
+  margin-top: 16px;
+}
