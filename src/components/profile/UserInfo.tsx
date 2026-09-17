@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FaEnvelope, FaPhone, FaUser } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
+import { getFullUserName } from "@/lib/userName";
 
 type UserProfile = {
   name: string;
@@ -45,9 +46,7 @@ if(user){
 
   setUser({
 
-        name:
-            user.user_metadata?.full_name ||
-            "Usuario",
+        name: getFullUserName(user.user_metadata),
 
         email:
           user.email ||

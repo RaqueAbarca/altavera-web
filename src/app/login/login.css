@@ -223,3 +223,55 @@
   color: var(--gray);
   text-align: center;
 }
+
+.optional-label {
+  color: var(--gray);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.form-hint {
+  margin-top: 2px;
+  color: var(--gray);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.confirmation-container {
+  text-align: center;
+}
+
+.confirmation-icon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(31, 64, 42, 0.1);
+  color: var(--green);
+}
+
+.confirmation-text {
+  margin: 14px 0 0;
+  color: var(--text);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.confirmation-note {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fbfcf9;
+  color: var(--green-light);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.confirmation-close {
+  margin: 20px 0 0;
+  color: var(--gray);
+  font-size: 0.78rem;
+}

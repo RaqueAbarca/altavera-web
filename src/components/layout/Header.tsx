@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/useCart";
 import { supabase } from "@/lib/supabase"; // 👈 Importamos supabase
+import { getPreferredUserName } from "@/lib/userName";
 import DeliveryNotice from "./DeliveryNotice";
 import {
   Menu,
@@ -78,7 +79,7 @@ export default function Header() {
   ];
 
   // Extraemos el primer nombre del usuario para mostrarlo en el botón
-  const clientName = user?.user_metadata?.full_name?.split(" ")[0] || "Mi Perfil";
+  const clientName = user ? getPreferredUserName(user.user_metadata, user.email) : "Mi Perfil";
   const trackingHref =
     profile?.role === "admin"
       ? "/admin/pedidos"

@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { FaUserCircle } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
+import { getPreferredUserName } from "@/lib/userName";
 
 export default function ProfileHeader() {
 
-  const [name, setName] = useState("Mi perfil");
+  const [name, setName] = useState("");
 
 
   useEffect(()=>{
@@ -22,11 +23,7 @@ export default function ProfileHeader() {
 
       if(user){
 
-        setName(
-          user.user_metadata?.full_name ||
-          user.email?.split("@")[0] ||
-          "Usuario"
-        );
+        setName(getPreferredUserName(user.user_metadata, user.email));
 
       }
 
@@ -48,7 +45,7 @@ export default function ProfileHeader() {
       <div>
 
         <h1>
-          {name}
+          {name ? `¡Hola, ${name}!` : "Mi perfil"}
         </h1>
 
         <p>

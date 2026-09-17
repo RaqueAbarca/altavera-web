@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { getAuthErrorMessage } from "@/lib/authMessages";
 import "../login/login.css";
 
 export default function ResetPasswordPage() {
@@ -45,11 +46,14 @@ export default function ResetPasswordPage() {
         if (active) setReady(true);
       } catch (recoveryError) {
         if (active) {
-          setError(
-            recoveryError instanceof Error
+          const customMessage =
+            recoveryError instanceof Error && recoveryError.message.startsWith("El enlace para")
               ? recoveryError.message
-              : "No se pudo validar el enlace de recuperación."
-          );
+              : getAuthErrorMessage(
+                  recoveryError as { message?: string; code?: string },
+                  "No se pudo validar el enlace de recuperación."
+                );
+          setError(customMessage);
         }
       } finally {
         if (active) setLoading(false);
@@ -87,9 +91,10 @@ export default function ResetPasswordPage() {
       setConfirmPassword("");
     } catch (updateError) {
       setError(
-        updateError instanceof Error
-          ? updateError.message
-          : "No se pudo actualizar la contraseña."
+        getAuthErrorMessage(
+          updateError as { message?: string; code?: string },
+          "No se pudo actualizar la contraseña."
+        )
       );
     } finally {
       setSaving(false);
