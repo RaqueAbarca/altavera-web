@@ -10,10 +10,11 @@ const WALMART_ORIGIN="https://www.walmart.co.cr";
 /*
  * Referencia competitiva de Altavera.
  *
- * Usamos la ubicación de Walmart Alajuela (Río Segundo / Las Cañas)
- * para que VTEX resuelva la región comercial correspondiente a esa
- * zona. Las variables de entorno permiten cambiar la referencia en
- * el futuro sin tocar código.
+ * Walmart Alajuela está en Río Segundo. Para resolver la región de VTEX
+ * usamos primero el código postal del distrito (más estable que serializar
+ * geocoordenadas en query string) y conservamos las coordenadas como
+ * respaldo. Las variables de entorno permiten cambiar la referencia sin
+ * tocar código.
  */
 const REFERENCE_LABEL=
   process.env.WALMART_REFERENCE_LABEL?.trim()||
@@ -22,6 +23,10 @@ const REFERENCE_LABEL=
 const REFERENCE_COUNTRY=
   process.env.WALMART_REFERENCE_COUNTRY?.trim()||
   "CRI";
+
+const REFERENCE_POSTAL_CODE=
+  process.env.WALMART_REFERENCE_POSTAL_CODE?.trim()||
+  "20109";
 
 const REFERENCE_LATITUDE=
   Number(process.env.WALMART_REFERENCE_LATITUDE??"10.00263");
@@ -57,36 +62,11 @@ function assertReferenceCoordinates(){
   }
 }
 
-async function resolveWalmartReference():Promise<WalmartReference>{
-  assertReferenceCoordinates();
-
-  const params=new URLSearchParams({
-    country:REFERENCE_COUNTRY,
-    geoCoordinates:
-      `${REFERENCE_LONGITUDE},${REFERENCE_LATITUDE}`
-  });
-
-  const response=await fetch(
-    `${WALMART_ORIGIN}/api/checkout/pub/regions?${params.toString()}`,
-    {
-      headers:{
-        accept:"application/json",
-        "user-agent":"Mozilla/5.0"
-      },
-      cache:"no-store"
-    }
-  );
-
-  if(!response.ok){
-    throw new Error(
-      `Walmart no pudo resolver la tienda/zona de referencia (HTTP ${response.status}).`
-    );
-  }
-
-  const data=await response.json() as RegionResponse[];
-
+function parseReference(
+  data:unknown
+):WalmartReference|null{
   const regions=Array.isArray(data)
-    ?data.filter(region=>
+    ?(data as RegionResponse[]).filter(region=>
       typeof region?.id==="string"&&
       region.id.length>0
     )
@@ -99,9 +79,7 @@ async function resolveWalmartReference():Promise<WalmartReference>{
     )??regions[0];
 
   if(!selected?.id){
-    throw new Error(
-      "Walmart no devolvió una región para la referencia de Alajuela. Se detuvo la actualización."
-    );
+    return null;
   }
 
   const sellers:WalmartSellerReference[]=
@@ -122,6 +100,105 @@ async function resolveWalmartReference():Promise<WalmartReference>{
   };
 }
 
+async function readResponseDetail(response:Response){
+  const text=await response.text().catch(()=>"");
+  if(!text){
+    return "sin detalle";
+  }
+
+  try{
+    const parsed=JSON.parse(text) as {
+      error?:{code?:string;message?:string};
+      message?:string;
+    };
+    const code=parsed?.error?.code;
+    const message=parsed?.error?.message||parsed?.message;
+    if(message){
+      return `${code?`${code}: `:""}${message}`.slice(0,240);
+    }
+  }catch{
+    // Si Walmart devuelve HTML/texto, mostramos un fragmento seguro.
+  }
+
+  return text.replace(/\s+/g," ").trim().slice(0,240);
+}
+
+async function resolveWalmartReference():Promise<WalmartReference>{
+  assertReferenceCoordinates();
+
+  /*
+   * VTEX documenta country + postalCode como forma directa de resolver
+   * regiones. Río Segundo usa 20109, por lo que esta es nuestra primera
+   * opción. Si Walmart cambia ese comportamiento, probamos geocoordenadas
+   * como array (dos parámetros repetidos), que es el tipo definido por la
+   * API de Checkout.
+   */
+  const attempts:Array<{label:string;params:URLSearchParams}>=[];
+
+  const postalParams=new URLSearchParams({
+    country:REFERENCE_COUNTRY,
+    postalCode:REFERENCE_POSTAL_CODE
+  });
+  attempts.push({
+    label:`código postal ${REFERENCE_POSTAL_CODE}`,
+    params:postalParams
+  });
+
+  const geoArrayParams=new URLSearchParams({
+    country:REFERENCE_COUNTRY
+  });
+  geoArrayParams.append(
+    "geoCoordinates",
+    String(REFERENCE_LONGITUDE)
+  );
+  geoArrayParams.append(
+    "geoCoordinates",
+    String(REFERENCE_LATITUDE)
+  );
+  attempts.push({
+    label:"geocoordenadas",
+    params:geoArrayParams
+  });
+
+  const failures:string[]=[];
+
+  for(const attempt of attempts){
+    const response=await fetch(
+      `${WALMART_ORIGIN}/api/checkout/pub/regions?${attempt.params.toString()}`,
+      {
+        headers:{
+          accept:"application/json",
+          "user-agent":"Mozilla/5.0"
+        },
+        cache:"no-store"
+      }
+    );
+
+    if(!response.ok){
+      const detail=await readResponseDetail(response);
+      failures.push(
+        `${attempt.label}: HTTP ${response.status} (${detail})`
+      );
+      continue;
+    }
+
+    const data=await response.json() as unknown;
+    const reference=parseReference(data);
+
+    if(reference){
+      return reference;
+    }
+
+    failures.push(
+      `${attempt.label}: Walmart respondió correctamente, pero sin regionId`
+    );
+  }
+
+  throw new Error(
+    `Walmart no pudo resolver la tienda/zona de referencia. ${failures.join(" | ")}`
+  );
+}
+
 function buildProductSearchUrl(
   reference:WalmartReference,
   page:number,
@@ -132,8 +209,6 @@ function buildProductSearchUrl(
     locale:"es-CR",
     regionId:reference.regionId,
     country:reference.country,
-    coordinates:
-      `${reference.longitude},${reference.latitude}`,
     simulationBehavior:"default",
     hideUnavailableItems:"true",
     count:String(count),
@@ -141,9 +216,10 @@ function buildProductSearchUrl(
   });
 
   /*
-   * Intelligent Search API v1 (julio 2026).
-   * Evitamos el antiguo persistedQuery de GraphQL, cuyo hash podía
-   * cambiar sin aviso y dejar la integración devolviendo 0 productos.
+   * Intelligent Search API v1 recibe la regionalización explícitamente
+   * mediante regionId. No reenviamos coordinates aquí: ya resolvimos la
+   * región con Checkout y evitamos que un formato de coordenadas distinto
+   * bloquee la búsqueda de productos.
    */
   return(
     `${WALMART_ORIGIN}/api/intelligent-search/v1/`+
@@ -218,11 +294,6 @@ export async function fetchWalmartProducts():Promise<WalmartFetchResult>{
     );
   }
 
-  /*
-   * Las páginas de búsqueda pueden solaparse si el catálogo cambia
-   * durante la consulta. Eliminamos duplicados antes de guardar para
-   * que un mismo producto nunca llegue dos veces al mismo upsert.
-   */
   const uniqueProducts=[...new Map(
     products.map(product=>[String(product.productId),product])
   ).values()];

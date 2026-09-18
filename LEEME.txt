@@ -1,0 +1,17 @@
+ALTAVERA — FIX RESOLUCIÓN WALMART ALAJUELA
+18/09/2026
+
+Qué corrige:
+- Usa primero el código postal 20109 de Río Segundo para resolver la región de Walmart/VTEX.
+- Si falla, prueba geocoordenadas como arreglo (formato esperado por Checkout).
+- Muestra el detalle real devuelto por Walmart si vuelve a fallar.
+- Ya no reenvía coordinates al buscador una vez que existe regionId.
+
+No requiere cambios en Supabase.
+
+Aplicar desde la raíz de altavera_web:
+  unzip -o ~/Downloads/altavera_patch_walmart_regionfix_20260918.zip -d .
+  npm run build
+
+Luego commit/push y, cuando Vercel termine, probar solo:
+Admin > Precios > Walmart > Actualizar Walmart
