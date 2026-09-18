@@ -15,6 +15,17 @@ type WalmartProduct={
   external_id:string;
   name:string;
   raw_price:number|null;
+  current_price:number|null;
+  regular_price:number|null;
+  discount_percent:number|null;
+  previous_current_price:number|null;
+  price_change_percent:number|null;
+  validation_status:string|null;
+  validation_warning:string|null;
+  reference_label:string|null;
+  reference_region_id:string|null;
+  selected_seller_id:string|null;
+  selected_seller_name:string|null;
   measurement_unit:string|null;
   quantity_text:string|null;
   unit_multiplier:number|null;
@@ -37,6 +48,8 @@ export default function WalmartMatchingList(){
   const [matches,setMatches]=useState<WalmartMatch[]>([]);
 
   const [selectedProducts,setSelectedProducts]=useState<Record<number,string>>({});
+  const [conversionFactors,setConversionFactors]=useState<Record<number,string>>({});
+  const [conversionConfidence,setConversionConfidence]=useState<Record<number,"exact"|"measured"|"estimated">>({});
 
   const [filter,setFilter]=useState<Filter>("pending");
   const [search,setSearch]=useState("");
@@ -66,6 +79,17 @@ export default function WalmartMatchingList(){
             external_id,
             name,
             raw_price,
+            current_price,
+            regular_price,
+            discount_percent,
+            previous_current_price,
+            price_change_percent,
+            validation_status,
+            validation_warning,
+            reference_label,
+            reference_region_id,
+            selected_seller_id,
+            selected_seller_name,
             measurement_unit,
             quantity_text,
             unit_multiplier,
@@ -244,10 +268,32 @@ export default function WalmartMatchingList(){
         const pendingConversions=
         data.conversions?.pending??0;
 
+        const referenceLabel=
+          data.reference?.label??
+          "referencia configurada";
+
+        const sellerNames=
+          Array.isArray(data.reference?.sellers)
+            ?data.reference.sellers
+              .map((seller:{name?:string})=>seller.name)
+              .filter(Boolean)
+              .join(", ")
+            :"";
+
+        const validation=data.validation??{};
+        const blocked=data.prices?.blocked??0;
+
         setMessage(
-        `Walmart actualizado: ${data.saved??0} productos guardados. `+
-        `${autoVerified} conversiones verificadas automáticamente. `+
-        `${pendingConversions} conversiones siguen pendientes.`
+          `Walmart actualizado: ${data.downloaded??data.saved??0} productos obtenidos y ${data.saved??0} guardados. `+
+          `Referencia: ${referenceLabel}. `+
+          (sellerNames?`Walmart reportó: ${sellerNames}. `:"")+
+          `${validation.valid??0} datos válidos, `+
+          `${validation.suspicious??0} cambios de precio sospechosos, `+
+          `${validation.presentationChanged??0} cambios de presentación y `+
+          `${validation.noPrice??0} sin precio. `+
+          `${blocked} referencias quedaron bloqueadas por seguridad. `+
+          `${autoVerified} conversiones verificadas automáticamente. `+
+          `${pendingConversions} conversiones siguen pendientes.`
         );
 
       await loadData();
@@ -264,6 +310,87 @@ export default function WalmartMatchingList(){
       );
     }finally{
       setUpdating(false);
+    }
+  }
+
+  async function aprobarPrecioSospechoso(
+    item:WalmartProduct
+  ){
+    setWorkingId(item.id);
+    setMessage("");
+
+    try{
+      const response=await fetch(
+        "/api/walmart/approve-observation",
+        {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({competitorProductId:item.id})
+        }
+      );
+
+      const data=await response.json();
+
+      if(!response.ok){
+        throw new Error(data.error??"No se pudo aprobar el precio");
+      }
+
+      setMessage(`${item.name}: cambio de precio aprobado.`);
+      await loadData();
+    }catch(error){
+      setMessage(
+        error instanceof Error
+          ?error.message
+          :"Error aprobando precio Walmart"
+      );
+    }finally{
+      setWorkingId(null);
+    }
+  }
+
+  async function verificarConversionManual(
+    item:WalmartProduct
+  ){
+    const factor=Number(conversionFactors[item.id]);
+
+    if(!Number.isFinite(factor)||factor<=0){
+      setMessage("Ingrese un factor de conversión mayor que 0.");
+      return;
+    }
+
+    setWorkingId(item.id);
+    setMessage("");
+
+    try{
+      const response=await fetch(
+        "/api/walmart/verify",
+        {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            competitorProductId:item.id,
+            conversionFactor:factor,
+            confidence:conversionConfidence[item.id]??"exact"
+          })
+        }
+      );
+
+      const data=await response.json();
+
+      if(!response.ok){
+        throw new Error(data.error??"No se pudo verificar la conversión");
+      }
+
+      setMessage(`${item.name}: conversión verificada.`);
+      await loadData();
+    }catch(error){
+      setMessage(
+        error instanceof Error
+          ?error.message
+          :"Error verificando conversión Walmart"
+      );
+    }finally{
+      setWorkingId(null);
     }
   }
 
@@ -459,6 +586,7 @@ export default function WalmartMatchingList(){
           <p className="walmart-description">
             Asociá cada producto de Walmart
             con su equivalente en Altavera.
+            La referencia de precios es Walmart Alajuela — Río Segundo (Las Cañas).
           </p>
         </div>
 
@@ -597,10 +725,24 @@ export default function WalmartMatchingList(){
                   <div className="walmart-product-meta">
 
                     <span>
-                      {formatPrice(
-                        item.raw_price
+                      Precio actual: {formatPrice(
+                        item.current_price??item.raw_price
                       )}
                     </span>
+
+                    {
+                      item.regular_price!==null&&
+                      item.current_price!==null&&
+                      item.regular_price>item.current_price&&
+                      (
+                        <span>
+                          Regular: {formatPrice(item.regular_price)}
+                          {item.discount_percent!==null
+                            ?` · Oferta -${Number(item.discount_percent).toLocaleString("es-CR")}%`
+                            :""}
+                        </span>
+                      )
+                    }
 
                     <span>
                       Unidad Walmart:{" "}
@@ -621,7 +763,48 @@ export default function WalmartMatchingList(){
                       )
                     }
 
+                    {
+                      item.selected_seller_name&&(
+                        <span>
+                          Tienda/seller reportado:{" "}
+                          {item.selected_seller_name}
+                        </span>
+                      )
+                    }
+
+                    <span>
+                      Última observación:{" "}
+                      {new Date(item.last_seen_at).toLocaleString("es-CR")}
+                    </span>
+
                   </div>
+
+                  {
+                    item.validation_status&&
+                    item.validation_status!=="valid"&&(
+                      <div className="walmart-validation-warning">
+                        <strong>Revisión requerida:</strong>{" "}
+                        {item.validation_warning??item.validation_status}
+                        {
+                          item.price_change_percent!==null&&(
+                            <> Cambio: {Number(item.price_change_percent).toLocaleString("es-CR")}%.</>
+                          )
+                        }
+                        {
+                          item.validation_status==="suspicious_price"&&(
+                            <button
+                              type="button"
+                              className="success-button"
+                              disabled={workingId===item.id}
+                              onClick={()=>aprobarPrecioSospechoso(item)}
+                            >
+                              Aprobar este precio
+                            </button>
+                          )
+                        }
+                      </div>
+                    )
+                  }
 
                 </div>
 
@@ -781,6 +964,50 @@ export default function WalmartMatchingList(){
                             :"Conversión pendiente"
                         }
                       </div>
+
+                      {
+                        match&&!match.verified&&(
+                          <div className="walmart-manual-conversion">
+                            <p>
+                              Si la equivalencia no puede comprobarse automáticamente, puede revisarla manualmente. El precio normalizado se calcula como precio Walmart ÷ factor.
+                            </p>
+                            <input
+                              type="number"
+                              min="0.0001"
+                              step="0.0001"
+                              placeholder="Factor de conversión"
+                              value={conversionFactors[item.id]??""}
+                              onChange={event=>
+                                setConversionFactors(current=>({
+                                  ...current,
+                                  [item.id]:event.target.value
+                                }))
+                              }
+                            />
+                            <select
+                              value={conversionConfidence[item.id]??"exact"}
+                              onChange={event=>
+                                setConversionConfidence(current=>({
+                                  ...current,
+                                  [item.id]:event.target.value as "exact"|"measured"|"estimated"
+                                }))
+                              }
+                            >
+                              <option value="exact">Exacta</option>
+                              <option value="measured">Medida</option>
+                              <option value="estimated">Estimada</option>
+                            </select>
+                            <button
+                              type="button"
+                              className="success-button"
+                              disabled={workingId===item.id}
+                              onClick={()=>verificarConversionManual(item)}
+                            >
+                              Verificar conversión
+                            </button>
+                          </div>
+                        )
+                      }
 
                     </div>
                   )

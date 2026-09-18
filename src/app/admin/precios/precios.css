@@ -1976,3 +1976,42 @@
     min-width:0;
   }
 }
+
+.walmart-validation-warning{
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid rgba(120,90,40,.25);
+  border-radius:10px;
+  background:rgba(255,248,230,.85);
+  font-size:.92rem;
+  line-height:1.45;
+}
+
+.walmart-validation-warning .success-button{
+  margin-top:8px;
+  display:block;
+}
+
+.walmart-manual-conversion{
+  margin-top:10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+
+.walmart-manual-conversion p{
+  flex-basis:100%;
+  margin:0;
+  font-size:.88rem;
+  opacity:.8;
+}
+
+.walmart-manual-conversion input,
+.walmart-manual-conversion select{
+  min-height:38px;
+  border:1px solid rgba(0,0,0,.18);
+  border-radius:8px;
+  padding:7px 9px;
+  background:#fff;
+}

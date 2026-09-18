@@ -1,89 +1,234 @@
-import type { WalmartRawProduct } from "./types";
+import type {
+  WalmartFetchResult,
+  WalmartRawProduct,
+  WalmartReference,
+  WalmartSellerReference
+} from "./types";
 
-const URL_BASE=
-  "https://www.walmart.co.cr/_v/segment/graphql/v1?workspace=master&maxAge=short&appsEtag=remove&domain=store&locale=es-CR&__bindingId=17dd0832-2127-4686-ad3a-09850b413565&operationName=productSearchV3";
+const WALMART_ORIGIN="https://www.walmart.co.cr";
 
-const EXTENSION_BASE={
-  persistedQuery:{
-    version:1,
-    sha256Hash:"b398fc0a2fd04ea5d4f7a94c732c10fb1bf64f8f9a2b31c92aee6a5e796457c9",
-    sender:"vtex.store-resources@0.x",
-    provider:"vtex.search-graphql@0.x"
-  }
+/*
+ * Referencia competitiva de Altavera.
+ *
+ * Usamos la ubicación de Walmart Alajuela (Río Segundo / Las Cañas)
+ * para que VTEX resuelva la región comercial correspondiente a esa
+ * zona. Las variables de entorno permiten cambiar la referencia en
+ * el futuro sin tocar código.
+ */
+const REFERENCE_LABEL=
+  process.env.WALMART_REFERENCE_LABEL?.trim()||
+  "Walmart Alajuela — Río Segundo (Las Cañas)";
+
+const REFERENCE_COUNTRY=
+  process.env.WALMART_REFERENCE_COUNTRY?.trim()||
+  "CRI";
+
+const REFERENCE_LATITUDE=
+  Number(process.env.WALMART_REFERENCE_LATITUDE??"10.00263");
+
+const REFERENCE_LONGITUDE=
+  Number(process.env.WALMART_REFERENCE_LONGITUDE??"-84.20602");
+
+const SALES_CHANNEL=
+  process.env.WALMART_SALES_CHANNEL?.trim()||
+  "1";
+
+type RegionResponse={
+  id?:string;
+  sellers?:Array<{
+    id?:string;
+    name?:string;
+  }>;
 };
 
-export async function fetchWalmartProducts(){
+type ProductSearchResponse={
+  products?:WalmartRawProduct[];
+  recordsFiltered?:number;
+};
+
+function assertReferenceCoordinates(){
+  if(
+    !Number.isFinite(REFERENCE_LATITUDE)||
+    !Number.isFinite(REFERENCE_LONGITUDE)
+  ){
+    throw new Error(
+      "La ubicación de referencia de Walmart no es válida. Revise WALMART_REFERENCE_LATITUDE y WALMART_REFERENCE_LONGITUDE."
+    );
+  }
+}
+
+async function resolveWalmartReference():Promise<WalmartReference>{
+  assertReferenceCoordinates();
+
+  const params=new URLSearchParams({
+    country:REFERENCE_COUNTRY,
+    geoCoordinates:
+      `${REFERENCE_LONGITUDE},${REFERENCE_LATITUDE}`
+  });
+
+  const response=await fetch(
+    `${WALMART_ORIGIN}/api/checkout/pub/regions?${params.toString()}`,
+    {
+      headers:{
+        accept:"application/json",
+        "user-agent":"Mozilla/5.0"
+      },
+      cache:"no-store"
+    }
+  );
+
+  if(!response.ok){
+    throw new Error(
+      `Walmart no pudo resolver la tienda/zona de referencia (HTTP ${response.status}).`
+    );
+  }
+
+  const data=await response.json() as RegionResponse[];
+
+  const regions=Array.isArray(data)
+    ?data.filter(region=>
+      typeof region?.id==="string"&&
+      region.id.length>0
+    )
+    :[];
+
+  const selected=
+    regions.find(region=>
+      Array.isArray(region.sellers)&&
+      region.sellers.length>0
+    )??regions[0];
+
+  if(!selected?.id){
+    throw new Error(
+      "Walmart no devolvió una región para la referencia de Alajuela. Se detuvo la actualización."
+    );
+  }
+
+  const sellers:WalmartSellerReference[]=
+    (selected.sellers??[])
+      .map(seller=>({
+        id:String(seller.id??"").trim(),
+        name:String(seller.name??seller.id??"").trim()
+      }))
+      .filter(seller=>seller.id.length>0);
+
+  return{
+    label:REFERENCE_LABEL,
+    country:REFERENCE_COUNTRY,
+    latitude:REFERENCE_LATITUDE,
+    longitude:REFERENCE_LONGITUDE,
+    regionId:selected.id,
+    sellers
+  };
+}
+
+function buildProductSearchUrl(
+  reference:WalmartReference,
+  page:number,
+  count:number
+){
+  const params=new URLSearchParams({
+    sc:SALES_CHANNEL,
+    locale:"es-CR",
+    regionId:reference.regionId,
+    country:reference.country,
+    coordinates:
+      `${reference.longitude},${reference.latitude}`,
+    simulationBehavior:"default",
+    hideUnavailableItems:"true",
+    count:String(count),
+    page:String(page)
+  });
+
+  /*
+   * Intelligent Search API v1 (julio 2026).
+   * Evitamos el antiguo persistedQuery de GraphQL, cuyo hash podía
+   * cambiar sin aviso y dejar la integración devolviendo 0 productos.
+   */
+  return(
+    `${WALMART_ORIGIN}/api/intelligent-search/v1/`+
+    `product-search/category-1/frutas-y-verduras?${params.toString()}`
+  );
+}
+
+export async function fetchWalmartProducts():Promise<WalmartFetchResult>{
   const products:WalmartRawProduct[]=[];
-  const batchSize=50;
+  const pageSize=50;
+  const reference=await resolveWalmartReference();
 
-  for(let from=0;from<1000;from+=batchSize){
-    const variables={
-      skusFilter:"ALL",
-      simulationBehavior:"default",
-      installmentCriteria:"MAX_WITHOUT_INTEREST",
-      productOriginVtex:false,
-      map:"category-1",
-      query:"frutas-y-verduras",
-      orderBy:"OrderByScoreDESC",
-      from,
-      to:from+batchSize-1,
-      selectedFacets:[
-        {
-          key:"category-1",
-          value:"frutas-y-verduras"
-        }
-      ],
-      searchState:null,
-      facetsBehavior:"Static",
-      categoryTreeBehavior:"default",
-      withFacets:false,
-      variant:"6a679fb03056e27b8338e03c-variantNull"
-    };
-
-    const extension={
-      ...EXTENSION_BASE,
-      variables:Buffer.from(
-        JSON.stringify(variables)
-      ).toString("base64")
-    };
-
-    const url=
-      `${URL_BASE}`+
-      `&variables=%7B%7D`+
-      `&extensions=${encodeURIComponent(
-        JSON.stringify(extension)
-      )}`;
+  for(let page=1;page<=20;page++){
+    const url=buildProductSearchUrl(
+      reference,
+      page,
+      pageSize
+    );
 
     const response=await fetch(url,{
       headers:{
-        accept:"*/*",
-        "content-type":"application/json",
+        accept:"application/json",
         "user-agent":"Mozilla/5.0"
       },
       cache:"no-store"
     });
 
     if(!response.ok){
+      const detail=await response.text()
+        .catch(()=>"");
+
       throw new Error(
-        `Walmart respondió HTTP ${response.status}`
+        `Walmart respondió HTTP ${response.status}`+
+        (detail?` (${detail.slice(0,180)})`:"")
       );
     }
 
-    const data=await response.json();
+    const data=await response.json() as ProductSearchResponse;
 
-    const batch:WalmartRawProduct[]=
-      data?.data?.productSearch?.products??[];
+    const batch=
+      Array.isArray(data?.products)
+        ?data.products
+        :[];
+
+    if(page===1&&batch.length===0){
+      throw new Error(
+        `Walmart devolvió 0 productos para ${reference.label}. Se detuvo la actualización para evitar usar precios antiguos.`
+      );
+    }
 
     products.push(...batch);
 
     console.log(
-      `Walmart ${from}-${from+batchSize-1}: ${batch.length}`
+      `Walmart ${reference.label} página ${page}: ${batch.length}`
     );
 
-    if(batch.length<batchSize){
+    if(batch.length<pageSize){
+      break;
+    }
+
+    if(
+      Number.isFinite(Number(data.recordsFiltered))&&
+      products.length>=Number(data.recordsFiltered)
+    ){
       break;
     }
   }
 
-  return products;
+  if(products.length===0){
+    throw new Error(
+      `Walmart no devolvió productos para ${reference.label}. No se modificaron precios.`
+    );
+  }
+
+  /*
+   * Las páginas de búsqueda pueden solaparse si el catálogo cambia
+   * durante la consulta. Eliminamos duplicados antes de guardar para
+   * que un mismo producto nunca llegue dos veces al mismo upsert.
+   */
+  const uniqueProducts=[...new Map(
+    products.map(product=>[String(product.productId),product])
+  ).values()];
+
+  return{
+    products:uniqueProducts,
+    reference
+  };
 }

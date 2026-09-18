@@ -39,6 +39,16 @@ type CompetitorPrice={
   competitor_id:number;
   date:string;
   price:number;
+  update_run_id:string|null;
+  observed_at:string|null;
+};
+
+type CompetitorUpdateRun={
+  id:string;
+  competitor_id:number;
+  status:string;
+  finished_at:string|null;
+  started_at:string|null;
 };
 
 type PricingRule={
@@ -65,29 +75,6 @@ function normalize(
     .toLowerCase()??"";
 }
 
-function daysBetween(
-  date:string,
-  now:Date
-){
-  const source=
-    new Date(
-      `${date}T00:00:00Z`
-    );
-
-  const difference=
-    now.getTime()-
-    source.getTime();
-
-  return Math.floor(
-    difference/
-    (
-      1000*
-      60*
-      60*
-      24
-    )
-  );
-}
 
 export async function buildPricingPreview(
   options:BuildPricingPreviewOptions={}
@@ -108,7 +95,8 @@ export async function buildPricingPreview(
     mappingsResult,
     competitorsResult,
     competitorPricesResult,
-    rulesResult
+    rulesResult,
+    walmartRunsResult
   ]=await Promise.all([
     supabaseAdmin
       .from("products")
@@ -175,7 +163,9 @@ export async function buildPricingPreview(
         product_id,
         competitor_id,
         date,
-        price
+        price,
+        update_run_id,
+        observed_at
       `)
       .order(
         "date",
@@ -199,7 +189,19 @@ export async function buildPricingPreview(
       .eq(
         "enabled",
         true
-      )
+      ),
+
+    supabaseAdmin
+      .from("competitor_update_runs")
+      .select(`
+        id,
+        competitor_id,
+        status,
+        finished_at,
+        started_at
+      `)
+      .order("started_at",{ascending:false})
+      .limit(20)
   ]);
 
   if(productsResult.error){
@@ -230,6 +232,10 @@ export async function buildPricingPreview(
     throw rulesResult.error;
   }
 
+  if(walmartRunsResult.error){
+    throw walmartRunsResult.error;
+  }
+
   const products=
     (productsResult.data??[]) as Product[];
 
@@ -247,6 +253,9 @@ export async function buildPricingPreview(
 
   const rules=
     (rulesResult.data??[]) as PricingRule[];
+
+  const walmartRuns=
+    (walmartRunsResult.data??[]) as CompetitorUpdateRun[];
 
   /*
    * Si existe ciclo oficial,
@@ -331,6 +340,53 @@ export async function buildPricingPreview(
     Number(
       walmart.id
     );
+
+  const latestWalmartRun=
+    walmartRuns.find(
+      run=>Number(run.competitor_id)===walmartId
+    )??null;
+
+  if(!latestWalmartRun){
+    throw new Error(
+      "No existe una actualización Walmart registrada. Actualice Walmart antes de generar precios."
+    );
+  }
+
+  if(latestWalmartRun.status!=="success"||!latestWalmartRun.finished_at){
+    throw new Error(
+      "La actualización Walmart más reciente no terminó correctamente. Vuelva a actualizar Walmart antes de generar precios."
+    );
+  }
+
+  const configuredFreshnessHours=Number(
+    process.env.WALMART_MAX_FRESHNESS_HOURS??"24"
+  );
+
+  const walmartFreshnessHours=
+    Number.isFinite(configuredFreshnessHours)&&configuredFreshnessHours>0
+      ?configuredFreshnessHours
+      :24;
+
+  const latestWalmartFinishedAt=
+    Date.parse(latestWalmartRun.finished_at);
+
+  const walmartAgeHours=
+    (Date.now()-latestWalmartFinishedAt)/(1000*60*60);
+
+  if(
+    !Number.isFinite(latestWalmartFinishedAt)||
+    !Number.isFinite(walmartAgeHours)||
+    walmartAgeHours<0||
+    walmartAgeHours>walmartFreshnessHours
+  ){
+    throw new Error(
+      `La última actualización Walmart válida tiene ${Math.max(0,Math.floor(walmartAgeHours))} horas. Actualice Walmart antes de generar precios.`
+    );
+  }
+
+  // Capturamos el ID después de validar que la corrida existe.
+  // Esto mantiene el estrechamiento de tipo de TypeScript dentro de funciones internas.
+  const latestWalmartRunId=latestWalmartRun.id;
 
   const costByProduct=
     new Map(
@@ -559,37 +615,20 @@ export async function buildPricingPreview(
 
   function getWalmartPrice(
     productId:number,
-    maxAgeDays:number
+    _maxAgeDays:number
   ){
-    const price=
-      competitorPrices.find(
-        row=>
-          row.product_id===
-          productId&&
-          row.competitor_id===
-          walmartId
-      );
-
-    if(
-      !price
-    ){
-      return null;
-    }
-
-    const age=
-      daysBetween(
-        price.date,
-        new Date()
-      );
-
-    if(
-      age<0||
-      age>maxAgeDays
-    ){
-      return null;
-    }
-
-    return price;
+    /*
+     * Seguridad fuerte: una recomendación solo puede usar un precio
+     * proveniente de la ÚLTIMA actualización Walmart exitosa. Si un
+     * producto no pasó las validaciones en esa corrida, no reutilizamos
+     * silenciosamente un precio anterior.
+     */
+    return competitorPrices.find(
+      row=>
+        row.product_id===productId&&
+        row.competitor_id===walmartId&&
+        row.update_run_id===latestWalmartRunId
+    )??null;
   }
 
   const recommendations=[];

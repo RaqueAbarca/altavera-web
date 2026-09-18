@@ -76,12 +76,25 @@ type PdfResponse={
 type WalmartResponse={
   success?:boolean;
   saved?:number;
+  downloaded?:number;
+  reference?:{
+    label?:string;
+    regionId?:string;
+  };
+  validation?:{
+    valid?:number;
+    suspicious?:number;
+    presentationChanged?:number;
+    noPrice?:number;
+  };
   prices?:{
     saved?:number;
+    blocked?:number;
   };
   conversions?:{
     verified?:number;
     pending?:number;
+    invalidated?:number;
   };
   error?:string;
 };
@@ -121,63 +134,6 @@ function bulletinLabel(
 ){
   return BULLETIN_LABELS[value]??
     value;
-}
-
-type ApiErrorPayload={
-  error?:string;
-  details?:string;
-};
-
-async function readApiResponse<
-  T extends ApiErrorPayload
->(
-  response:Response,
-  fallbackMessage:string
-):Promise<T>{
-  const raw=
-    await response.text();
-
-  let data:T|null=null;
-
-  if(raw){
-    try{
-      data=JSON.parse(raw) as T;
-    }catch(error){
-      console.error(
-        "Respuesta no JSON de la API:",
-        {
-          url:response.url,
-          status:response.status,
-          contentType:
-            response.headers.get(
-              "content-type"
-            ),
-          preview:raw.slice(0,300),
-          error
-        }
-      );
-    }
-  }
-
-  if(!response.ok){
-    const message=
-      data?.error??
-      `${fallbackMessage} (HTTP ${response.status})`;
-
-    throw new Error(
-      data?.details
-        ?`${message}: ${data.details}`
-        :message
-    );
-  }
-
-  if(!data){
-    throw new Error(
-      `${fallbackMessage}: el servidor devolvió una respuesta inválida`
-    );
-  }
-
-  return data;
 }
 
 export default function PreciosPage(){
@@ -533,11 +489,16 @@ export default function PreciosPage(){
           }
         );
 
-      const cenadaData=
-        await readApiResponse<PdfResponse>(
-          cenadaResponse,
+      const cenadaData:
+        PdfResponse=
+          await cenadaResponse.json();
+
+      if(!cenadaResponse.ok){
+        throw new Error(
+          cenadaData.error??
           "Error procesando boletines CENADA"
         );
+      }
 
       await loadPrices();
 
@@ -606,14 +567,28 @@ export default function PreciosPage(){
           }
         );
 
-      const walmartData=
-        await readApiResponse<WalmartResponse>(
-          walmartResponse,
+      const walmartData:
+        WalmartResponse=
+          await walmartResponse.json();
+
+      if(!walmartResponse.ok){
+        throw new Error(
+          walmartData.error??
           "CENADA quedó listo, pero Walmart no pudo actualizarse"
         );
+      }
+
+      const walmartWarnings=
+        (walmartData.validation?.suspicious??0)+
+        (walmartData.validation?.presentationChanged??0)+
+        (walmartData.validation?.noPrice??0);
 
       setResultadoPdf(
-        `3/3 Walmart actualizado. Generando recomendaciones V2.4 para el ciclo #${cenadaData.cycleId}...`
+        `3/3 Walmart actualizado desde ${walmartData.reference?.label??"la referencia configurada"}: ${walmartData.saved??0} productos observados, ${walmartData.prices?.saved??0} precios seguros sincronizados${
+          walmartWarnings>0
+            ?` y ${walmartWarnings} observaciones bloqueadas para revisión.`
+            :"."
+        } Generando recomendaciones V2.4 para el ciclo #${cenadaData.cycleId}...`
       );
 
       const runResponse=
@@ -633,14 +608,23 @@ export default function PreciosPage(){
           }
         );
 
-      const runData=
-        await readApiResponse<PricingRunResponse>(
-          runResponse,
+      const runData:
+        PricingRunResponse=
+          await runResponse.json();
+
+      if(!runResponse.ok){
+        throw new Error(
+          runData.error??
           "No se pudo generar la corrida de precios"
         );
+      }
 
       setResultadoPdf(
-        `Listo. Ciclo #${cenadaData.cycleId} preparado con ${cenadaSummary}. Walmart sincronizó ${walmartData.prices?.saved??0} precios. Run #${runData.runId??"—"}${
+        `Listo. Ciclo #${cenadaData.cycleId} preparado con ${cenadaSummary}. Walmart (${walmartData.reference?.label??"referencia configurada"}) observó ${walmartData.saved??0} productos y sincronizó ${walmartData.prices?.saved??0} precios seguros${
+          walmartWarnings>0
+            ?`; ${walmartWarnings} observaciones quedaron fuera del cálculo por seguridad`
+            :""
+        }. Run #${runData.runId??"—"}${
           runData.reused
             ?" reutilizado porque acababa de generarse"
             :" generado"

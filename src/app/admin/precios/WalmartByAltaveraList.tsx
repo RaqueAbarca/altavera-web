@@ -23,6 +23,7 @@ type WalmartProduct={
   id:number;
   name:string;
   raw_price:number|null;
+  validation_status:string|null;
   measurement_unit:string|null;
   quantity_text:string|null;
 };
@@ -80,10 +81,12 @@ export default function WalmartByAltaveraList(){
             id,
             name,
             raw_price,
+            validation_status,
             measurement_unit,
             quantity_text
           `)
           .not("raw_price","is",null)
+          .eq("validation_status","valid")
           .order("name"),
 
         supabase

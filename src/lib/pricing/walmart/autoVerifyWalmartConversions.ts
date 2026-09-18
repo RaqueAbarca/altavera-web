@@ -9,6 +9,8 @@ type MatchRow={
     name:string;
     measurement_unit:string|null;
     quantity_text:string|null;
+    validation_status:string|null;
+    current_price:number|null;
   }|null;
   products:{
     unit:string|null;
@@ -26,7 +28,9 @@ export async function autoVerifyWalmartConversions(){
         competitor_products(
           name,
           measurement_unit,
-          quantity_text
+          quantity_text,
+          validation_status,
+          current_price
         ),
         products(
           unit
@@ -46,56 +50,63 @@ export async function autoVerifyWalmartConversions(){
   let pending=0;
 
   for(const match of matches){
-    const walmart=
-      match.competitor_products;
+    const walmart=match.competitor_products;
+    const altavera=match.products;
 
-    const altavera=
-      match.products;
-
-    if(
-      !walmart||
-      !altavera
-    ){
+    if(!walmart||!altavera){
       pending++;
       continue;
     }
 
-    const result=
-      calculateWalmartConversion({
-        walmartName:
-          walmart.name,
-        measurementUnit:
-          walmart.measurement_unit,
-        quantityText:
-          walmart.quantity_text,
-        altaveraUnit:
-          altavera.unit
-      });
+    const result=calculateWalmartConversion({
+      walmartName:walmart.name,
+      measurementUnit:walmart.measurement_unit,
+      quantityText:walmart.quantity_text,
+      altaveraUnit:altavera.unit
+    });
 
     if(!result){
       pending++;
       continue;
     }
 
+    const now=new Date().toISOString();
+
     const {error:updateError}=
       await supabaseAdmin
-        .from(
-          "competitor_product_matches"
-        )
+        .from("competitor_product_matches")
         .update({
-          conversion_factor:
-            result.factor,
+          conversion_factor:result.factor,
           verified:true,
           confidence:"exact",
-          notes:
-            `Conversión automática exacta. ${result.reason}`,
-          updated_at:
-            new Date().toISOString()
+          notes:`Conversión automática exacta. ${result.reason}`,
+          updated_at:now
         })
         .eq("id",match.id);
 
     if(updateError){
       throw updateError;
+    }
+
+    /*
+     * Si Walmart cambió la presentación pero la nueva equivalencia se
+     * pudo demostrar exactamente, la observación vuelve a ser apta.
+     */
+    if(walmart.validation_status==="presentation_changed"){
+      const {error:productError}=await supabaseAdmin
+        .from("competitor_products")
+        .update({
+          validation_status:"valid",
+          validation_warning:null,
+          last_valid_current_price:walmart.current_price,
+          validation_reviewed_at:now,
+          updated_at:now
+        })
+        .eq("id",match.competitor_product_id);
+
+      if(productError){
+        throw productError;
+      }
     }
 
     verified++;
