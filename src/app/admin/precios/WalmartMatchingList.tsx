@@ -285,6 +285,7 @@ export default function WalmartMatchingList(){
 
         setMessage(
           `Walmart actualizado: ${data.downloaded??data.saved??0} productos obtenidos y ${data.saved??0} guardados. `+
+          (data.walmartReportedTotal!=null?`Walmart reportó ${data.walmartReportedTotal} productos para esta búsqueda regional${data.pagesFetched?` en ${data.pagesFetched} página${data.pagesFetched===1?"":"s"}`:""}. `:"")+
           `Referencia: ${referenceLabel}. `+
           (sellerNames?`Walmart reportó: ${sellerNames}. `:"")+
           `${validation.valid??0} datos válidos, `+

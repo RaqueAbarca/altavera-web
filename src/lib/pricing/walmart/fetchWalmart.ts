@@ -49,6 +49,11 @@ type RegionResponse={
 type ProductSearchResponse={
   products?:WalmartRawProduct[];
   recordsFiltered?:number;
+  pagination?:{
+    current?:{index?:number};
+    last?:{index?:number};
+    perPage?:number;
+  };
 };
 
 function assertReferenceCoordinates(){
@@ -211,6 +216,7 @@ function buildProductSearchUrl(
     country:reference.country,
     simulationBehavior:"default",
     hideUnavailableItems:"true",
+    showSponsored:"false",
     count:String(count),
     page:String(page)
   });
@@ -231,6 +237,8 @@ export async function fetchWalmartProducts():Promise<WalmartFetchResult>{
   const products:WalmartRawProduct[]=[];
   const pageSize=50;
   const reference=await resolveWalmartReference();
+  let reportedTotal:number|null=null;
+  let pagesFetched=0;
 
   for(let page=1;page<=20;page++){
     const url=buildProductSearchUrl(
@@ -258,6 +266,18 @@ export async function fetchWalmartProducts():Promise<WalmartFetchResult>{
     }
 
     const data=await response.json() as ProductSearchResponse;
+    pagesFetched=page;
+
+    const responseTotal=Number(data.recordsFiltered);
+    if(Number.isFinite(responseTotal)&&responseTotal>=0){
+      if(reportedTotal===null){
+        reportedTotal=Math.floor(responseTotal);
+      }else if(reportedTotal!==Math.floor(responseTotal)){
+        throw new Error(
+          `Walmart cambió el total reportado durante la descarga (${reportedTotal} → ${Math.floor(responseTotal)}). Se detuvo la actualización para evitar una lectura inconsistente.`
+        );
+      }
+    }
 
     const batch=
       Array.isArray(data?.products)
@@ -298,8 +318,25 @@ export async function fetchWalmartProducts():Promise<WalmartFetchResult>{
     products.map(product=>[String(product.productId),product])
   ).values()];
 
+  /*
+   * recordsFiltered es el total que VTEX declara para ESTA búsqueda ya
+   * regionalizada. Es una señal de completitud mucho más fiable que
+   * comparar contra el catálogo genérico que Altavera tenía antes de fijar
+   * una tienda/zona de referencia.
+   */
+  if(
+    reportedTotal!==null&&
+    uniqueProducts.length<reportedTotal
+  ){
+    throw new Error(
+      `Walmart reportó ${reportedTotal} productos para ${reference.label}, pero solo se recopilaron ${uniqueProducts.length}. Se detuvo la actualización porque la descarga quedó incompleta.`
+    );
+  }
+
   return{
     products:uniqueProducts,
-    reference
+    reference,
+    reportedTotal,
+    pagesFetched
   };
 }

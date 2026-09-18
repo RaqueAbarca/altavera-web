@@ -33,7 +33,9 @@ export async function POST(){
 
     const {
       products:rawProducts,
-      reference
+      reference,
+      reportedTotal,
+      pagesFetched
     }=await fetchWalmartProducts();
 
     const configuredMinProducts=Number(
@@ -54,17 +56,31 @@ export async function POST(){
         ?configuredCatalogRatio
         :0.5;
 
-    const {count:existingCatalogCount,error:catalogCountError}=
+    /*
+     * IMPORTANTE: el catálogo histórico de competitor_products puede incluir
+     * productos de la consulta genérica anterior. Ahora que Walmart está
+     * regionalizado, la referencia correcta es la última corrida EXITOSA de
+     * la MISMA región, no el total histórico de productos guardados.
+     */
+    const {data:previousRegionalRun,error:regionalBaselineError}=
       await supabaseAdmin
-        .from("competitor_products")
-        .select("id",{count:"exact",head:true})
-        .eq("competitor_id",updateRun.competitorId);
+        .from("competitor_update_runs")
+        .select("downloaded_count,finished_at")
+        .eq("competitor_id",updateRun.competitorId)
+        .eq("status","success")
+        .eq("reference_region_id",reference.regionId)
+        .order("finished_at",{ascending:false})
+        .limit(1)
+        .maybeSingle();
 
-    if(catalogCountError){
-      throw catalogCountError;
+    if(regionalBaselineError){
+      throw regionalBaselineError;
     }
 
-    const baselineCount=Number(existingCatalogCount??0);
+    const baselineCount=Number(
+      previousRegionalRun?.downloaded_count??0
+    );
+
     const minimumExpected=Math.max(
       minProducts,
       baselineCount>0
@@ -74,7 +90,18 @@ export async function POST(){
 
     if(rawProducts.length<minimumExpected){
       throw new Error(
-        `Walmart devolvió solo ${rawProducts.length} productos. Se esperaban al menos ${minimumExpected} según el catálogo conocido (${baselineCount}). Se detuvo la actualización para evitar usar una respuesta parcial.`
+        baselineCount>0
+          ?`Walmart devolvió solo ${rawProducts.length} productos para la misma región. Se esperaban al menos ${minimumExpected} tomando como referencia la última actualización regional exitosa (${baselineCount}). Se detuvo la actualización.`
+          :`Walmart devolvió solo ${rawProducts.length} productos para ${reference.label}. El mínimo de seguridad inicial es ${minimumExpected}. Se detuvo la actualización.`
+      );
+    }
+
+    if(
+      reportedTotal!==null&&
+      rawProducts.length!==reportedTotal
+    ){
+      throw new Error(
+        `Walmart reportó ${reportedTotal} productos para la búsqueda regional, pero Altavera recopiló ${rawProducts.length}. Se detuvo la actualización por inconsistencia.`
       );
     }
 
@@ -140,8 +167,10 @@ export async function POST(){
       success:true,
       updateRunId:updateRun.id,
       downloaded:rawProducts.length,
-      catalogBaseline:baselineCount,
+      regionalBaseline:baselineCount,
       catalogMinimum:minimumExpected,
+      walmartReportedTotal:reportedTotal,
+      pagesFetched,
       saved:saveResult.saved,
       reference:{
         label:reference.label,

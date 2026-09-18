@@ -60,4 +60,6 @@ export type WalmartProduct={
 export type WalmartFetchResult={
   products:WalmartRawProduct[];
   reference:WalmartReference;
+  reportedTotal:number|null;
+  pagesFetched:number;
 };
