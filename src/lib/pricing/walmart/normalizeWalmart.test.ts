@@ -70,4 +70,28 @@ describe("normalizeWalmartProduct con región",()=>{
     expect(result.regularPrice).toBe(1700);
     expect(result.selectedSellerId).toBe("alajuela");
   });
+  it("no considera oferta una diferencia menor al 2 por ciento",()=>{
+    const result=normalizeWalmartProduct({
+      productId:"test-3",
+      productName:"Aguacate Hass Kilo",
+      items:[{
+        measurementUnit:"kg",
+        unitMultiplier:0.25,
+        sellers:[{
+          sellerId:"1",
+          sellerName:"Walmart",
+          commertialOffer:{
+            Price:2250,
+            ListPrice:2252,
+            AvailableQuantity:10
+          }
+        }]
+      }]
+    });
+
+    expect(result.currentPrice).toBe(2250);
+    expect(result.regularPrice).toBe(2252);
+    expect(result.discountPercent).toBe(0);
+  });
+
 });

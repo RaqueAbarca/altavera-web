@@ -42,6 +42,8 @@ function roundPercent(value:number){
   return Math.round(value*100)/100;
 }
 
+export const MIN_MEANINGFUL_DISCOUNT_PERCENT=2;
+
 export function normalizeWalmartProduct(
   product:WalmartRawProduct,
   reference?:WalmartReference
@@ -103,11 +105,16 @@ export function normalizeWalmartProduct(
       :null);
   const regularPrice=rawListPrice??currentPrice;
 
-  const discountPercent=
+  const rawDiscountPercent=
     currentPrice!==null&&
     regularPrice!==null&&
     regularPrice>currentPrice
       ?roundPercent(((regularPrice-currentPrice)/regularPrice)*100)
+      :0;
+
+  const discountPercent=
+    rawDiscountPercent>=MIN_MEANINGFUL_DISCOUNT_PERCENT
+      ?rawDiscountPercent
       :0;
 
   return{

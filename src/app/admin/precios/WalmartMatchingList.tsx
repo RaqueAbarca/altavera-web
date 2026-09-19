@@ -692,7 +692,7 @@ export default function WalmartMatchingList(){
                     {
                       item.regular_price!==null&&
                       item.current_price!==null&&
-                      item.regular_price>item.current_price&&
+                      Number(item.discount_percent??0)>=2&&
                       (
                         <span>
                           Regular: {formatPrice(item.regular_price)}

@@ -13,6 +13,7 @@ type MatchRow={
     current_price:number|null;
   }|null;
   products:{
+    name:string;
     unit:string|null;
   }|null;
 };
@@ -33,6 +34,7 @@ export async function autoVerifyWalmartConversions(){
           current_price
         ),
         products(
+          name,
           unit
         )
       `)
@@ -62,6 +64,7 @@ export async function autoVerifyWalmartConversions(){
       walmartName:walmart.name,
       measurementUnit:walmart.measurement_unit,
       quantityText:walmart.quantity_text,
+      altaveraName:altavera.name,
       altaveraUnit:altavera.unit
     });
 

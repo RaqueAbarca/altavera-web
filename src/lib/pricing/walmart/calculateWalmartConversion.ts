@@ -2,6 +2,7 @@ type Input={
   walmartName:string;
   measurementUnit:string|null;
   quantityText:string|null;
+  altaveraName?:string|null;
   altaveraUnit:string|null;
 };
 
@@ -66,7 +67,8 @@ function parseCount(value:string){
 }
 
 function targetWeightKg(
-  altaveraUnit:string
+  altaveraUnit:string,
+  altaveraName:string
 ){
   const normalized=
     normalize(altaveraUnit);
@@ -78,9 +80,40 @@ function targetWeightKg(
     return 1;
   }
 
-  return parseWeightKg(
-    altaveraUnit
+  return (
+    parseWeightKg(altaveraUnit)??
+    parseWeightKg(altaveraName)
   );
+}
+
+function parseAltaveraPackCount(
+  altaveraName:string
+){
+  const text=normalize(altaveraName);
+
+  const multiplierMatch=text.match(
+    /(?:^|[^\d])(?:1\s*)?[x×]\s*(\d+)(?:[^\d]|$)/i
+  );
+
+  if(multiplierMatch){
+    const count=Number(multiplierMatch[1]);
+    if(Number.isInteger(count)&&count>0){
+      return count;
+    }
+  }
+
+  const explicitCount=text.match(
+    /(\d+)\s*(?:unidad|unidades|und|uds)\b/i
+  );
+
+  if(explicitCount){
+    const count=Number(explicitCount[1]);
+    if(Number.isInteger(count)&&count>0){
+      return count;
+    }
+  }
+
+  return 1;
 }
 
 export function calculateWalmartConversion(
@@ -94,7 +127,8 @@ export function calculateWalmartConversion(
 
   const targetWeight=
     targetWeightKg(
-      input.altaveraUnit??""
+      input.altaveraUnit??"",
+      input.altaveraName??""
     );
 
   /*
@@ -173,10 +207,16 @@ export function calculateWalmartConversion(
     altaveraUnit==="und"&&
     sourceCount
   ){
+    const altaveraCount=parseAltaveraPackCount(
+      input.altaveraName??""
+    );
+
     return{
-      factor:sourceCount,
+      factor:sourceCount/altaveraCount,
       reason:
-        `Walmart vende ${sourceCount} unidades por presentación y Altavera vende por unidad.`
+        altaveraCount===1
+          ?`Walmart vende ${sourceCount} unidades por presentación y Altavera vende por unidad.`
+          :`Walmart vende ${sourceCount} unidades por presentación y Altavera vende un paquete de ${altaveraCount} unidades.`
     };
   }
 

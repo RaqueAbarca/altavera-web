@@ -12,6 +12,7 @@ type MatchRow={
     quantity_text:string|null;
   }|null;
   products:{
+    name:string;
     unit:string|null;
   }|null;
 };
@@ -29,7 +30,7 @@ export async function revalidateAutomaticWalmartConversions(){
         measurement_unit,
         quantity_text
       ),
-      products(unit)
+      products(name,unit)
     `)
     .eq("action","use")
     .eq("verified",true);
@@ -64,6 +65,7 @@ export async function revalidateAutomaticWalmartConversions(){
       walmartName:walmart.name,
       measurementUnit:walmart.measurement_unit,
       quantityText:walmart.quantity_text,
+      altaveraName:altavera.name,
       altaveraUnit:altavera.unit
     });
 
