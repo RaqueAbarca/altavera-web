@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { suggestWalmartMatches } from "@/lib/pricing/walmart/suggestWalmartMatches";
 
 type Product={
@@ -67,115 +66,33 @@ export default function WalmartMatchingList(){
     setLoading(true);
 
     try{
-      const {data:walmartCompetitor,error:walmartCompetitorError}=
-        await supabase
-          .from("competitors")
-          .select("id")
-          .eq("name","Walmart")
-          .eq("enabled",true)
-          .maybeSingle();
+      const response=await fetch(
+        "/api/walmart/admin-data",
+        {cache:"no-store"}
+      );
 
-      if(walmartCompetitorError){
-        throw walmartCompetitorError;
-      }
+      const data=await response.json();
 
-      if(!walmartCompetitor){
-        throw new Error("No existe un competidor Walmart habilitado");
-      }
-
-      const {data:latestRun,error:latestRunError}=
-        await supabase
-          .from("competitor_update_runs")
-          .select("id")
-          .eq("competitor_id",walmartCompetitor.id)
-          .eq("status","success")
-          .not("reference_region_id","is",null)
-          .order("started_at",{ascending:false})
-          .limit(1)
-          .maybeSingle();
-
-      if(latestRunError){
-        throw latestRunError;
-      }
-
-      const [productsResult,walmartResult]=await Promise.all([
-        supabase
-          .from("products")
-          .select("id,name,unit")
-          .order("name"),
-
-        latestRun
-          ?supabase
-            .from("competitor_products")
-            .select(`
-              id,
-              external_id,
-              name,
-              raw_price,
-              current_price,
-              regular_price,
-              discount_percent,
-              previous_current_price,
-              price_change_percent,
-              validation_status,
-              validation_warning,
-              reference_label,
-              reference_region_id,
-              selected_seller_id,
-              selected_seller_name,
-              measurement_unit,
-              quantity_text,
-              unit_multiplier,
-              last_seen_at
-            `)
-            .eq("competitor_id",walmartCompetitor.id)
-            .eq("last_update_run_id",latestRun.id)
-            .order("name")
-          :Promise.resolve({data:[],error:null})
-      ]);
-
-      if(productsResult.error){
-        throw productsResult.error;
-      }
-
-      if(walmartResult.error){
-        throw walmartResult.error;
+      if(!response.ok){
+        throw new Error(
+          data.error??
+          "Error cargando productos Walmart"
+        );
       }
 
       const activeWalmartProducts=
-        (walmartResult.data??[]) as WalmartProduct[];
-
-      const activeIds=activeWalmartProducts.map(item=>item.id);
-      let activeMatches:WalmartMatch[]=[];
-
-      if(activeIds.length>0){
-        const {data:matchesData,error:matchesError}=
-          await supabase
-            .from("competitor_product_matches")
-            .select(`
-              competitor_product_id,
-              product_id,
-              action,
-              verified,
-              conversion_factor
-            `)
-            .in("competitor_product_id",activeIds);
-
-        if(matchesError){
-          throw matchesError;
-        }
-
-        activeMatches=(matchesData??[]) as WalmartMatch[];
-      }
+        (data.walmartProducts??[]) as WalmartProduct[];
 
       setWalmartProducts(activeWalmartProducts);
-      setProducts((productsResult.data??[]) as Product[]);
-      setMatches(activeMatches);
+      setProducts((data.products??[]) as Product[]);
+      setMatches((data.matches??[]) as WalmartMatch[]);
 
-      if(!latestRun){
+      if(!data.latestRunId){
         setMessage(
           "Todavía no existe una actualización regional exitosa de Walmart."
         );
+      }else{
+        setMessage("");
       }
     }catch(error){
       console.error(
