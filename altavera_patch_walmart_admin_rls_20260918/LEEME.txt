@@ -1,0 +1,17 @@
+Parche Walmart Admin / RLS
+
+Problema:
+- public.competitors tiene RLS activo y no tiene policies.
+- Las pantallas cliente de Walmart intentaban leer competitors y otras tablas directamente desde el navegador.
+- Supabase devolvia 0 filas y el Admin mostraba "No existe un competidor Walmart habilitado" aunque Walmart existe y enabled=true.
+
+Solucion:
+- Se agrega GET /api/walmart/admin-data.
+- La ruta valida primero que la sesion sea de administrador.
+- Luego lee competitors, competitor_update_runs, competitor_products, competitor_product_matches y products desde el servidor usando supabaseAdmin.
+- Las dos pantallas Walmart dejan de consultar esas tablas directamente desde el navegador.
+- No requiere SQL ni cambia datos.
+
+Aplicacion:
+unzip -o ~/Downloads/altavera_patch_walmart_admin_rls_20260918.zip -d .
+npm run build
