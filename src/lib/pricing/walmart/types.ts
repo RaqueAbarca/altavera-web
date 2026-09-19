@@ -25,6 +25,19 @@ export type WalmartRawProduct={
       highPrice?:number;
     };
   };
+  productClusters?:Array<{
+    id?:string|number;
+    name?:string;
+  }>;
+  clusterHighlights?:Array<{
+    id?:string|number;
+    name?:string;
+  }>;
+  properties?:Array<{
+    name?:string;
+    originalName?:string;
+    values?:unknown[];
+  }>;
   items?:Array<{
     itemId?:string;
     measurementUnit?:string;

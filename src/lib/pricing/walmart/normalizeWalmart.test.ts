@@ -23,6 +23,32 @@ describe("normalizeWalmartProduct",()=>{
     expect(result.discountPercent).toBe(16);
   });
 
+  it("ignora una rebaja exclusiva en línea y usa el precio regular",()=>{
+    const result=normalizeWalmartProduct({
+      productId:"online-1",
+      productName:"Limón Hortifruti Mandarino - 8 Uds",
+      clusterHighlights:[{
+        id:"promo-online",
+        name:"Rebaja Exclusiva en línea"
+      }],
+      items:[{
+        measurementUnit:"un",
+        sellers:[{
+          commertialOffer:{
+            Price:462,
+            ListPrice:550,
+            AvailableQuantity:10
+          }
+        }]
+      }]
+    });
+
+    expect(result.price).toBe(550);
+    expect(result.currentPrice).toBe(550);
+    expect(result.regularPrice).toBe(550);
+    expect(result.discountPercent).toBe(0);
+  });
+
   it("usa el precio actual también como regular si no existe ListPrice",()=>{
     const result=normalizeWalmartProduct({
       productId:"2",

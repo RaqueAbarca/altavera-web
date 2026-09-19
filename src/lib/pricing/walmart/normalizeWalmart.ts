@@ -42,6 +42,25 @@ function roundPercent(value:number){
   return Math.round(value*100)/100;
 }
 
+function normalizePromotionText(value:string){
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase();
+}
+
+export function hasOnlineExclusiveDiscount(product:WalmartRawProduct){
+  /*
+   * Walmart marca algunas promociones como "Rebaja exclusiva en línea".
+   * La etiqueta puede llegar en distintos bloques de metadatos de VTEX
+   * (clusters, highlights o propiedades), por eso buscamos la frase en el
+   * producto crudo completo en vez de depender de una sola ubicación.
+   */
+  const metadata=normalizePromotionText(JSON.stringify(product));
+
+  return metadata.includes("rebaja exclusiva en linea");
+}
+
 export const MIN_MEANINGFUL_DISCOUNT_PERCENT=2;
 
 export function normalizeWalmartProduct(
@@ -92,7 +111,7 @@ export function normalizeWalmartProduct(
    */
   const allowPriceRangeFallback=items.length<=1;
 
-  const currentPrice=
+  const observedCurrentPrice=
     positiveNumber(offer?.Price)??
     (allowPriceRangeFallback
       ?positiveNumber(product.priceRange?.sellingPrice?.lowPrice)
@@ -103,9 +122,22 @@ export function normalizeWalmartProduct(
     (allowPriceRangeFallback
       ?positiveNumber(product.priceRange?.listPrice?.lowPrice)
       :null);
-  const regularPrice=rawListPrice??currentPrice;
+  const regularPrice=rawListPrice??observedCurrentPrice;
+  const onlineExclusiveDiscount=hasOnlineExclusiveDiscount(product);
+
+  /*
+   * Para Altavera una rebaja exclusiva en línea NO entra al cálculo
+   * competitivo. Conservamos el raw_data original, pero el precio efectivo
+   * de Walmart pasa a ser el precio regular/lista. El resto de promociones
+   * continúa funcionando exactamente igual.
+   */
+  const currentPrice=
+    onlineExclusiveDiscount&&regularPrice!==null
+      ?regularPrice
+      :observedCurrentPrice;
 
   const rawDiscountPercent=
+    !onlineExclusiveDiscount&&
     currentPrice!==null&&
     regularPrice!==null&&
     regularPrice>currentPrice
