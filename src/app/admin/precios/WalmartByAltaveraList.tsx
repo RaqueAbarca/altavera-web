@@ -65,38 +65,60 @@ export default function WalmartByAltaveraList(){
     setLoading(true);
 
     try{
-      const [
-        productsResult,
-        walmartResult,
-        matchesResult
-      ]=await Promise.all([
+      const {data:walmartCompetitor,error:walmartCompetitorError}=
+        await supabase
+          .from("competitors")
+          .select("id")
+          .eq("name","Walmart")
+          .eq("enabled",true)
+          .maybeSingle();
+
+      if(walmartCompetitorError){
+        throw walmartCompetitorError;
+      }
+
+      if(!walmartCompetitor){
+        throw new Error("No existe un competidor Walmart habilitado");
+      }
+
+      const {data:latestRun,error:latestRunError}=
+        await supabase
+          .from("competitor_update_runs")
+          .select("id")
+          .eq("competitor_id",walmartCompetitor.id)
+          .eq("status","success")
+          .not("reference_region_id","is",null)
+          .order("started_at",{ascending:false})
+          .limit(1)
+          .maybeSingle();
+
+      if(latestRunError){
+        throw latestRunError;
+      }
+
+      const [productsResult,walmartResult]=await Promise.all([
         supabase
           .from("products")
           .select("id,name,unit")
           .order("name"),
 
-        supabase
-          .from("competitor_products")
-          .select(`
-            id,
-            name,
-            raw_price,
-            validation_status,
-            measurement_unit,
-            quantity_text
-          `)
-          .not("raw_price","is",null)
-          .eq("validation_status","valid")
-          .order("name"),
-
-        supabase
-          .from("competitor_product_matches")
-          .select(`
-            competitor_product_id,
-            product_id,
-            action,
-            verified
-          `)
+        latestRun
+          ?supabase
+            .from("competitor_products")
+            .select(`
+              id,
+              name,
+              raw_price,
+              validation_status,
+              measurement_unit,
+              quantity_text
+            `)
+            .eq("competitor_id",walmartCompetitor.id)
+            .eq("last_update_run_id",latestRun.id)
+            .not("raw_price","is",null)
+            .eq("validation_status","valid")
+            .order("name")
+          :Promise.resolve({data:[],error:null})
       ]);
 
       if(productsResult.error){
@@ -107,22 +129,40 @@ export default function WalmartByAltaveraList(){
         throw walmartResult.error;
       }
 
-      if(matchesResult.error){
-        throw matchesResult.error;
+      const activeWalmartProducts=
+        (walmartResult.data??[]) as WalmartProduct[];
+
+      const activeIds=activeWalmartProducts.map(item=>item.id);
+      let activeMatches:WalmartMatch[]=[];
+
+      if(activeIds.length>0){
+        const {data:matchesData,error:matchesError}=
+          await supabase
+            .from("competitor_product_matches")
+            .select(`
+              competitor_product_id,
+              product_id,
+              action,
+              verified
+            `)
+            .in("competitor_product_id",activeIds);
+
+        if(matchesError){
+          throw matchesError;
+        }
+
+        activeMatches=(matchesData??[]) as WalmartMatch[];
       }
 
-      setProducts(
-        (productsResult.data??[]) as Product[]
-      );
+      setProducts((productsResult.data??[]) as Product[]);
+      setWalmartProducts(activeWalmartProducts);
+      setMatches(activeMatches);
 
-      setWalmartProducts(
-        (walmartResult.data??[]) as WalmartProduct[]
-      );
-
-      setMatches(
-        (matchesResult.data??[]) as WalmartMatch[]
-      );
-
+      if(!latestRun){
+        setMessage(
+          "Todavía no existe una actualización regional exitosa de Walmart."
+        );
+      }
     }catch(error){
       console.error(
         "Error cargando matching por Altavera:",

@@ -67,75 +67,116 @@ export default function WalmartMatchingList(){
     setLoading(true);
 
     try{
-      const [
-        walmartResult,
-        productsResult,
-        matchesResult
-      ]=await Promise.all([
-        supabase
-          .from("competitor_products")
-          .select(`
-            id,
-            external_id,
-            name,
-            raw_price,
-            current_price,
-            regular_price,
-            discount_percent,
-            previous_current_price,
-            price_change_percent,
-            validation_status,
-            validation_warning,
-            reference_label,
-            reference_region_id,
-            selected_seller_id,
-            selected_seller_name,
-            measurement_unit,
-            quantity_text,
-            unit_multiplier,
-            last_seen_at
-          `)
-          .order("name"),
+      const {data:walmartCompetitor,error:walmartCompetitorError}=
+        await supabase
+          .from("competitors")
+          .select("id")
+          .eq("name","Walmart")
+          .eq("enabled",true)
+          .maybeSingle();
 
+      if(walmartCompetitorError){
+        throw walmartCompetitorError;
+      }
+
+      if(!walmartCompetitor){
+        throw new Error("No existe un competidor Walmart habilitado");
+      }
+
+      const {data:latestRun,error:latestRunError}=
+        await supabase
+          .from("competitor_update_runs")
+          .select("id")
+          .eq("competitor_id",walmartCompetitor.id)
+          .eq("status","success")
+          .not("reference_region_id","is",null)
+          .order("started_at",{ascending:false})
+          .limit(1)
+          .maybeSingle();
+
+      if(latestRunError){
+        throw latestRunError;
+      }
+
+      const [productsResult,walmartResult]=await Promise.all([
         supabase
           .from("products")
           .select("id,name,unit")
           .order("name"),
 
-        supabase
-          .from("competitor_product_matches")
-          .select(`
-            competitor_product_id,
-            product_id,
-            action,
-            verified,
-            conversion_factor
-          `)
+        latestRun
+          ?supabase
+            .from("competitor_products")
+            .select(`
+              id,
+              external_id,
+              name,
+              raw_price,
+              current_price,
+              regular_price,
+              discount_percent,
+              previous_current_price,
+              price_change_percent,
+              validation_status,
+              validation_warning,
+              reference_label,
+              reference_region_id,
+              selected_seller_id,
+              selected_seller_name,
+              measurement_unit,
+              quantity_text,
+              unit_multiplier,
+              last_seen_at
+            `)
+            .eq("competitor_id",walmartCompetitor.id)
+            .eq("last_update_run_id",latestRun.id)
+            .order("name")
+          :Promise.resolve({data:[],error:null})
       ]);
-
-      if(walmartResult.error){
-        throw walmartResult.error;
-      }
 
       if(productsResult.error){
         throw productsResult.error;
       }
 
-      if(matchesResult.error){
-        throw matchesResult.error;
+      if(walmartResult.error){
+        throw walmartResult.error;
       }
 
-      setWalmartProducts(
-        (walmartResult.data??[]) as WalmartProduct[]
-      );
+      const activeWalmartProducts=
+        (walmartResult.data??[]) as WalmartProduct[];
 
-      setProducts(
-        (productsResult.data??[]) as Product[]
-      );
+      const activeIds=activeWalmartProducts.map(item=>item.id);
+      let activeMatches:WalmartMatch[]=[];
 
-      setMatches(
-        (matchesResult.data??[]) as WalmartMatch[]
-      );
+      if(activeIds.length>0){
+        const {data:matchesData,error:matchesError}=
+          await supabase
+            .from("competitor_product_matches")
+            .select(`
+              competitor_product_id,
+              product_id,
+              action,
+              verified,
+              conversion_factor
+            `)
+            .in("competitor_product_id",activeIds);
+
+        if(matchesError){
+          throw matchesError;
+        }
+
+        activeMatches=(matchesData??[]) as WalmartMatch[];
+      }
+
+      setWalmartProducts(activeWalmartProducts);
+      setProducts((productsResult.data??[]) as Product[]);
+      setMatches(activeMatches);
+
+      if(!latestRun){
+        setMessage(
+          "Todavía no existe una actualización regional exitosa de Walmart."
+        );
+      }
     }catch(error){
       console.error(
         "Error cargando panel Walmart:",
@@ -619,7 +660,7 @@ export default function WalmartMatchingList(){
             setFilter("pending")
           }
         >
-          Pendientes ({counts.pending})
+          Pendientes regionales ({counts.pending})
         </button>
 
         <button
@@ -633,7 +674,7 @@ export default function WalmartMatchingList(){
             setFilter("matched")
           }
         >
-          Asociados ({counts.matched})
+          Asociados activos ({counts.matched})
         </button>
 
         <button
