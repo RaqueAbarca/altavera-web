@@ -459,7 +459,7 @@
 
 .orders-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 
@@ -991,4 +991,34 @@
   .order-delivery-location-actions a {
     justify-content: center;
   }
+}
+
+
+/* ========================================
+   RESUMEN TIPO FACTURA EN PEDIDOS
+======================================== */
+.order-invoice-card { overflow: hidden; }
+.order-total-highlight { flex: 0 0 auto; min-width: 150px; padding: 0.65rem 0.8rem; border: 1px solid #dce7dd; border-radius: 12px; background: #f4f8f4; text-align: right; }
+.order-total-highlight span { display: block; margin-bottom: 0.2rem; color: var(--gray); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.order-total-highlight strong { color: var(--green); font-size: 1.3rem; }
+.order-invoice { margin-top: 1rem; border: 1px solid #e6e9e4; border-radius: 14px; overflow: hidden; background: #fff; }
+.order-invoice-title { padding: 0.72rem 0.85rem; border-bottom: 1px solid #e6e9e4; background: #f8faf7; color: #2a4431; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.035em; }
+.order-invoice-table-wrap { overflow-x: auto; }
+.order-invoice-table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 0.84rem; }
+.order-invoice-table th, .order-invoice-table td { padding: 0.7rem 0.8rem; border-bottom: 1px solid #f0f1ef; text-align: right; vertical-align: top; }
+.order-invoice-table th { background: #fcfdfb; color: #6b746d; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
+.order-invoice-table th:first-child, .order-invoice-table td:first-child { text-align: left; }
+.order-invoice-table td:first-child strong { display: block; color: #25342a; }
+.order-invoice-table small { display: block; margin-top: 0.2rem; color: var(--gray); }
+.order-invoice-totals { margin-left: auto; width: min(100%, 390px); padding: 0.65rem 0.85rem 0.8rem; }
+.order-invoice-totals > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.38rem 0; color: #58615a; font-size: 0.84rem; }
+.order-invoice-totals strong { color: #263329; }
+.order-invoice-totals .order-invoice-grand-total { margin-top: 0.35rem; padding-top: 0.7rem; border-top: 2px solid #dfe6df; color: #1d3023; font-size: 1rem; font-weight: 800; }
+.order-invoice-grand-total strong { color: var(--green); font-size: 1.35rem; }
+.order-actions .order-contact-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 42px; padding: 9px 14px; border: 1px solid #b9d9bd; border-radius: 10px; background: #eff8f0; color: #245b2c; font-weight: 700; text-decoration: none; }
+.order-actions .order-contact-button:hover { background: #e3f2e5; }
+@media (max-width: 640px) {
+  .order-card-heading { flex-direction: column; }
+  .order-total-highlight { width: 100%; text-align: left; }
+  .order-actions .order-contact-button { width: 100%; }
 }

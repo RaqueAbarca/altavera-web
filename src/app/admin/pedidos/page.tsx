@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, MapPin, Navigation } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, MessageCircle, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { buildOrderOnTheWayMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { playAdminSound } from "@/lib/adminSounds";
@@ -33,6 +33,8 @@ type Order = {
   id: string;
   guest_name: string;
   guest_phone: string;
+  subtotal: number | string | null;
+  shipping: number | string | null;
   total: number | string;
   payment_method: string;
   status: string;
@@ -123,6 +125,26 @@ function googleMapsUrl(order: Order) {
 
 function wazeUrl(order: Order) {
   return `https://www.waze.com/ul?ll=${encodeURIComponent(`${Number(order.latitude)},${Number(order.longitude)}`)}&navigate=yes`;
+}
+
+
+function formatMoney(value: number | string | null | undefined) {
+  const amount = Number(value ?? 0);
+  return `₡${Number.isFinite(amount) ? amount.toLocaleString("es-CR", { maximumFractionDigits: 2 }) : "0"}`;
+}
+
+function itemSubtotal(item: OrderItem) {
+  return Number(item.price) * Number(item.quantity);
+}
+
+function contactCustomerUrl(order: Order) {
+  return buildWhatsAppUrl({
+    phone: order.guest_phone,
+    message: [
+      `Hola ${order.guest_name.trim() || "cliente"},`,
+      `te contactamos de Altavera con respecto a tu pedido #${order.id.slice(0, 8).toUpperCase()}.`,
+    ].join("\n\n"),
+  });
 }
 
 function buildLiveShoppingList(orders: Order[]) {
@@ -500,9 +522,22 @@ export default function AdminOrdersPage() {
                   <div className="orders-grid">
                     {visibleOrders.map((order) => {
                       const action = nextAction(order);
+                      const contactUrl = contactCustomerUrl(order);
+                      const calculatedSubtotal = order.order_item.reduce(
+                        (sum, item) => sum + itemSubtotal(item),
+                        0
+                      );
+                      const storedSubtotal =
+                        order.subtotal === null || order.subtotal === undefined
+                          ? Number.NaN
+                          : Number(order.subtotal);
+                      const subtotal = Number.isFinite(storedSubtotal)
+                        ? storedSubtotal
+                        : calculatedSubtotal;
+                      const shipping = Number(order.shipping ?? 0);
 
                       return (
-                        <article className="order-card" key={order.id}>
+                        <article className="order-card order-invoice-card" key={order.id}>
                           <div className="order-card-heading">
                             <div>
                               <h3>Pedido #{order.id.slice(0, 8)}</h3>
@@ -511,7 +546,10 @@ export default function AdminOrdersPage() {
                                 {getPaymentMethodLabel(order.payment_method)}
                               </span>
                             </div>
-                            <strong>₡{Number(order.total).toLocaleString("es-CR")}</strong>
+                            <div className="order-total-highlight">
+                              <span>{belongsToTab(order.status, "pending") ? "Total a verificar" : "Total del pedido"}</span>
+                              <strong>{formatMoney(order.total)}</strong>
+                            </div>
                           </div>
 
                           {order.customer_notes && (
@@ -546,51 +584,92 @@ export default function AdminOrdersPage() {
                             </div>
                           )}
 
-                          <ul className="order-products-list">
-                            {order.order_item.map((item) => {
-                              const maturityLabel = getMaturityLabel(
-                                item.maturity_preference
-                              );
+                          <div className="order-invoice">
+                            <div className="order-invoice-title">Detalle del pedido</div>
+                            <div className="order-invoice-table-wrap">
+                              <table className="order-invoice-table">
+                                <thead>
+                                  <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio</th>
+                                    <th>Subtotal</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {order.order_item.map((item) => {
+                                    const maturityLabel = getMaturityLabel(
+                                      item.maturity_preference
+                                    );
 
-                              return (
-                                <li key={item.id}>
-                                  <span>
-                                    {item.product_name}
-                                    {maturityLabel && (
-                                      <small>Maduración: {maturityLabel}</small>
-                                    )}
-                                  </span>
-                                  <strong>
-                                    {item.unit
-                                      ? `${Number(item.quantity).toLocaleString("es-CR")} ${item.unit}`
-                                      : `x ${Number(item.quantity).toLocaleString("es-CR")}`}
-                                  </strong>
-                                </li>
-                              );
-                            })}
-                          </ul>
-
-                          {(action || (order.status !== "delivered" && order.status !== "cancelled")) && (
-                            <div className="order-actions">
-                              {action && (
-                                <button
-                                  type="button"
-                                  onClick={() => updateStatus(order, action.status)}
-                                >
-                                  {action.label}
-                                </button>
-                              )}
-                              {order.status !== "delivered" && order.status !== "cancelled" && (
-                                <button
-                                  type="button"
-                                  className="order-cancel-button"
-                                  onClick={() => cancelOrder(order)}
-                                >
-                                  Cancelar pedido
-                                </button>
-                              )}
+                                    return (
+                                      <tr key={item.id}>
+                                        <td>
+                                          <strong>{item.product_name}</strong>
+                                          {maturityLabel && (
+                                            <small>Maduración: {maturityLabel}</small>
+                                          )}
+                                        </td>
+                                        <td>
+                                          {item.unit
+                                            ? `${Number(item.quantity).toLocaleString("es-CR")} ${item.unit}`
+                                            : Number(item.quantity).toLocaleString("es-CR")}
+                                        </td>
+                                        <td>{formatMoney(item.price)}</td>
+                                        <td><strong>{formatMoney(itemSubtotal(item))}</strong></td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
                             </div>
-                          )}
+
+                            <div className="order-invoice-totals">
+                              <div>
+                                <span>Subtotal productos</span>
+                                <strong>{formatMoney(subtotal)}</strong>
+                              </div>
+                              <div>
+                                <span>Envío</span>
+                                <strong>{shipping > 0 ? formatMoney(shipping) : "Gratis"}</strong>
+                              </div>
+                              <div className="order-invoice-grand-total">
+                                <span>Total</span>
+                                <strong>{formatMoney(order.total)}</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="order-actions">
+                            {contactUrl && (
+                              <a
+                                className="order-contact-button"
+                                href={contactUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <MessageCircle size={17} aria-hidden="true" />
+                                Contactar al cliente
+                              </a>
+                            )}
+                            {action && (
+                              <button
+                                type="button"
+                                onClick={() => updateStatus(order, action.status)}
+                              >
+                                {action.label}
+                              </button>
+                            )}
+                            {order.status !== "delivered" && order.status !== "cancelled" && (
+                              <button
+                                type="button"
+                                className="order-cancel-button"
+                                onClick={() => cancelOrder(order)}
+                              >
+                                Cancelar pedido
+                              </button>
+                            )}
+                          </div>
                         </article>
                       );
                     })}
