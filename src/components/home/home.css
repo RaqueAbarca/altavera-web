@@ -20,6 +20,17 @@
   min-width: 0;
 }
 
+.hero-brand {
+  display: block;
+  margin-bottom: 0.7rem;
+  color: var(--orange);
+  font-size: clamp(0.82rem, 1vw, 0.96rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
 .hero-copy p {
   max-width: 500px;
   margin-top: 20px;

@@ -13,7 +13,10 @@
   font-weight: 700;
 }
 .checkout-back-link:hover { color: var(--orange); }
-.guest-form { width: 100%; }
+.guest-form {
+  width: 100%;
+  scroll-margin-top: 92px;
+}
 .checkout-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.58fr) minmax(340px, 0.82fr);

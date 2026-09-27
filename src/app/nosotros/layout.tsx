@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata = createPageMetadata({
-  title: "Sobre Altavera",
+  title: "Quiénes somos",
   description:
-    "Conoce Altavera, una marca costarricense que facilita recibir frutas y verduras frescas en casa con una experiencia de compra cercana y confiable.",
+    "Conoce quiénes están detrás de Altavera, nuestra historia y el compromiso con una experiencia cercana para recibir frutas y verduras frescas en casa.",
   path: "/nosotros",
 });
 

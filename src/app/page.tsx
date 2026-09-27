@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createPageMetadata, getSiteUrl } from "@/lib/seo";
 import { getPublicAppSettings } from "@/lib/appSettings.server";
 import "@/components/home/home.css";
@@ -5,12 +6,17 @@ import Hero from "@/components/home/Hero";
 import Features from "@/components/home/Features";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
 
-export const metadata = createPageMetadata({
-  title: "Frutas y verduras frescas a domicilio en Alajuela",
-  description:
-    "Compra frutas y verduras frescas en línea con Altavera y recibe tu pedido a domicilio en nuestra zona de cobertura de Alajuela, Costa Rica.",
-  path: "/",
-});
+export const metadata: Metadata = {
+  ...createPageMetadata({
+    title: "Altavera | Frutas y verduras frescas a domicilio en Alajuela",
+    description:
+      "Compra frutas y verduras frescas en línea con Altavera y recibe tu pedido a domicilio en nuestra zona de cobertura de Alajuela, Costa Rica.",
+    path: "/",
+  }),
+  title: {
+    absolute: "Altavera | Frutas y verduras frescas a domicilio en Alajuela",
+  },
+};
 
 export default async function Home() {
   const baseUrl = getSiteUrl().origin;
@@ -24,6 +30,16 @@ export default async function Home() {
         "@id": `${baseUrl}/#website`,
         url: `${baseUrl}/`,
         name: "Altavera",
+        alternateName: ["Altavera Costa Rica", "Altavera en línea"],
+        inLanguage: "es-CR",
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${baseUrl}/#webpage`,
+        url: `${baseUrl}/`,
+        name: "Altavera | Frutas y verduras frescas a domicilio en Alajuela",
+        isPartOf: { "@id": `${baseUrl}/#website` },
+        about: { "@id": `${baseUrl}/#organization` },
         inLanguage: "es-CR",
       },
       {

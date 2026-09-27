@@ -6,6 +6,7 @@ export default function Hero() {
       <div className="container hero-grid">
         <div className="hero-copy">
           <h1>
+            <span className="hero-brand">Altavera</span>
             Selección fresca
             <span className="mobile-break"><br /></span>
             para su hogar.

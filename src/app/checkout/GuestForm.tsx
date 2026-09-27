@@ -85,6 +85,8 @@ export default function GuestForm() {
   const [savingAddress, setSavingAddress] = useState(false);
   const [addressFeedback, setAddressFeedback] = useState("");
   const savedAddressCheckIdRef = useRef(0);
+  const checkoutTopRef = useRef<HTMLFormElement>(null);
+  const checkoutStepMountedRef = useRef(false);
 
   const selectedCycle = useMemo(
     () =>
@@ -337,8 +339,33 @@ export default function GuestForm() {
   }
 
   function goToTop() {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(() => {
+      checkoutTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
   }
+
+  useEffect(() => {
+    if (!checkoutStepMountedRef.current) {
+      checkoutStepMountedRef.current = true;
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
+      checkoutTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
 
   async function copyPaymentValue(key: string, value: string) {
     if (!value) return;
@@ -570,7 +597,7 @@ export default function GuestForm() {
   );
 
   return (
-    <form className="guest-form" onSubmit={handleSubmit} noValidate>
+    <form ref={checkoutTopRef} className="guest-form" onSubmit={handleSubmit} noValidate>
       <CheckoutStepper currentStep={step} />
 
       {stepError && (
