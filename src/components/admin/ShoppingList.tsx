@@ -9,6 +9,8 @@ type ProductCount = {
   unit?: string | null;
   category?: string | null;
   maturityPreference?: string | null;
+  cenadaReferencePrice?: number | null;
+  cenadaReferenceDate?: string | null;
 };
 
 type Props = {
@@ -18,6 +20,27 @@ type Props = {
   printContext?: string;
   emptyMessage?: string;
 };
+
+
+function formatMoney(value?: number | null) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+    return null;
+  }
+
+  return `₡${Number(value).toLocaleString("es-CR", { maximumFractionDigits: 2 })}`;
+}
+
+function formatReferenceDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(`${value}T12:00:00-06:00`);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("es-CR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 function categoryLabel(category?: string | null) {
   const value = category?.trim();
@@ -112,6 +135,8 @@ export default function ShoppingList({
                   {group.items.map((product, index) => {
                     const key = itemKey(product, index);
                     const maturityLabel = getMaturityLabel(product.maturityPreference);
+                    const cenadaReference = formatMoney(product.cenadaReferencePrice);
+                    const cenadaReferenceDate = formatReferenceDate(product.cenadaReferenceDate);
 
                     return (
                       <li key={key} className={checked[key] ? "is-checked" : ""}>
@@ -134,6 +159,13 @@ export default function ShoppingList({
                           {product.name}
                           {maturityLabel && (
                             <small>Maduración: {maturityLabel}</small>
+                          )}
+                          {cenadaReference && (
+                            <small>
+                              Ref. CENADA: {cenadaReference}
+                              {product.unit ? ` / ${product.unit}` : ""}
+                              {cenadaReferenceDate ? ` · ${cenadaReferenceDate}` : ""}
+                            </small>
                           )}
                         </span>
 

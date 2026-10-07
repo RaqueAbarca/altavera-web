@@ -130,14 +130,37 @@ export async function GET() {
       )
     );
 
-    const { data: productRows, error: productError } = productIds.length
-      ? await supabaseAdmin
-          .from("products")
-          .select("id,category,unit")
-          .in("id", productIds)
-      : { data: [], error: null };
+    const [{ data: productRows, error: productError }, { data: latestPricingRun, error: pricingRunError }] =
+      await Promise.all([
+        productIds.length
+          ? supabaseAdmin
+              .from("products")
+              .select("id,category,unit")
+              .in("id", productIds)
+          : Promise.resolve({ data: [], error: null }),
+        supabaseAdmin
+          .from("pricing_runs")
+          .select("id")
+          .eq("status", "completed")
+          .not("cycle_id", "is", null)
+          .order("id", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
     if (productError) throw productError;
+    if (pricingRunError) throw pricingRunError;
+
+    const { data: cenadaReferenceRows, error: cenadaReferenceError } =
+      productIds.length && latestPricingRun?.id
+        ? await supabaseAdmin
+            .from("price_recommendations")
+            .select("product_id,cenada_price,cenada_source_date")
+            .eq("run_id", latestPricingRun.id)
+            .in("product_id", productIds)
+        : { data: [], error: null };
+
+    if (cenadaReferenceError) throw cenadaReferenceError;
 
     const productMetaById = new Map<
       number,
@@ -148,6 +171,19 @@ export async function GET() {
         {
           category: product.category ?? null,
           unit: product.unit ?? null,
+        },
+      ])
+    );
+
+    const cenadaReferenceByProduct = new Map<
+      number,
+      { price: number | null; date: string | null }
+    >(
+      (cenadaReferenceRows ?? []).map((row) => [
+        Number(row.product_id),
+        {
+          price: row.cenada_price === null ? null : Number(row.cenada_price),
+          date: row.cenada_source_date ?? null,
         },
       ])
     );
@@ -165,6 +201,14 @@ export async function GET() {
           (item.product_id === null
             ? null
             : productMetaById.get(Number(item.product_id))?.unit ?? null),
+        cenada_reference_price:
+          item.product_id === null
+            ? null
+            : cenadaReferenceByProduct.get(Number(item.product_id))?.price ?? null,
+        cenada_reference_date:
+          item.product_id === null
+            ? null
+            : cenadaReferenceByProduct.get(Number(item.product_id))?.date ?? null,
       })),
     });
 
@@ -176,6 +220,14 @@ export async function GET() {
           item.product_id === null
             ? null
             : productMetaById.get(Number(item.product_id))?.category ?? null,
+        cenada_reference_price:
+          item.product_id === null
+            ? null
+            : cenadaReferenceByProduct.get(Number(item.product_id))?.price ?? null,
+        cenada_reference_date:
+          item.product_id === null
+            ? null
+            : cenadaReferenceByProduct.get(Number(item.product_id))?.date ?? null,
       })),
     });
 

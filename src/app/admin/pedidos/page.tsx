@@ -27,6 +27,8 @@ type OrderItem = {
   maturity_preference: string | null;
   category: string | null;
   unit: string | null;
+  cenada_reference_price: number | null;
+  cenada_reference_date: string | null;
 };
 
 type Order = {
@@ -55,6 +57,8 @@ type ShoppingListItem = {
   unit: string | null;
   maturity_preference: string | null;
   category: string | null;
+  cenada_reference_price: number | null;
+  cenada_reference_date: string | null;
 };
 
 type DeliveryCycle = {
@@ -156,6 +160,8 @@ function buildLiveShoppingList(orders: Order[]) {
       maturityPreference: string | null;
       category: string | null;
       unit: string | null;
+      cenadaReferencePrice: number | null;
+      cenadaReferenceDate: string | null;
     }
   >();
 
@@ -174,6 +180,8 @@ function buildLiveShoppingList(orders: Order[]) {
           maturityPreference,
           category: item.category ?? null,
           unit,
+          cenadaReferencePrice: item.cenada_reference_price ?? null,
+          cenadaReferenceDate: item.cenada_reference_date ?? null,
         });
       });
     });
