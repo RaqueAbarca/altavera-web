@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bell, BellOff, CheckCircle2, Play, Save, Smartphone, TriangleAlert, Truck, Volume2, VolumeX, WalletCards } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, CalendarDays, CheckCircle2, Play, Save, Smartphone, TriangleAlert, Volume2, VolumeX, WalletCards } from "lucide-react";
 import {
   ADMIN_SOUNDS,
   getAdminSoundsEnabled,
@@ -11,7 +11,7 @@ import {
   setAdminSoundsEnabled,
   setAdminSoundsVolume,
 } from "@/lib/adminSounds";
-import type { AdminAppSettings, BankAccountSettings } from "@/lib/appSettings";
+import { DELIVERY_WEEKDAYS, type AdminAppSettings, type BankAccountSettings, type DeliveryScheduleRule } from "@/lib/appSettings";
 import "../admin.css";
 import "./configuracion.css";
 
@@ -25,6 +25,8 @@ const EMPTY_BANK_ACCOUNT: BankAccountSettings = {
 
 const EMPTY_OPERATIONAL_SETTINGS: AdminAppSettings = {
   deliveryFlatFeeCrc: null,
+  deliverySchedule: [],
+  deliveryScheduleConfigured: false,
   sinpePhone: "",
   sinpeHolder: "",
   bankAccounts: [
@@ -34,6 +36,33 @@ const EMPTY_OPERATIONAL_SETTINGS: AdminAppSettings = {
   whatsappPhone: "",
   contactEmail: "",
 };
+
+const SATURDAY_DELIVERY_DRAFT: DeliveryScheduleRule = {
+  deliveryWeekday: 6,
+  cutoffWeekday: 5,
+  cutoffTime: "",
+};
+
+function hydrateOperationalSettings(
+  settings: AdminAppSettings,
+  fallbackSchedule?: DeliveryScheduleRule[]
+): AdminAppSettings {
+  if (settings.deliveryScheduleConfigured && settings.deliverySchedule.length > 0) {
+    return settings;
+  }
+
+  return {
+    ...settings,
+    deliverySchedule:
+      fallbackSchedule && fallbackSchedule.length > 0
+        ? fallbackSchedule
+        : [{ ...SATURDAY_DELIVERY_DRAFT }],
+  };
+}
+
+function weekdayLabel(value: number) {
+  return DELIVERY_WEEKDAYS.find((day) => day.value === value)?.label ?? "Día";
+}
 
 type PushState =
   | "checking"
@@ -140,7 +169,7 @@ export default function AdminConfiguracionPage() {
         throw new Error(data.error ?? "No se pudo cargar la configuración operativa");
       }
 
-      setOperationalSettings(data as AdminAppSettings);
+      setOperationalSettings(hydrateOperationalSettings(data as AdminAppSettings));
     } catch (error) {
       setOperationalMessage(
         error instanceof Error
@@ -176,15 +205,29 @@ export default function AdminConfiguracionPage() {
     setOperationalMessage("");
   }
 
-  async function saveOperationalSettings() {
+  async function saveOperationalSettings(section: "delivery" | "business") {
     setOperationalSaving(true);
     setOperationalMessage("");
 
     try {
+      const body =
+        section === "delivery"
+          ? {
+              deliveryFlatFeeCrc: operationalSettings.deliveryFlatFeeCrc,
+              deliverySchedule: operationalSettings.deliverySchedule,
+            }
+          : {
+              sinpePhone: operationalSettings.sinpePhone,
+              sinpeHolder: operationalSettings.sinpeHolder,
+              bankAccounts: operationalSettings.bankAccounts,
+              whatsappPhone: operationalSettings.whatsappPhone,
+              contactEmail: operationalSettings.contactEmail,
+            };
+
       const response = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(operationalSettings),
+        body: JSON.stringify(body),
       });
       const data = await response.json().catch(() => ({}));
 
@@ -193,8 +236,14 @@ export default function AdminConfiguracionPage() {
       }
 
       const { ok: _ok, ...saved } = data as AdminAppSettings & { ok?: boolean };
-      setOperationalSettings(saved);
-      setOperationalMessage("Configuración guardada. Los cambios ya están activos en la tienda.");
+      setOperationalSettings((current) =>
+        hydrateOperationalSettings(saved, current.deliverySchedule)
+      );
+      setOperationalMessage(
+        section === "delivery"
+          ? "Calendario de entregas guardado. Las próximas fechas ya usan esta configuración."
+          : "Datos guardados. Los cambios ya están activos en la tienda."
+      );
     } catch (error) {
       setOperationalMessage(
         error instanceof Error
@@ -204,6 +253,45 @@ export default function AdminConfiguracionPage() {
     } finally {
       setOperationalSaving(false);
     }
+  }
+
+  function toggleDeliveryDay(deliveryWeekday: number) {
+    setOperationalSettings((current) => {
+      const exists = current.deliverySchedule.some(
+        (rule) => rule.deliveryWeekday === deliveryWeekday
+      );
+
+      const deliverySchedule = exists
+        ? current.deliverySchedule.filter(
+            (rule) => rule.deliveryWeekday !== deliveryWeekday
+          )
+        : [
+            ...current.deliverySchedule,
+            {
+              deliveryWeekday,
+              cutoffWeekday: (deliveryWeekday + 6) % 7,
+              cutoffTime: "",
+            },
+          ];
+
+      return { ...current, deliverySchedule };
+    });
+    setOperationalMessage("");
+  }
+
+  function updateDeliveryRule(
+    deliveryWeekday: number,
+    changes: Partial<Pick<DeliveryScheduleRule, "cutoffWeekday" | "cutoffTime">>
+  ) {
+    setOperationalSettings((current) => ({
+      ...current,
+      deliverySchedule: current.deliverySchedule.map((rule) =>
+        rule.deliveryWeekday === deliveryWeekday
+          ? { ...rule, ...changes }
+          : rule
+      ),
+    }));
+    setOperationalMessage("");
   }
 
   async function getRegistration() {
@@ -425,44 +513,118 @@ export default function AdminConfiguracionPage() {
 
       <section className="admin-setting-card admin-business-card">
         <div className="admin-setting-icon" aria-hidden="true">
-          <Truck size={24} strokeWidth={1.8} />
+          <CalendarDays size={24} strokeWidth={1.8} />
         </div>
 
         <div className="admin-setting-content">
           <span className="admin-setting-kicker">Entregas</span>
-          <h2>Tarifa de envío</h2>
+          <h2>Días de entrega y corte</h2>
           <p>
-            Este monto se usa automáticamente en carrito, checkout y al crear el pedido.
-            Ya no depende de una variable de Vercel.
+            Elegí uno o varios días de entrega. Cada día puede tener su propio día y hora de corte para recibir pedidos.
           </p>
 
-          <div className="admin-business-fields admin-business-fields--compact">
-            <label className="admin-business-field">
-              <span>Tarifa fija actual</span>
-              <div className="admin-money-input">
-                <span>₡</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  inputMode="numeric"
-                  value={operationalSettings.deliveryFlatFeeCrc ?? ""}
-                  onChange={(event) =>
-                    updateOperationalSetting(
-                      "deliveryFlatFeeCrc",
-                      event.target.value === "" ? null : Number(event.target.value)
-                    )
-                  }
-                  placeholder="Ej: 1500"
+          {!operationalSettings.deliveryScheduleConfigured && (
+            <div className="admin-setting-note">
+              El calendario nuevo todavía no está guardado. Dejé sábado preseleccionado como borrador; elegí el día y la hora de corte y guardalo para activarlo.
+            </div>
+          )}
+
+          <div className="admin-delivery-days" role="group" aria-label="Días de entrega">
+            {DELIVERY_WEEKDAYS.map((day) => {
+              const active = operationalSettings.deliverySchedule.some(
+                (rule) => rule.deliveryWeekday === day.value
+              );
+              return (
+                <button
+                  key={day.value}
+                  type="button"
+                  className={`admin-delivery-day${active ? " is-active" : ""}`}
+                  onClick={() => toggleDeliveryDay(day.value)}
+                  aria-pressed={active}
                   disabled={operationalLoading}
-                />
-              </div>
-              <small>Puede ser ₡0 si decidís ofrecer envío gratuito.</small>
-            </label>
+                >
+                  {day.shortLabel}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="admin-setting-note">
-            Por ahora Altavera usa tarifa fija. La configuración quedó guardada en Supabase para que más adelante podamos cambiarla a cálculo por distancia usando la ubicación del cliente, sin volver a depender de Vercel.
+          <div className="admin-delivery-rules">
+            {operationalSettings.deliverySchedule
+              .slice()
+              .sort((a, b) => {
+                const order = [1, 2, 3, 4, 5, 6, 0];
+                return order.indexOf(a.deliveryWeekday) - order.indexOf(b.deliveryWeekday);
+              })
+              .map((rule) => (
+                <div className="admin-delivery-rule" key={rule.deliveryWeekday}>
+                  <div className="admin-delivery-rule__day">
+                    <span>Entrega</span>
+                    <strong>{weekdayLabel(rule.deliveryWeekday)}</strong>
+                  </div>
+
+                  <label className="admin-business-field">
+                    <span>Día de corte</span>
+                    <select
+                      value={rule.cutoffWeekday}
+                      onChange={(event) =>
+                        updateDeliveryRule(rule.deliveryWeekday, {
+                          cutoffWeekday: Number(event.target.value),
+                        })
+                      }
+                      disabled={operationalLoading}
+                    >
+                      {DELIVERY_WEEKDAYS.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {day.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="admin-business-field">
+                    <span>Hora de corte</span>
+                    <input
+                      type="time"
+                      value={rule.cutoffTime}
+                      onChange={(event) =>
+                        updateDeliveryRule(rule.deliveryWeekday, {
+                          cutoffTime: event.target.value,
+                        })
+                      }
+                      disabled={operationalLoading}
+                    />
+                  </label>
+                </div>
+              ))}
+          </div>
+
+          <div className="admin-business-subsection">
+            <h3>Tarifa de envío</h3>
+            <div className="admin-business-fields admin-business-fields--compact">
+              <label className="admin-business-field">
+                <span>Tarifa fija actual</span>
+                <div className="admin-money-input">
+                  <span>₡</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    value={operationalSettings.deliveryFlatFeeCrc ?? ""}
+                    onChange={(event) =>
+                      updateOperationalSetting(
+                        "deliveryFlatFeeCrc",
+                        event.target.value === "" ? null : Number(event.target.value)
+                      )
+                    }
+                    placeholder="Ej: 1500"
+                    disabled={operationalLoading}
+                  />
+                </div>
+                <small>Puede ser ₡0 si decidís ofrecer envío gratuito.</small>
+              </label>
+            </div>
           </div>
 
           {operationalMessage && (
@@ -473,11 +635,11 @@ export default function AdminConfiguracionPage() {
             <button
               type="button"
               className="admin-setting-button"
-              onClick={saveOperationalSettings}
+              onClick={() => void saveOperationalSettings("delivery")}
               disabled={operationalLoading || operationalSaving}
             >
               <Save size={18} />
-              {operationalSaving ? "Guardando..." : "Guardar tarifa"}
+              {operationalSaving ? "Guardando..." : "Guardar entregas y tarifa"}
             </button>
           </div>
         </div>
@@ -617,7 +779,7 @@ export default function AdminConfiguracionPage() {
             <button
               type="button"
               className="admin-setting-button"
-              onClick={saveOperationalSettings}
+              onClick={() => void saveOperationalSettings("business")}
               disabled={operationalLoading || operationalSaving}
             >
               <Save size={18} />

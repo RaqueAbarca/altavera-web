@@ -15,7 +15,7 @@ export async function GET() {
       .eq("status", "open")
       .gt("cutoff_at", new Date().toISOString())
       .order("delivery_date", { ascending: true })
-      .limit(2);
+      .limit(8);
 
     if (error) throw error;
 

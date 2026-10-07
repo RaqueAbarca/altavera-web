@@ -392,3 +392,105 @@
   font-size: 0.68rem;
   font-weight: 750;
 }
+
+.admin-delivery-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.admin-delivery-day {
+  min-height: 42px;
+  padding: 8px 6px;
+  border: 1px solid #ccd7cf;
+  border-radius: 10px;
+  background: #fff;
+  color: #536157;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.admin-delivery-day.is-active {
+  border-color: #5d9469;
+  background: #edf6ef;
+  color: #1f5b2c;
+  box-shadow: 0 0 0 2px rgba(67, 123, 78, 0.08);
+}
+
+.admin-delivery-day:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.admin-delivery-rules {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-delivery-rule {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(170px, 1fr) minmax(150px, 0.8fr);
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e9e3;
+  border-radius: 12px;
+  background: #fafcf9;
+}
+
+.admin-delivery-rule__day {
+  display: grid;
+  gap: 4px;
+  align-self: center;
+}
+
+.admin-delivery-rule__day span {
+  color: #778179;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-delivery-rule__day strong {
+  color: #25382b;
+  font-size: 1rem;
+}
+
+.admin-business-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #ccd7cf;
+  border-radius: 10px;
+  background: #fff;
+  color: #223128;
+  font: inherit;
+  font-weight: 550;
+  outline: none;
+}
+
+.admin-business-field select:focus {
+  border-color: #6aa777;
+  box-shadow: 0 0 0 3px rgba(67, 123, 78, 0.11);
+}
+
+.admin-business-field select:disabled {
+  background: #f4f6f4;
+  color: #7b857d;
+}
+
+@media (max-width: 720px) {
+  .admin-delivery-days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .admin-delivery-rule {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}

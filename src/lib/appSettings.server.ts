@@ -5,6 +5,7 @@ import {
   type AdminAppSettings,
   type BankAccountSettings,
   type DeliveryFeeMode,
+  type DeliveryScheduleRule,
   type PublicAppSettings,
 } from "@/lib/appSettings";
 
@@ -33,6 +34,51 @@ function nullableNonNegativeNumber(value: unknown) {
 
 function deliveryMode(value: unknown): DeliveryFeeMode {
   return value === "distance" ? "distance" : "flat";
+}
+
+
+function isWeekday(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 6
+  );
+}
+
+function isCutoffTime(value: unknown): value is string {
+  return typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+export function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set<number>();
+  const schedule: DeliveryScheduleRule[] = [];
+
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const source = item as Record<string, unknown>;
+    const deliveryWeekday = Number(
+      source.delivery_weekday ?? source.deliveryWeekday
+    );
+    const cutoffWeekday = Number(source.cutoff_weekday ?? source.cutoffWeekday);
+    const cutoffTime = cleanString(source.cutoff_time ?? source.cutoffTime);
+
+    if (
+      !isWeekday(deliveryWeekday) ||
+      !isWeekday(cutoffWeekday) ||
+      !isCutoffTime(cutoffTime) ||
+      seen.has(deliveryWeekday)
+    ) {
+      continue;
+    }
+
+    seen.add(deliveryWeekday);
+    schedule.push({ deliveryWeekday, cutoffWeekday, cutoffTime });
+  }
+
+  return schedule;
 }
 
 function cleanBankAccount(value: unknown): BankAccountSettings {
@@ -126,7 +172,11 @@ export async function getPublicAppSettings() {
 }
 
 export async function getAdminAppSettings(): Promise<AdminAppSettings> {
-  const settings = await getPublicAppSettings();
+  const row = await getRawAppSettings();
+  const settings = mapPublicAppSettings(row);
+  const deliverySchedule = parseDeliverySchedule(
+    row?.delivery_pricing?.delivery_schedule
+  );
   const bankAccounts = settings.payment.bankAccounts.slice(0, MAX_BANK_ACCOUNTS);
 
   while (bankAccounts.length < MAX_BANK_ACCOUNTS) {
@@ -135,6 +185,8 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
 
   return {
     deliveryFlatFeeCrc: settings.delivery.flatFeeCrc,
+    deliverySchedule,
+    deliveryScheduleConfigured: deliverySchedule.length > 0,
     sinpePhone: settings.payment.sinpePhone,
     sinpeHolder: settings.payment.sinpeHolder,
     bankAccounts,

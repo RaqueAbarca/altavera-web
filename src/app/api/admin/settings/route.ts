@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { syncDeliveryCycles } from "@/lib/deliveryCycles.server";
+import type { DeliveryScheduleRule } from "@/lib/appSettings";
 import {
   APP_SETTINGS_ID,
   getAdminAppSettings,
@@ -37,6 +39,62 @@ function parseBankAccounts(value: unknown) {
   });
 }
 
+
+function hasOwn(object: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Selecciona al menos un día de entrega.");
+  }
+
+  const schedule: DeliveryScheduleRule[] = [];
+  const seen = new Set<number>();
+
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error("Hay una regla de entrega inválida.");
+    }
+
+    const source = item as Record<string, unknown>;
+    const deliveryWeekday = Number(source.deliveryWeekday);
+    const cutoffWeekday = Number(source.cutoffWeekday);
+    const cutoffTime = text(source.cutoffTime, 5);
+
+    if (
+      !Number.isInteger(deliveryWeekday) ||
+      deliveryWeekday < 0 ||
+      deliveryWeekday > 6 ||
+      !Number.isInteger(cutoffWeekday) ||
+      cutoffWeekday < 0 ||
+      cutoffWeekday > 6 ||
+      !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(cutoffTime)
+    ) {
+      throw new Error(
+        "Revisa el día y la hora de corte de cada día de entrega."
+      );
+    }
+
+    if (seen.has(deliveryWeekday)) {
+      throw new Error("Cada día de entrega solo puede configurarse una vez.");
+    }
+
+    seen.add(deliveryWeekday);
+    schedule.push({ deliveryWeekday, cutoffWeekday, cutoffTime });
+  }
+
+  return schedule;
+}
+
+function serializeDeliverySchedule(schedule: DeliveryScheduleRule[]) {
+  return schedule.map((rule) => ({
+    delivery_weekday: rule.deliveryWeekday,
+    cutoff_weekday: rule.cutoffWeekday,
+    cutoff_time: rule.cutoffTime,
+  }));
+}
+
 export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
@@ -62,45 +120,67 @@ export async function PUT(request: Request) {
   if (!auth.ok) return auth.response;
 
   try {
-    const body = await request.json();
-    const deliveryFlatFeeCrc = parseFee(body.deliveryFlatFeeCrc);
-    const bankAccounts = parseBankAccounts(body.bankAccounts);
-    const firstBankAccount = bankAccounts[0] ?? {
-      bank_name: "",
-      account_holder: "",
-      account_number: "",
-      iban: "",
-    };
-
+    const body = (await request.json()) as Record<string, unknown>;
     const current = await getRawAppSettings();
     const currentDelivery = current?.delivery_pricing ?? {};
     const currentPayment = current?.payment_settings ?? {};
     const currentContact = current?.contact_settings ?? {};
 
+    const nextDelivery = { ...currentDelivery };
+    const nextPayment = { ...currentPayment };
+    const nextContact = { ...currentContact };
+    let deliveryScheduleChanged = false;
+
+    if (hasOwn(body, "deliveryFlatFeeCrc")) {
+      nextDelivery.mode = "flat";
+      nextDelivery.flat_fee_crc = parseFee(body.deliveryFlatFeeCrc);
+    }
+
+    if (hasOwn(body, "deliverySchedule")) {
+      const schedule = parseDeliverySchedule(body.deliverySchedule);
+      nextDelivery.delivery_schedule = serializeDeliverySchedule(schedule);
+      deliveryScheduleChanged = true;
+    }
+
+    if (hasOwn(body, "sinpePhone")) {
+      nextPayment.sinpe_phone = text(body.sinpePhone, 40);
+    }
+
+    if (hasOwn(body, "sinpeHolder")) {
+      nextPayment.sinpe_holder = text(body.sinpeHolder);
+    }
+
+    if (hasOwn(body, "bankAccounts")) {
+      const bankAccounts = parseBankAccounts(body.bankAccounts);
+      const firstBankAccount = bankAccounts[0] ?? {
+        bank_name: "",
+        account_holder: "",
+        account_number: "",
+        iban: "",
+      };
+
+      nextPayment.bank_accounts = bankAccounts;
+      // Conservamos también la primera cuenta en las claves antiguas para
+      // mantener compatibilidad con cualquier despliegue previo.
+      nextPayment.bank_name = firstBankAccount.bank_name;
+      nextPayment.bank_account_holder = firstBankAccount.account_holder;
+      nextPayment.bank_account_number = firstBankAccount.account_number;
+      nextPayment.bank_iban = firstBankAccount.iban;
+    }
+
+    if (hasOwn(body, "whatsappPhone")) {
+      nextContact.whatsapp_phone = text(body.whatsappPhone, 40);
+    }
+
+    if (hasOwn(body, "contactEmail")) {
+      nextContact.email = text(body.contactEmail, 180);
+    }
+
     const payload = {
       id: APP_SETTINGS_ID,
-      delivery_pricing: {
-        ...currentDelivery,
-        mode: "flat",
-        flat_fee_crc: deliveryFlatFeeCrc,
-      },
-      payment_settings: {
-        ...currentPayment,
-        sinpe_phone: text(body.sinpePhone, 40),
-        sinpe_holder: text(body.sinpeHolder),
-        bank_accounts: bankAccounts,
-        // Conservamos también la primera cuenta en las claves antiguas para
-        // mantener compatibilidad con cualquier despliegue previo.
-        bank_name: firstBankAccount.bank_name,
-        bank_account_holder: firstBankAccount.account_holder,
-        bank_account_number: firstBankAccount.account_number,
-        bank_iban: firstBankAccount.iban,
-      },
-      contact_settings: {
-        ...currentContact,
-        whatsapp_phone: text(body.whatsappPhone, 40),
-        email: text(body.contactEmail, 180),
-      },
+      delivery_pricing: nextDelivery,
+      payment_settings: nextPayment,
+      contact_settings: nextContact,
       updated_at: new Date().toISOString(),
       updated_by: auth.user.id,
     };
@@ -110,6 +190,10 @@ export async function PUT(request: Request) {
       .upsert(payload, { onConflict: "id" });
 
     if (error) throw error;
+
+    if (deliveryScheduleChanged) {
+      await syncDeliveryCycles();
+    }
 
     return NextResponse.json({ ok: true, ...(await getAdminAppSettings()) });
   } catch (error) {
