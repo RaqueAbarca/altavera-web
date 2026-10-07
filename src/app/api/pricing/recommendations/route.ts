@@ -17,6 +17,76 @@ type ProductRelation={
   category:string|null;
 };
 
+type PriceTrendDirection=
+  |"up"
+  |"down"
+  |"same"
+  |"new";
+
+type PreviousRecommendationRow={
+  product_id:number;
+  cenada_price:number|null;
+  competitor_price:number|null;
+};
+
+function buildPriceTrend(input:{
+  currentPrice:number|null;
+  previousPrice:number|null;
+  currentRunId:number;
+  previousRunId:number|null;
+  currentCycleId:number;
+  previousCycleId:number|null;
+}){
+  if(input.currentPrice===null){
+    return null;
+  }
+
+  if(
+    input.previousRunId===null||
+    input.previousPrice===null||
+    input.previousPrice<=0
+  ){
+    return{
+      direction:"new" as PriceTrendDirection,
+      currentPrice:input.currentPrice,
+      previousPrice:null,
+      difference:null,
+      percentChange:null,
+      currentRunId:input.currentRunId,
+      previousRunId:input.previousRunId,
+      currentCycleId:input.currentCycleId,
+      previousCycleId:input.previousCycleId
+    };
+  }
+
+  const difference=
+    input.currentPrice-
+    input.previousPrice;
+
+  const percentChange=
+    difference/
+    input.previousPrice;
+
+  const direction:PriceTrendDirection=
+    Math.abs(difference)<0.005
+      ?"same"
+      :difference>0
+        ?"up"
+        :"down";
+
+  return{
+    direction,
+    currentPrice:input.currentPrice,
+    previousPrice:input.previousPrice,
+    difference,
+    percentChange,
+    currentRunId:input.currentRunId,
+    previousRunId:input.previousRunId,
+    currentCycleId:input.currentCycleId,
+    previousCycleId:input.previousCycleId
+  };
+}
+
 function getProductRelation(
   value:
     |ProductRelation
@@ -114,10 +184,28 @@ export async function GET(){
         run.cycle_id
       );
 
+    const {
+      data:previousRun,
+      error:previousRunError
+    }=await supabaseAdmin
+      .from("pricing_runs")
+      .select("id,cycle_id")
+      .not("cycle_id","is",null)
+      .eq("status","completed")
+      .lt("id",run.id)
+      .order("id",{ascending:false})
+      .limit(1)
+      .maybeSingle();
+
+    if(previousRunError){
+      throw previousRunError;
+    }
+
     const [
       cycleResult,
       recommendationsResult,
-      productsResult
+      productsResult,
+      previousRecommendationsResult
     ]=await Promise.all([
       supabaseAdmin
         .from(
@@ -150,6 +238,12 @@ export async function GET(){
           cenada_price,
           effective_cost,
           competitor_price,
+          cenada_source_date,
+          cenada_bulletin_number,
+          competitor_source_date,
+          competitor_update_run_id,
+          competitor_observed_at,
+          competitor_is_fallback,
 
           minimum_price,
           standard_minimum_margin,
@@ -216,7 +310,18 @@ export async function GET(){
           {
             ascending:true
           }
-        )
+        ),
+
+      previousRun
+        ?supabaseAdmin
+          .from("price_recommendations")
+          .select(`
+            product_id,
+            cenada_price,
+            competitor_price
+          `)
+          .eq("run_id",previousRun.id)
+        :Promise.resolve({data:[],error:null})
     ]);
 
     if(cycleResult.error){
@@ -231,8 +336,38 @@ export async function GET(){
       throw productsResult.error;
     }
 
+    if(previousRecommendationsResult.error){
+      throw previousRecommendationsResult.error;
+    }
+
     const recommendationRows=
       recommendationsResult.data??[];
+
+    const previousByProduct=
+      new Map<
+        number,
+        {
+          cenadaPrice:number|null;
+          competitorPrice:number|null;
+        }
+      >(
+        ((previousRecommendationsResult.data??[]) as PreviousRecommendationRow[])
+          .map(
+            row=>[
+              Number(row.product_id),
+              {
+                cenadaPrice:
+                  row.cenada_price===null
+                    ?null
+                    :Number(row.cenada_price),
+                competitorPrice:
+                  row.competitor_price===null
+                    ?null
+                    :Number(row.competitor_price)
+              }
+            ] as const
+          )
+      );
 
     const recommendationProductIds=
       new Set(
@@ -404,6 +539,41 @@ export async function GET(){
                   row.minimum_allowed_price
                 );
 
+          const productId=
+            Number(
+              row.product_id
+            );
+
+          const currentCenadaPrice=
+            row.cenada_price===null
+              ?null
+              :Number(
+                  row.cenada_price
+                );
+
+          const currentCompetitorPrice=
+            row.competitor_price===null
+              ?null
+              :Number(
+                  row.competitor_price
+                );
+
+          const previousSnapshot=
+            previousByProduct.get(
+              productId
+            )??null;
+
+          const previousRunId=
+            previousRun
+              ?Number(previousRun.id)
+              :null;
+
+          const previousCycleId=
+            previousRun?.cycle_id===null||
+            previousRun?.cycle_id===undefined
+              ?null
+              :Number(previousRun.cycle_id);
+
           return{
             id:
               Number(
@@ -416,9 +586,7 @@ export async function GET(){
               ),
 
             productId:
-              Number(
-                row.product_id
-              ),
+              productId,
 
             productName:
               product?.name??
@@ -438,11 +606,28 @@ export async function GET(){
               ),
 
             cenadaPrice:
-              row.cenada_price===null
-                ?null
-                :Number(
-                    row.cenada_price
-                  ),
+              currentCenadaPrice,
+
+            cenadaSourceDate:
+              row.cenada_source_date??null,
+
+            cenadaBulletinNumber:
+              row.cenada_bulletin_number??null,
+
+            cenadaTrend:
+              buildPriceTrend({
+                currentPrice:
+                  currentCenadaPrice,
+                previousPrice:
+                  previousSnapshot
+                    ?.cenadaPrice??null,
+                currentRunId:
+                  Number(run.id),
+                previousRunId,
+                currentCycleId:
+                  cycleId,
+                previousCycleId
+              }),
 
             effectiveCost:
               row.effective_cost===null
@@ -452,11 +637,36 @@ export async function GET(){
                   ),
 
             competitorPrice:
-              row.competitor_price===null
-                ?null
-                :Number(
-                    row.competitor_price
-                  ),
+              currentCompetitorPrice,
+
+            competitorSourceDate:
+              row.competitor_source_date??null,
+
+            competitorUpdateRunId:
+              row.competitor_update_run_id??null,
+
+            competitorObservedAt:
+              row.competitor_observed_at??null,
+
+            competitorIsFallback:
+              Boolean(
+                row.competitor_is_fallback
+              ),
+
+            walmartTrend:
+              buildPriceTrend({
+                currentPrice:
+                  currentCompetitorPrice,
+                previousPrice:
+                  previousSnapshot
+                    ?.competitorPrice??null,
+                currentRunId:
+                  Number(run.id),
+                previousRunId,
+                currentCycleId:
+                  cycleId,
+                previousCycleId
+              }),
 
             minimumPrice,
 

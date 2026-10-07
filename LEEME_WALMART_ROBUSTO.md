@@ -18,7 +18,7 @@ No usa IA.
 6. Si Walmart devuelve 0 productos, un error, o una cantidad anormalmente pequeña, la actualización falla.
 7. Si un precio cambia más de 40% respecto al último precio válido, se bloquea hasta revisión manual.
 8. Si cambia la presentación/unidad de Walmart, se invalida la conversión y el precio no se usa hasta volver a verificarla.
-9. Las recomendaciones solo pueden usar precios de la última actualización Walmart exitosa. Nunca reutilizan silenciosamente un precio de una corrida anterior.
+9. Las recomendaciones prefieren precios de la última actualización Walmart exitosa. Si una referencia asociada no apareció en esa corrida, pueden reutilizar una observación válida reciente dentro del límite configurado y la interfaz la marca explícitamente como `Precio reciente anterior`. Si la referencia sí apareció pero quedó bloqueada por validación o conversión, no se reutiliza un precio anterior.
 10. Si la última actualización Walmart falló, el motor de precios también se bloquea aunque exista una actualización anterior reciente.
 11. Por defecto una actualización se considera suficientemente fresca durante 24 horas, aunque el flujo normal vuelve a actualizar Walmart cada vez que se procesan boletines CENADA.
 

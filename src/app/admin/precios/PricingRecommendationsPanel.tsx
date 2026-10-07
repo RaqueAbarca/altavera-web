@@ -6,6 +6,25 @@ import {
   useState
 } from "react";
 
+import {
+  ArrowDown,
+  ArrowUp,
+  Info,
+  Minus
+} from "lucide-react";
+
+type PriceTrend={
+  direction:"up"|"down"|"same"|"new";
+  currentPrice:number;
+  previousPrice:number|null;
+  difference:number|null;
+  percentChange:number|null;
+  currentRunId:number;
+  previousRunId:number|null;
+  currentCycleId:number;
+  previousCycleId:number|null;
+};
+
 type Recommendation={
   id:number;
   runId:number;
@@ -16,8 +35,16 @@ type Recommendation={
 
   currentPrice:number;
   cenadaPrice:number|null;
+  cenadaSourceDate:string|null;
+  cenadaBulletinNumber:string|null;
+  cenadaTrend:PriceTrend|null;
   effectiveCost:number|null;
   competitorPrice:number|null;
+  competitorSourceDate:string|null;
+  competitorUpdateRunId:string|null;
+  competitorObservedAt:string|null;
+  competitorIsFallback:boolean;
+  walmartTrend:PriceTrend|null;
 
   minimumPrice:number|null;
   standardMinimumMargin:number;
@@ -192,6 +219,142 @@ function formatDateTime(
       dateStyle:"medium",
       timeStyle:"short"
     }
+  );
+}
+
+function formatSignedPrice(
+  value:number|null
+){
+  if(value===null){
+    return "—";
+  }
+
+  const formatted=
+    formatPrice(
+      Math.abs(value)
+    );
+
+  if(value>0){
+    return `+${formatted}`;
+  }
+
+  if(value<0){
+    return `-${formatted}`;
+  }
+
+  return formatted;
+}
+
+function PriceTrendIndicator({
+  trend,
+  source,
+  sourceDate,
+  sourceDetail,
+  fallback=false
+}:{
+  trend:PriceTrend|null;
+  source:"CENADA"|"Walmart";
+  sourceDate:string|null;
+  sourceDetail?:string|null;
+  fallback?:boolean;
+}){
+  if(!trend){
+    return null;
+  }
+
+  const label=
+    trend.direction==="up"
+      ?"Subió"
+      :trend.direction==="down"
+        ?"Bajó"
+        :trend.direction==="same"
+          ?"Sin cambio"
+          :"Sin comparación anterior";
+
+  const Icon=
+    trend.direction==="up"
+      ?ArrowUp
+      :trend.direction==="down"
+        ?ArrowDown
+        :trend.direction==="same"
+          ?Minus
+          :Info;
+
+  const ariaLabel=
+    trend.percentChange===null
+      ?`${source}: ${label}`
+      :`${source}: ${label} ${Math.abs(trend.percentChange*100).toFixed(1)} por ciento`;
+
+  return(
+    <span
+      className={`pricing-source-trend ${trend.direction}`}
+      tabIndex={0}
+      aria-label={ariaLabel}
+    >
+      <Icon size={16} strokeWidth={2.4} aria-hidden="true"/>
+
+      <span
+        className="pricing-source-tooltip"
+        role="tooltip"
+      >
+        <strong>
+          {source}: {label}
+          {
+            trend.percentChange!==null
+              ?` ${Math.abs(trend.percentChange*100).toFixed(1)}%`
+              :""
+          }
+        </strong>
+
+        {
+          trend.previousPrice!==null&&(
+            <span>
+              {formatPrice(trend.previousPrice)} → {formatPrice(trend.currentPrice)}
+            </span>
+          )
+        }
+
+        {
+          trend.difference!==null&&(
+            <span>
+              Diferencia: {formatSignedPrice(trend.difference)}
+            </span>
+          )
+        }
+
+        <span>
+          {
+            trend.previousRunId!==null
+              ?`Run #${trend.previousRunId} → Run #${trend.currentRunId}`
+              :`Run actual #${trend.currentRunId}`
+          }
+        </span>
+
+        {
+          sourceDate&&(
+            <span>
+              Fuente actual: {formatDate(sourceDate)}
+            </span>
+          )
+        }
+
+        {
+          sourceDetail&&(
+            <span>
+              {sourceDetail}
+            </span>
+          )
+        }
+
+        {
+          fallback&&(
+            <span className="pricing-source-tooltip-warning">
+              Walmart no observó esta referencia en la última actualización. Se usó un precio válido reciente de una corrida anterior.
+            </span>
+          )
+        }
+      </span>
+    </span>
   );
 }
 
@@ -1344,11 +1507,24 @@ export default function PricingRecommendationsPanel(){
                             CENADA
                           </span>
 
-                          <strong>
-                            {formatPrice(
-                              item.cenadaPrice
-                            )}
-                          </strong>
+                          <div className="pricing-source-price-row">
+                            <strong>
+                              {formatPrice(
+                                item.cenadaPrice
+                              )}
+                            </strong>
+
+                            <PriceTrendIndicator
+                              trend={item.cenadaTrend}
+                              source="CENADA"
+                              sourceDate={item.cenadaSourceDate}
+                              sourceDetail={
+                                item.cenadaBulletinNumber
+                                  ?`Boletín: ${item.cenadaBulletinNumber}`
+                                  :null
+                              }
+                            />
+                          </div>
                         </div>
 
                         <div className="pricing-value">
@@ -1356,11 +1532,33 @@ export default function PricingRecommendationsPanel(){
                             Walmart
                           </span>
 
-                          <strong>
-                            {formatPrice(
-                              item.competitorPrice
-                            )}
-                          </strong>
+                          <div className="pricing-source-price-row">
+                            <strong>
+                              {formatPrice(
+                                item.competitorPrice
+                              )}
+                            </strong>
+
+                            <PriceTrendIndicator
+                              trend={item.walmartTrend}
+                              source="Walmart"
+                              sourceDate={item.competitorSourceDate}
+                              sourceDetail={
+                                item.competitorObservedAt
+                                  ?`Observado: ${formatDateTime(item.competitorObservedAt)}`
+                                  :null
+                              }
+                              fallback={item.competitorIsFallback}
+                            />
+                          </div>
+
+                          {
+                            item.competitorIsFallback&&(
+                              <small className="pricing-source-fallback-note">
+                                Precio reciente anterior
+                              </small>
+                            )
+                          }
                         </div>
 
                         <div className="pricing-value">

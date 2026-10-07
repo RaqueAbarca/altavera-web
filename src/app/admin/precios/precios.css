@@ -717,6 +717,122 @@
   font-size:16px;
 }
 
+.pricing-source-price-row{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.pricing-source-trend{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  border-radius:999px;
+  cursor:help;
+  outline:none;
+}
+
+.pricing-source-trend.up{
+  background:#fff1e4;
+  color:#9a5419;
+}
+
+.pricing-source-trend.down{
+  background:#edf5ef;
+  color:#355843;
+}
+
+.pricing-source-trend.same{
+  background:#f1f1f1;
+  color:#666;
+}
+
+.pricing-source-trend.new{
+  background:#eef2f7;
+  color:#52606d;
+}
+
+.pricing-source-trend:focus-visible{
+  box-shadow:0 0 0 3px rgba(31,64,42,.16);
+}
+
+.pricing-source-tooltip{
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 10px);
+  transform:translateX(-50%) translateY(4px);
+  z-index:30;
+  width:max-content;
+  min-width:230px;
+  max-width:300px;
+  padding:10px 12px;
+  border:1px solid #ded8cf;
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 10px 28px rgba(31,31,31,.14);
+  color:#333;
+  font-size:12px;
+  line-height:1.4;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .14s ease,transform .14s ease,visibility .14s ease;
+}
+
+.pricing-source-tooltip::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:100%;
+  width:9px;
+  height:9px;
+  background:#fff;
+  border-right:1px solid #ded8cf;
+  border-bottom:1px solid #ded8cf;
+  transform:translate(-50%,-5px) rotate(45deg);
+}
+
+.pricing-source-tooltip strong,
+.pricing-source-tooltip span{
+  display:block;
+  margin:0;
+}
+
+.pricing-source-tooltip strong{
+  margin-bottom:5px;
+  color:#1f402a;
+  font-size:12px;
+}
+
+.pricing-source-tooltip span+span{
+  margin-top:3px;
+}
+
+.pricing-source-tooltip-warning{
+  margin-top:7px!important;
+  padding-top:7px;
+  border-top:1px solid #eee7dd;
+  color:#8a5a25;
+}
+
+.pricing-source-trend:hover .pricing-source-tooltip,
+.pricing-source-trend:focus .pricing-source-tooltip{
+  opacity:1;
+  visibility:visible;
+  transform:translateX(-50%) translateY(0);
+}
+
+.pricing-source-fallback-note{
+  display:block;
+  margin-top:6px;
+  color:#8a5a25;
+  font-size:11px;
+  font-weight:600;
+}
+
 .pricing-value.recommended{
   background:#f2f7f3;
   border-color:#b8cbbd;

@@ -41,6 +41,20 @@ type CompetitorPrice={
   price:number;
   update_run_id:string|null;
   observed_at:string|null;
+  source_competitor_product_id:number|null;
+};
+
+type CompetitorProductMatch={
+  product_id:number|null;
+  competitor_product_id:number;
+  action:"use"|"ignore";
+  verified:boolean;
+};
+
+type CompetitorProductObservation={
+  competitor_product_id:number;
+  update_run_id:string;
+  validation_status:string;
 };
 
 type CompetitorUpdateRun={
@@ -95,6 +109,7 @@ export async function buildPricingPreview(
     mappingsResult,
     competitorsResult,
     competitorPricesResult,
+    competitorMatchesResult,
     rulesResult,
     walmartRunsResult
   ]=await Promise.all([
@@ -165,7 +180,8 @@ export async function buildPricingPreview(
         date,
         price,
         update_run_id,
-        observed_at
+        observed_at,
+        source_competitor_product_id
       `)
       .order(
         "date",
@@ -173,6 +189,16 @@ export async function buildPricingPreview(
           ascending:false
         }
       ),
+
+    supabaseAdmin
+      .from("competitor_product_matches")
+      .select(`
+        product_id,
+        competitor_product_id,
+        action,
+        verified
+      `)
+      .eq("action","use"),
 
     supabaseAdmin
       .from("pricing_rules")
@@ -201,7 +227,7 @@ export async function buildPricingPreview(
         started_at
       `)
       .order("started_at",{ascending:false})
-      .limit(20)
+      .limit(100)
   ]);
 
   if(productsResult.error){
@@ -228,6 +254,10 @@ export async function buildPricingPreview(
     throw competitorPricesResult.error;
   }
 
+  if(competitorMatchesResult.error){
+    throw competitorMatchesResult.error;
+  }
+
   if(rulesResult.error){
     throw rulesResult.error;
   }
@@ -250,6 +280,9 @@ export async function buildPricingPreview(
 
   const competitorPrices=
     (competitorPricesResult.data??[]) as CompetitorPrice[];
+
+  const competitorMatches=
+    (competitorMatchesResult.data??[]) as CompetitorProductMatch[];
 
   const rules=
     (rulesResult.data??[]) as PricingRule[];
@@ -387,6 +420,98 @@ export async function buildPricingPreview(
   // Capturamos el ID después de validar que la corrida existe.
   // Esto mantiene el estrechamiento de tipo de TypeScript dentro de funciones internas.
   const latestWalmartRunId=latestWalmartRun.id;
+
+  const walmartMatchIdsByProduct=
+    new Map<number,Set<number>>();
+
+  for(const match of competitorMatches){
+    if(!match.product_id){
+      continue;
+    }
+
+    const current=
+      walmartMatchIdsByProduct.get(
+        Number(match.product_id)
+      )??new Set<number>();
+
+    current.add(
+      Number(match.competitor_product_id)
+    );
+
+    walmartMatchIdsByProduct.set(
+      Number(match.product_id),
+      current
+    );
+  }
+
+  const matchedCompetitorProductIds=
+    Array.from(
+      new Set(
+        competitorMatches.map(
+          match=>
+            Number(
+              match.competitor_product_id
+            )
+        )
+      )
+    );
+
+  let latestWalmartObservations:
+    CompetitorProductObservation[]=[];
+
+  if(matchedCompetitorProductIds.length>0){
+    const {
+      data:observationRows,
+      error:observationError
+    }=await supabaseAdmin
+      .from(
+        "competitor_product_observations"
+      )
+      .select(`
+        competitor_product_id,
+        update_run_id,
+        validation_status
+      `)
+      .eq(
+        "update_run_id",
+        latestWalmartRunId
+      )
+      .in(
+        "competitor_product_id",
+        matchedCompetitorProductIds
+      );
+
+    if(observationError){
+      throw observationError;
+    }
+
+    latestWalmartObservations=
+      (observationRows??[]) as
+        CompetitorProductObservation[];
+  }
+
+  const observedCompetitorProductIds=
+    new Set(
+      latestWalmartObservations.map(
+        observation=>
+          Number(
+            observation.competitor_product_id
+          )
+      )
+    );
+
+  const successfulWalmartRunIds=
+    new Set(
+      walmartRuns
+        .filter(
+          run=>
+            Number(run.competitor_id)===walmartId&&
+            run.status==="success"
+        )
+        .map(
+          run=>run.id
+        )
+    );
 
   const costByProduct=
     new Map(
@@ -615,20 +740,108 @@ export async function buildPricingPreview(
 
   function getWalmartPrice(
     productId:number,
-    _maxAgeDays:number
+    maxAgeDays:number
   ){
+    const current=
+      competitorPrices.find(
+        row=>
+          row.product_id===productId&&
+          row.competitor_id===walmartId&&
+          row.update_run_id===latestWalmartRunId
+      )??null;
+
+    if(current){
+      return{
+        ...current,
+        isFallback:false
+      };
+    }
+
+    const currentMatchIds=
+      walmartMatchIdsByProduct.get(
+        productId
+      )??new Set<number>();
+
     /*
-     * Seguridad fuerte: una recomendación solo puede usar un precio
-     * proveniente de la ÚLTIMA actualización Walmart exitosa. Si un
-     * producto no pasó las validaciones en esa corrida, no reutilizamos
-     * silenciosamente un precio anterior.
+     * Si alguna referencia asociada SÍ apareció en la corrida actual,
+     * pero no produjo un precio normalizado, significa que quedó bloqueada
+     * por validación/conversión. En ese caso no reutilizamos un dato viejo.
      */
-    return competitorPrices.find(
-      row=>
-        row.product_id===productId&&
-        row.competitor_id===walmartId&&
-        row.update_run_id===latestWalmartRunId
-    )??null;
+    const wasObservedThisRun=
+      Array.from(currentMatchIds).some(
+        competitorProductId=>
+          observedCompetitorProductIds.has(
+            competitorProductId
+          )
+      );
+
+    if(wasObservedThisRun){
+      return null;
+    }
+
+    const maxAgeMs=
+      Math.max(0,maxAgeDays)*
+      24*60*60*1000;
+
+    const now=Date.now();
+
+    const fallback=
+      competitorPrices
+        .filter(
+          row=>
+            row.product_id===productId&&
+            row.competitor_id===walmartId&&
+            row.update_run_id!==null&&
+            row.update_run_id!==latestWalmartRunId&&
+            successfulWalmartRunIds.has(
+              row.update_run_id
+            )&&
+            row.source_competitor_product_id!==null&&
+            currentMatchIds.has(
+              Number(
+                row.source_competitor_product_id
+              )
+            )
+        )
+        .map(
+          row=>{
+            const timestamp=
+              row.observed_at
+                ?Date.parse(
+                    row.observed_at
+                  )
+                :Date.parse(
+                    `${row.date}T12:00:00`
+                  );
+
+            return{
+              row,
+              timestamp
+            };
+          }
+        )
+        .filter(
+          item=>
+            Number.isFinite(
+              item.timestamp
+            )&&
+            item.timestamp<=now&&
+            now-item.timestamp<=maxAgeMs
+        )
+        .sort(
+          (a,b)=>
+            b.timestamp-
+            a.timestamp
+        )[0]?.row??null;
+
+    if(!fallback){
+      return null;
+    }
+
+    return{
+      ...fallback,
+      isFallback:true
+    };
   }
 
   const recommendations=[];
@@ -800,7 +1013,16 @@ export async function buildPricingPreview(
               price:
                 Number(
                   walmartPrice.price
-                )
+                ),
+
+              updateRunId:
+                walmartPrice.update_run_id,
+
+              observedAt:
+                walmartPrice.observed_at,
+
+              isFallback:
+                walmartPrice.isFallback
             }
           :null,
 

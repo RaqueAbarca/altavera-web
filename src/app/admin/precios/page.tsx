@@ -588,7 +588,7 @@ export default function PreciosPage(){
           walmartWarnings>0
             ?` y ${walmartWarnings} observaciones bloqueadas para revisión.`
             :"."
-        } Generando recomendaciones V2.4 para el ciclo #${cenadaData.cycleId}...`
+        } Generando recomendaciones V2.5 para el ciclo #${cenadaData.cycleId}...`
       );
 
       const runResponse=
@@ -706,7 +706,7 @@ export default function PreciosPage(){
           <div className="weekly-pricing-flow">
             <span>CENADA</span>
             <span>Walmart</span>
-            <span>Run V2.4</span>
+            <span>Run V2.5</span>
             <span>Revisión</span>
           </div>
         </div>

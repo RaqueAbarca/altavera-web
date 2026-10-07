@@ -78,7 +78,7 @@ export async function createPricingRun(
           `CENADA-CYCLE-${cycleId}`,
 
         algorithm_version:
-          "v2.4",
+          "v2.5",
 
         status:
           "running",
@@ -150,6 +150,24 @@ export async function createPricingRun(
               competitor_price:
                 item.result
                   .competitorPrice,
+
+              cenada_source_date:
+                item.cenada.date,
+
+              cenada_bulletin_number:
+                item.cenada.bulletinType,
+
+              competitor_source_date:
+                item.walmart?.date??null,
+
+              competitor_update_run_id:
+                item.walmart?.updateRunId??null,
+
+              competitor_observed_at:
+                item.walmart?.observedAt??null,
+
+              competitor_is_fallback:
+                item.walmart?.isFallback??false,
 
               /*
                * minimum_price se conserva
