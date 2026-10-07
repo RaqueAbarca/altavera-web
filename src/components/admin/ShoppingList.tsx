@@ -137,6 +137,11 @@ export default function ShoppingList({
                     const maturityLabel = getMaturityLabel(product.maturityPreference);
                     const cenadaReference = formatMoney(product.cenadaReferencePrice);
                     const cenadaReferenceDate = formatReferenceDate(product.cenadaReferenceDate);
+                    const cenadaEstimatedTotal =
+                      product.cenadaReferencePrice !== null &&
+                      product.cenadaReferencePrice !== undefined
+                        ? formatMoney(Number(product.cenadaReferencePrice) * Number(product.quantity))
+                        : null;
 
                     return (
                       <li key={key} className={checked[key] ? "is-checked" : ""}>
@@ -161,11 +166,18 @@ export default function ShoppingList({
                             <small>Maduración: {maturityLabel}</small>
                           )}
                           {cenadaReference && (
-                            <small>
-                              Ref. CENADA: {cenadaReference}
-                              {product.unit ? ` / ${product.unit}` : ""}
-                              {cenadaReferenceDate ? ` · ${cenadaReferenceDate}` : ""}
-                            </small>
+                            <>
+                              <small>
+                                Ref. CENADA: {cenadaReference}
+                                {product.unit ? ` / ${product.unit}` : ""}
+                                {cenadaReferenceDate ? ` · ${cenadaReferenceDate}` : ""}
+                              </small>
+                              {cenadaEstimatedTotal && (
+                                <small>
+                                  Costo estimado CENADA: {cenadaEstimatedTotal}
+                                </small>
+                              )}
+                            </>
                           )}
                         </span>
 
