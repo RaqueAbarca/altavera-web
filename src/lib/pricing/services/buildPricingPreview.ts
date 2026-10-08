@@ -24,7 +24,9 @@ type CenadaPrice={
   date:string;
   bulletin_number:string|null;
   cenada_name:string|null;
-  price_per_unit:number;
+  mode_price:number|null;
+  conversion_factor:number|null;
+  price_per_unit:number|null;
 };
 
 type CenadaMapping={
@@ -141,13 +143,10 @@ export async function buildPricingPreview(
         date,
         bulletin_number,
         cenada_name,
+        mode_price,
+        conversion_factor,
         price_per_unit
       `)
-      .not(
-        "price_per_unit",
-        "is",
-        null
-      )
       .order(
         "date",
         {
@@ -273,7 +272,38 @@ export async function buildPricingPreview(
     (costsResult.data??[]) as CostSettings[];
 
   let cenadaPrices=
-    (cenadaResult.data??[]) as CenadaPrice[];
+    ((cenadaResult.data??[]) as CenadaPrice[])
+      .map(row=>{
+        const mode=Number(row.mode_price);
+        const factor=Number(row.conversion_factor);
+
+        /*
+         * Autorreparación de registros históricos:
+         * algunas filas antiguas guardaron price_per_unit usando el
+         * máximo del boletín. Para la corrida de precios no confiamos
+         * ciegamente en ese valor: reconstruimos el costo normalizado
+         * desde MODA / factor de conversión siempre que sea posible.
+         */
+        if(
+          Number.isFinite(mode)&&
+          mode>0&&
+          Number.isFinite(factor)&&
+          factor>0
+        ){
+          return {
+            ...row,
+            price_per_unit:
+              Math.round((mode/factor)*100)/100
+          };
+        }
+
+        return row;
+      })
+      .filter(
+        row=>
+          row.price_per_unit!==null&&
+          Number(row.price_per_unit)>0
+      );
 
   const mappings=
     (mappingsResult.data??[]) as CenadaMapping[];
@@ -638,15 +668,15 @@ export async function buildPricingPreview(
           }
         );
 
+      /*
+       * price_per_unit ya se calcula desde la MODA del boletín
+       * en saveCenadaPrice(). Si hay más de una fila candidata,
+       * no elegimos la más cara: usamos la observación más reciente.
+       */
       return unmappedRows
         .sort(
           (a,b)=>
-            Number(
-              b.price_per_unit
-            )-
-            Number(
-              a.price_per_unit
-            )
+            b.date.localeCompare(a.date)
         )[0]??null;
     }
 
@@ -659,6 +689,13 @@ export async function buildPricingPreview(
         )
       );
 
+    /*
+     * Cada price_per_unit proviene de mode_price (MODA), ya
+     * normalizada a la unidad de Altavera. Entre referencias con
+     * la misma prioridad elegimos la fecha más reciente, no el
+     * precio más alto. Esto evita que el costo de referencia se
+     * infle artificialmente.
+     */
     return mappedRows
       .filter(
         item=>
@@ -678,12 +715,7 @@ export async function buildPricingPreview(
       )
       .sort(
         (a,b)=>
-          Number(
-            b.price_per_unit
-          )-
-          Number(
-            a.price_per_unit
-          )
+          b.date.localeCompare(a.date)
       )[0]??null;
   }
 

@@ -7,7 +7,7 @@ import { createPricingRun } from "@/lib/pricing/services/createPricingRun";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
-const ALGORITHM_VERSION="v2.5";
+const ALGORITHM_VERSION="v2.7";
 const AUTOMATION_DEDUP_MINUTES=15;
 
 type RequestBody={

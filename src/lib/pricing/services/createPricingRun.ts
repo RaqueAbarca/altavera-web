@@ -78,7 +78,7 @@ export async function createPricingRun(
           `CENADA-CYCLE-${cycleId}`,
 
         algorithm_version:
-          "v2.5",
+          "v2.7",
 
         status:
           "running",
