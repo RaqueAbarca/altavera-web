@@ -199,6 +199,107 @@ function detectBulletinType(
   );
 }
 
+
+type CenadaPriceColumns={
+  minimumPrice:number;
+  maximumPrice:number;
+  modePrice:number;
+  averagePrice:number;
+};
+
+function isValidPriceColumns(
+  prices:CenadaPriceColumns
+){
+  const {
+    minimumPrice,
+    maximumPrice,
+    modePrice,
+    averagePrice
+  }=prices;
+
+  if(
+    ![
+      minimumPrice,
+      maximumPrice,
+      modePrice,
+      averagePrice
+    ].every(Number.isFinite)
+  ){
+    return false;
+  }
+
+  const epsilon=0.01;
+
+  return(
+    minimumPrice<=maximumPrice+epsilon&&
+    modePrice>=minimumPrice-epsilon&&
+    modePrice<=maximumPrice+epsilon&&
+    averagePrice>=minimumPrice-epsilon&&
+    averagePrice<=maximumPrice+epsilon
+  );
+}
+
+function resolvePriceColumns(
+  raw:[number,number,number,number],
+  line:string
+):CenadaPriceColumns{
+  const [a,b,c,d]=raw;
+
+  /*
+   * Dependiendo del orden interno del PDF, pdf-parse puede devolver
+   * las columnas numéricas en el orden visual:
+   *
+   * mínimo, máximo, moda, promedio
+   *
+   * o en el orden inverso que hemos observado en los boletines PIMA:
+   *
+   * promedio, moda, máximo, mínimo
+   *
+   * No asumimos ninguno de los dos. Validamos ambas interpretaciones
+   * usando propiedades que siempre deben cumplir los datos de CENADA:
+   * mínimo <= máximo y tanto moda como promedio dentro de ese rango.
+   */
+  const visual:CenadaPriceColumns={
+    minimumPrice:a,
+    maximumPrice:b,
+    modePrice:c,
+    averagePrice:d
+  };
+
+  const reversed:CenadaPriceColumns={
+    minimumPrice:d,
+    maximumPrice:c,
+    modePrice:b,
+    averagePrice:a
+  };
+
+  const visualValid=
+    isValidPriceColumns(visual);
+
+  const reversedValid=
+    isValidPriceColumns(reversed);
+
+  if(visualValid&&!reversedValid){
+    return visual;
+  }
+
+  if(reversedValid&&!visualValid){
+    return reversed;
+  }
+
+  if(visualValid&&reversedValid){
+    /*
+     * Esto ocurre cuando los valores hacen equivalentes ambas
+     * interpretaciones (por ejemplo, todos iguales).
+     */
+    return visual;
+  }
+
+  throw new Error(
+    `No se pudo determinar el orden de las columnas de precio CENADA: ${line}`
+  );
+}
+
 export async function parseCenadaPdf(
   file:File
 ):Promise<ParsedCenadaDocument>{
@@ -264,15 +365,30 @@ export async function parseCenadaPdf(
         continue;
       }
 
-      const [
-        ,
-        unit,
-        minimum,
-        maximum,
-        mode,
-        average,
-        productName
-      ]=match;
+      const unit=match[1];
+      const productName=match[6];
+
+      const rawPrices=
+        [
+          match[2],
+          match[3],
+          match[4],
+          match[5]
+        ].map(
+          value=>
+            Number(
+              value.replace(
+                /,/g,
+                ""
+              )
+            )
+        ) as [number,number,number,number];
+
+      const prices=
+        resolvePriceColumns(
+          rawPrices,
+          line
+        );
 
       rows.push({
         source:"cenada",
@@ -291,36 +407,16 @@ export async function parseCenadaPdf(
           unit.trim(),
 
         minimumPrice:
-          Number(
-            minimum.replace(
-              /,/g,
-              ""
-            )
-          ),
+          prices.minimumPrice,
 
         maximumPrice:
-          Number(
-            maximum.replace(
-              /,/g,
-              ""
-            )
-          ),
+          prices.maximumPrice,
 
         modePrice:
-          Number(
-            mode.replace(
-              /,/g,
-              ""
-            )
-          ),
+          prices.modePrice,
 
         averagePrice:
-          Number(
-            average.replace(
-              /,/g,
-              ""
-            )
-          ),
+          prices.averagePrice,
 
         page:1,
 
