@@ -59,7 +59,6 @@ function buildCoveragePolygons(zones: PublicDeliveryZone[]) {
   return inclusions.map((zone) => {
     const rings = [toLeafletLatLngs(zone.polygon)];
     for (const exclusion of exclusions) {
-      const point = exclusion.polygon[0];
       const overlaps = exclusion.polygon.some((point) =>
         pointInPolygon(point[0], point[1], zone.polygon)
       );
@@ -67,6 +66,38 @@ function buildCoveragePolygons(zones: PublicDeliveryZone[]) {
     }
     return rings;
   });
+}
+
+function FitCoverageBounds({
+  zones,
+  enabled,
+}: {
+  zones: PublicDeliveryZone[];
+  enabled: boolean;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const points = zones
+      .filter((zone) => zone.type === "include")
+      .flatMap((zone) => zone.polygon)
+      .map(([lng, lat]) => L.latLng(lat, lng));
+
+    if (points.length < 3) return;
+
+    const bounds = L.latLngBounds(points);
+    if (!bounds.isValid()) return;
+
+    map.fitBounds(bounds, {
+      padding: [24, 24],
+      maxZoom: 13,
+      animate: false,
+    });
+  }, [enabled, map, zones]);
+
+  return null;
 }
 
 type Position = [number, number];
@@ -214,21 +245,30 @@ export default function LocationPickerClient({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/delivery/zones", { cache: "no-store" })
-      .then(async (response) => {
+
+    async function loadCoverageZones() {
+      try {
+        const response = await fetch(`/api/delivery/zones?t=${Date.now()}`, {
+          cache: "no-store",
+        });
         if (!response.ok) throw new Error("No se pudo cargar la cobertura");
-        return response.json();
-      })
-      .then((data) => {
+        const data = await response.json();
+
         if (!cancelled && Array.isArray(data.zones)) {
           setCoverageZones(data.zones);
         }
-      })
-      .catch(() => {
+      } catch {
         // Mantiene la cobertura estática si la API no está disponible.
-      });
+      }
+    }
+
+    void loadCoverageZones();
+    const onFocus = () => void loadCoverageZones();
+    window.addEventListener("focus", onFocus);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 
@@ -594,23 +634,26 @@ export default function LocationPickerClient({
         center={[10.016, -84.214]}
         zoom={13}
         scrollWheelZoom
-        className="checkout-map"
+        className="checkout-map altavera-public-map"
       >
         <AltaveraMapLayer />
+        <FitCoverageBounds zones={coverageZones} enabled={!position} />
 
-        <Polygon
-          positions={coverageMultiPolygon}
-          interactive={false}
-          pathOptions={{
-            stroke: false,
-            weight: 0,
-            opacity: 0,
-            fill: true,
-            fillColor: "#355843",
-            fillOpacity: 0.12,
-            fillRule: "evenodd",
-          }}
-        />
+        {coverageMultiPolygon.length > 0 && (
+          <Polygon
+            positions={coverageMultiPolygon}
+            interactive={false}
+            pathOptions={{
+              color: "#28533a",
+              weight: 2,
+              opacity: 0.9,
+              fill: true,
+              fillColor: "#355843",
+              fillOpacity: 0.2,
+              fillRule: "evenodd",
+            }}
+          />
+        )}
 
         <LocationMarker
           position={position}

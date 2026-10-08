@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, Polygon } from "react-leaflet";
+import L from "leaflet";
+import { MapContainer, Polygon, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   DELIVERY_COVERAGE_ZONES,
@@ -33,7 +34,6 @@ function buildCoveragePolygons(zones: PublicDeliveryZone[]) {
   return inclusions.map((zone) => {
     const rings = [toLeafletLatLngs(zone.polygon)];
     for (const exclusion of exclusions) {
-      const point = exclusion.polygon[0];
       const overlaps = exclusion.polygon.some((point) =>
         pointInPolygon(point[0], point[1], zone.polygon)
       );
@@ -43,43 +43,85 @@ function buildCoveragePolygons(zones: PublicDeliveryZone[]) {
   });
 }
 
+function FitCoverageBounds({ zones }: { zones: PublicDeliveryZone[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const points = zones
+      .filter((zone) => zone.type === "include")
+      .flatMap((zone) => zone.polygon)
+      .map(([lng, lat]) => L.latLng(lat, lng));
+
+    if (points.length < 3) return;
+
+    const bounds = L.latLngBounds(points);
+    if (!bounds.isValid()) return;
+
+    map.fitBounds(bounds, {
+      padding: [24, 24],
+      maxZoom: 14,
+      animate: false,
+    });
+  }, [map, zones]);
+
+  return null;
+}
+
 export default function CoverageMapClient() {
   const [zones, setZones] = useState<PublicDeliveryZone[]>(fallbackZones);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/delivery/zones", { cache: "no-store" })
-      .then(async (response) => {
+
+    async function loadZones() {
+      try {
+        const response = await fetch(`/api/delivery/zones?t=${Date.now()}`, {
+          cache: "no-store",
+        });
         if (!response.ok) throw new Error("No se pudo cargar la cobertura");
-        return response.json();
-      })
-      .then((data) => {
+        const data = await response.json();
         if (!cancelled && Array.isArray(data.zones)) setZones(data.zones);
-      })
-      .catch(() => {
+      } catch {
         // Si la API falla, se conserva la cobertura estática de respaldo.
-      });
-    return () => { cancelled = true; };
+      }
+    }
+
+    void loadZones();
+    const onFocus = () => void loadZones();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const coverageMultiPolygon = useMemo(() => buildCoveragePolygons(zones), [zones]);
 
   return (
-    <MapContainer center={[10.016,-84.214]} zoom={14} scrollWheelZoom className="coverage-map">
+    <MapContainer
+      center={[10.016, -84.214]}
+      zoom={13}
+      scrollWheelZoom
+      className="coverage-map altavera-public-map"
+    >
       <AltaveraMapLayer />
-      <Polygon
-        positions={coverageMultiPolygon}
-        interactive={false}
-        pathOptions={{
-          stroke: false,
-          weight: 0,
-          opacity: 0,
-          fill: true,
-          fillColor: "#355843",
-          fillOpacity: 0.28,
-          fillRule: "evenodd",
-        }}
-      />
+      <FitCoverageBounds zones={zones} />
+      {coverageMultiPolygon.length > 0 && (
+        <Polygon
+          positions={coverageMultiPolygon}
+          interactive={false}
+          pathOptions={{
+            color: "#28533a",
+            weight: 2,
+            opacity: 0.9,
+            fill: true,
+            fillColor: "#355843",
+            fillOpacity: 0.2,
+            fillRule: "evenodd",
+          }}
+        />
+      )}
     </MapContainer>
   );
 }

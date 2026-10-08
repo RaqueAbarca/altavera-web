@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# temporary patch folders (do not keep inside the project)
+/altavera_patch_*/
+/patch-*/
