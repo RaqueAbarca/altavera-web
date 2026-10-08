@@ -29,6 +29,28 @@ export function buildOrderOnTheWayMessage(input: {
   ].join("\n\n");
 }
 
+
+export function buildOrderPaymentInstructionsMessage(input: {
+  customerName: string;
+  orderId: string;
+  deliveryDate: string;
+  total: string;
+  paymentMethod: string;
+}) {
+  const customerName = input.customerName.trim() || "cliente";
+  const shortOrderId = input.orderId.slice(0, 8).toUpperCase();
+  const paymentMethod = input.paymentMethod.trim() || "el método seleccionado";
+
+  return [
+    `Hola ${customerName}, gracias por tu pedido en Altavera 🌿`,
+    `Pedido #${shortOrderId}\nEntrega: ${input.deliveryDate}\nTotal: ${input.total}\nMétodo de pago seleccionado: ${paymentMethod}`,
+    "Para confirmar tu pedido, realizá el pago por el medio que seleccionaste al realizar la compra, ya sea SINPE Móvil o transferencia bancaria.",
+    "Una vez realizado el pago, podés enviarnos el comprobante por este mismo chat para verificarlo.",
+    "Si querés recibir el detalle completo de tu pedido, incluyendo productos, cantidades y precios, indicánoslo por aquí y con gusto te lo compartimos.",
+    "Una vez verificado el pago, confirmaremos tu pedido.",
+  ].join("\n\n");
+}
+
 export function buildWhatsAppUrl(input: {
   phone: string | null | undefined;
   message: string;

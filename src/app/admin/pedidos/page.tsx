@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, MapPin, MessageCircle, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { buildOrderOnTheWayMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import {
+  buildOrderOnTheWayMessage,
+  buildOrderPaymentInstructionsMessage,
+  buildWhatsAppUrl,
+} from "@/lib/whatsapp";
 import { playAdminSound } from "@/lib/adminSounds";
 import ShoppingList from "@/components/admin/ShoppingList";
 import { getMaturityLabel } from "@/lib/maturity";
@@ -148,6 +152,19 @@ function contactCustomerUrl(order: Order) {
       `Hola ${order.guest_name.trim() || "cliente"},`,
       `te contactamos de Altavera con respecto a tu pedido #${order.id.slice(0, 8).toUpperCase()}.`,
     ].join("\n\n"),
+  });
+}
+
+function paymentInstructionsUrl(order: Order, deliveryDate: string) {
+  return buildWhatsAppUrl({
+    phone: order.guest_phone,
+    message: buildOrderPaymentInstructionsMessage({
+      customerName: order.guest_name,
+      orderId: order.id,
+      deliveryDate: formatDeliveryDate(deliveryDate),
+      total: formatMoney(order.total),
+      paymentMethod: getPaymentMethodLabel(order.payment_method),
+    }),
   });
 }
 
@@ -530,7 +547,10 @@ export default function AdminOrdersPage() {
                   <div className="orders-grid">
                     {visibleOrders.map((order) => {
                       const action = nextAction(order);
-                      const contactUrl = contactCustomerUrl(order);
+                      const isPaymentPending = belongsToTab(order.status, "pending");
+                      const contactUrl = isPaymentPending
+                        ? paymentInstructionsUrl(order, selectedCycle.delivery_date)
+                        : contactCustomerUrl(order);
                       const calculatedSubtotal = order.order_item.reduce(
                         (sum, item) => sum + itemSubtotal(item),
                         0
@@ -657,7 +677,9 @@ export default function AdminOrdersPage() {
                                 rel="noreferrer"
                               >
                                 <MessageCircle size={17} aria-hidden="true" />
-                                Contactar al cliente
+                                {isPaymentPending
+                                  ? "Enviar instrucciones de pago"
+                                  : "Contactar al cliente"}
                               </a>
                             )}
                             {action && (
