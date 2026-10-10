@@ -6,8 +6,8 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, MapPin, MessageCircle, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
-  buildOrderOnTheWayMessage,
   buildOrderPaymentInstructionsMessage,
+  buildOrderStatusWhatsAppMessage,
   buildWhatsAppUrl,
 } from "@/lib/whatsapp";
 import { playAdminSound } from "@/lib/adminSounds";
@@ -313,13 +313,21 @@ export default function AdminOrdersPage() {
   );
 
   async function updateStatus(order: Order, status: string) {
-    const isGoingOnTheWay = status === "ready";
-    const whatsappUrl = isGoingOnTheWay
+    const whatsappStatuses = new Set([
+      "confirmed",
+      "preparing",
+      "ready",
+      "delivered",
+      "cancelled",
+    ]);
+    const shouldOpenWhatsApp = whatsappStatuses.has(status);
+    const whatsappUrl = shouldOpenWhatsApp
       ? buildWhatsAppUrl({
           phone: order.guest_phone,
-          message: buildOrderOnTheWayMessage({
+          message: buildOrderStatusWhatsAppMessage({
             customerName: order.guest_name,
             orderId: order.id,
+            status: status as "confirmed" | "preparing" | "ready" | "delivered" | "cancelled",
           }),
         })
       : null;
@@ -356,19 +364,20 @@ export default function AdminOrdersPage() {
         void playAdminSound("payment-confirmed");
       }
 
-      // Para "En camino" mantenemos WhatsApp como apoyo inmediato. El correo
-      // de estado se envía automáticamente desde la ruta del servidor.
-      if (isGoingOnTheWay) {
+      // El correo de estado se envía automáticamente desde la ruta del servidor.
+      // Además abrimos WhatsApp con el mensaje correspondiente para que el admin
+      // lo revise y lo envíe manualmente.
+      if (shouldOpenWhatsApp) {
         if (whatsappUrl && whatsappWindow) {
           whatsappWindow.opener = null;
           whatsappWindow.location.href = whatsappUrl;
         } else if (!whatsappUrl) {
           alert(
-            "El pedido quedó marcado como En camino, pero no tiene un teléfono válido para abrir WhatsApp."
+            "El estado del pedido cambió, pero no tiene un teléfono válido para abrir WhatsApp."
           );
         } else {
           alert(
-            "El pedido quedó marcado como En camino, pero el navegador bloqueó la ventana de WhatsApp."
+            "El estado del pedido cambió, pero el navegador bloqueó la ventana de WhatsApp."
           );
         }
       }

@@ -15,18 +15,57 @@ export function normalizeWhatsAppPhone(value: string | null | undefined) {
   return digits;
 }
 
-export function buildOrderOnTheWayMessage(input: {
+
+export type OrderWhatsAppStatus =
+  | "confirmed"
+  | "preparing"
+  | "ready"
+  | "delivered"
+  | "cancelled";
+
+export function buildOrderStatusWhatsAppMessage(input: {
   customerName: string;
   orderId: string;
+  status: OrderWhatsAppStatus;
 }) {
   const customerName = input.customerName.trim() || "cliente";
   const shortOrderId = input.orderId.slice(0, 8).toUpperCase();
 
-  return [
-    `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera ya va en camino.`,
-    "Lo entregaremos en la ubicación que registraste al hacer tu pedido.",
-    "¡Gracias por comprar con nosotros!",
-  ].join("\n\n");
+  const messages: Record<OrderWhatsAppStatus, string[]> = {
+    confirmed: [
+      `Hola ${customerName}, ya confirmamos el pago de tu pedido #${shortOrderId} de Altavera 🌿`,
+      "Tu pedido quedó confirmado para la fecha de entrega seleccionada.",
+      "Te avisaremos cuando comencemos a prepararlo.",
+    ],
+    preparing: [
+      `Hola ${customerName}, estamos preparando tu pedido #${shortOrderId} de Altavera 🌿`,
+      "Ya comenzamos a preparar tus productos para la fecha de entrega seleccionada.",
+      "Te avisaremos cuando salga para entrega.",
+    ],
+    ready: [
+      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera ya va en camino 🚚`,
+      "Lo entregaremos en la ubicación que registraste al hacer tu pedido.",
+      "¡Gracias por comprar con nosotros!",
+    ],
+    delivered: [
+      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera fue marcado como entregado 🌿`,
+      "Muchas gracias por comprar con nosotros. Esperamos que disfrutés tus productos.",
+      "Si necesitás ayuda con tu pedido, podés escribirnos por este mismo chat.",
+    ],
+    cancelled: [
+      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera fue cancelado.`,
+      "Si tenés alguna consulta sobre el pedido o el pago, podés escribirnos por este mismo chat y con gusto lo revisamos.",
+    ],
+  };
+
+  return messages[input.status].join("\n\n");
+}
+
+export function buildOrderOnTheWayMessage(input: {
+  customerName: string;
+  orderId: string;
+}) {
+  return buildOrderStatusWhatsAppMessage({ ...input, status: "ready" });
 }
 
 
@@ -42,13 +81,12 @@ export function buildOrderPaymentInstructionsMessage(input: {
   const paymentMethod = input.paymentMethod.trim() || "el método seleccionado";
 
   return [
-    `Hola ${customerName}, gracias por tu pedido en Altavera!`,
-    `Tu pedido es el #${shortOrderId}\nEntrega: ${input.deliveryDate}\nTotal: ${input.total}\nMétodo de pago seleccionado: ${paymentMethod}`,
-    "Para confirmar tu pedido, realizá el pago por el medio que seleccionaste al realizar la compra.",
+    `Hola ${customerName}, gracias por tu pedido en Altavera 🌿`,
+    `Pedido #${shortOrderId}\nEntrega: ${input.deliveryDate}\nTotal: ${input.total}\nMétodo de pago seleccionado: ${paymentMethod}`,
+    "Para confirmar tu pedido, realizá el pago por el medio que seleccionaste al realizar la compra, ya sea SINPE Móvil o transferencia bancaria.",
     "Una vez realizado el pago, podés enviarnos el comprobante por este mismo chat para verificarlo.",
     "Si querés recibir el detalle completo de tu pedido, incluyendo productos, cantidades y precios, indicánoslo por aquí y con gusto te lo compartimos.",
     "Una vez verificado el pago, confirmaremos tu pedido.",
-    "Quedamos a la espera, muchas gracias por tu compra!",
   ].join("\n\n");
 }
 
