@@ -33,6 +33,11 @@ import { getMaturityLabel } from "@/lib/maturity";
 import { formatCRC } from "@/lib/deliveryFee";
 import type { PaymentMethod } from "@/lib/paymentMethods";
 import type { SavedAddress } from "@/types/address";
+import {
+  clearStoredPromoCode,
+  readStoredPromoCode,
+  saveStoredPromoCode,
+} from "@/lib/promoStorage";
 
 export default function GuestForm() {
   const { cart, totalPrice, clearCart } = useCart();
@@ -181,6 +186,46 @@ export default function GuestForm() {
       void loadDeliveryCycles(true);
     }, 60_000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const storedPromo = readStoredPromoCode();
+    if (!storedPromo) return;
+
+    setPromoInput(storedPromo.code);
+
+    const revalidateStoredPromo = async () => {
+      try {
+        const response = await fetch("/api/promos/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: storedPromo.code }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.valid) {
+          clearStoredPromoCode();
+          setPromoInput("");
+          setAppliedPromo(null);
+          return;
+        }
+
+        const promo = {
+          code: data.code as string,
+          label: (data.label || "Envío gratis") as string,
+          discountType: "free_shipping" as const,
+        };
+
+        setPromoInput(promo.code);
+        setAppliedPromo({ code: promo.code, label: promo.label });
+        setPromoMessage("Envío gratis aplicado.");
+        saveStoredPromoCode(promo);
+      } catch {
+        // Checkout vuelve a validar el código al crear el pedido; no bloqueamos la compra por un fallo temporal.
+      }
+    };
+
+    void revalidateStoredPromo();
   }, []);
 
   useEffect(() => {
@@ -451,13 +496,20 @@ export default function GuestForm() {
       const data = await response.json();
 
       if (!response.ok || !data.valid) {
+        clearStoredPromoCode();
         setAppliedPromo(null);
         throw new Error(data.error ?? "Código promocional inválido o no disponible.");
       }
 
-      setPromoInput(data.code);
-      setAppliedPromo({ code: data.code, label: data.label || "Envío gratis" });
+      const promo = {
+        code: data.code as string,
+        label: (data.label || "Envío gratis") as string,
+        discountType: "free_shipping" as const,
+      };
+      setPromoInput(promo.code);
+      setAppliedPromo({ code: promo.code, label: promo.label });
       setPromoMessage("Envío gratis aplicado.");
+      saveStoredPromoCode(promo);
     } catch (promoError) {
       setPromoMessage(
         promoError instanceof Error
@@ -470,6 +522,7 @@ export default function GuestForm() {
   }
 
   function removePromoCode() {
+    clearStoredPromoCode();
     setAppliedPromo(null);
     setPromoInput("");
     setPromoMessage("");
@@ -538,6 +591,7 @@ export default function GuestForm() {
 
       const createdOrder = await createOrder({ order, cart });
 
+      clearStoredPromoCode();
       clearCart();
       router.push(`/pedido/${createdOrder.id}#token=${createdOrder.accessToken}`);
     } catch (error) {

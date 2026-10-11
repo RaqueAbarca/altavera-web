@@ -1,15 +1,9 @@
-# Código promocional visible en celular
+# Ajustes catálogo — 11/10/2026
 
-Este parche mueve el campo de código promocional fuera del resumen plegable en la vista móvil.
+Este parche hace tres cambios en `/productos`:
 
-- En escritorio: permanece dentro del resumen lateral.
-- En celular/tablet: aparece siempre visible debajo de "Ver resumen", aunque el resumen esté cerrado.
-- Si el código se aplica, el total del resumen se actualiza como antes.
-- No requiere SQL.
+1. Tarjetas más angostas en desktop (máximo 410 px) y ligeramente menos altas.
+2. El carrito lateral sigue siendo `sticky`, pero deja más espacio debajo del header y puede hacer scroll interno si crece mucho.
+3. La búsqueda ignora tildes/diacríticos: por ejemplo `brocoli` encuentra `Brócoli`, `rabano` encuentra `Rábano` y `pina` encuentra `Piña`.
 
-Aplicar desde la raíz del proyecto:
-
-```bash
-unzip -o ~/Downloads/altavera_patch_codigo_visible_movil_20261011.zip -d .
-npm run build
-```
+No requiere SQL.

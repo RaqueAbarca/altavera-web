@@ -34,6 +34,14 @@ type Props = {
   favoritesOnly?: boolean;
 };
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 export default function ProductsSection({
   products,
   selectedCategory,
@@ -64,9 +72,8 @@ export default function ProductsSection({
         ? product.is_seasonal === true
         : product.category === selectedCategory);
 
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(search.toLowerCase().trim());
+    const normalizedSearch = normalizeSearchText(search);
+    const matchesSearch = normalizeSearchText(product.name).includes(normalizedSearch);
 
     const matchesFavorites =
       !favoritesOnly || favoriteIds.has(product.id);

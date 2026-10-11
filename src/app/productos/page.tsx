@@ -8,6 +8,7 @@ import ProductFilters from "@/components/productos/productFilters";
 import { supabase } from "@/lib/supabase";
 import SearchBar from "@/components/productos/SearchBar";
 import LoginPromo from "@/components/home/LoginPromo";
+import CatalogCartSidebar from "@/components/productos/CatalogCartSidebar";
 
 type Product = {
   id: number;
@@ -87,6 +88,8 @@ export default function ProductosPage() {
             search={search}
           />
         </section>
+
+        <CatalogCartSidebar />
       </div>
     </main>
   );
