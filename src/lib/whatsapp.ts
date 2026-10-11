@@ -33,17 +33,17 @@ export function buildOrderStatusWhatsAppMessage(input: {
 
   const messages: Record<OrderWhatsAppStatus, string[]> = {
     confirmed: [
-      `Hola ${customerName}, ya confirmamos el pago de tu pedido #${shortOrderId} de Altavera`,
+      `Hola ${customerName}, ya confirmamos el pago de tu pedido #${shortOrderId} de Altavera.`,
       "Tu pedido quedó confirmado para la fecha de entrega seleccionada.",
       "Te avisaremos cuando comencemos a prepararlo.",
     ],
     preparing: [
-      `Hola ${customerName}, estamos preparando tu pedido #${shortOrderId} de Altavera`,
+      `Hola ${customerName}, estamos preparando tu pedido #${shortOrderId} de Altavera.`,
       "Ya comenzamos a preparar tus productos para la fecha de entrega seleccionada.",
       "Te avisaremos cuando salga para entrega.",
     ],
     ready: [
-      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera ya va en camino`,
+      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera ya va en camino.`,
       "Lo entregaremos en la ubicación que registraste al hacer tu pedido.",
       "¡Gracias por comprar con nosotros!",
     ],
@@ -81,7 +81,7 @@ export function buildOrderPaymentInstructionsMessage(input: {
   const paymentMethod = input.paymentMethod.trim() || "el método seleccionado";
 
   return [
-    `Hola ${customerName}, gracias por tu pedido en Altavera 🌿`,
+    `Hola ${customerName}, gracias por tu pedido en Altavera.`,
     `Pedido #${shortOrderId}\nEntrega: ${input.deliveryDate}\nTotal: ${input.total}\nMétodo de pago seleccionado: ${paymentMethod}`,
     "Para confirmar tu pedido, realizá el pago por el medio que seleccionaste al realizar la compra, ya sea SINPE Móvil o transferencia bancaria.",
     "Una vez realizado el pago, podés enviarnos el comprobante por este mismo chat para verificarlo.",
