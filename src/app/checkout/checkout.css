@@ -388,6 +388,7 @@
   text-transform: capitalize;
 }
 .checkout-mobile-summary { display: none; }
+.checkout-promo--mobile { display: none; }
 .payment-methods {
   display: grid;
   gap: 0.8rem;
@@ -665,6 +666,16 @@
   .checkout-layout { grid-template-columns: 1fr; gap: 1.5rem; }
   .checkout-desktop-summary { display: none; }
   .checkout-mobile-summary { display: block; margin-bottom: 1.6rem; }
+  .checkout-mobile-summary .checkout-promo--summary { display: none; }
+  .checkout-promo--mobile {
+    display: block;
+    margin-top: 0.7rem;
+    padding: 0.95rem 1rem 1rem;
+    border: 1px solid rgba(53,88,67,0.12);
+    border-radius: 17px;
+    background: #ffffff;
+    box-shadow: 0 10px 26px rgba(31,64,42,0.05);
+  }
   .checkout-mobile-summary details {
     overflow: hidden;
     border: 1px solid rgba(53,88,67,0.12);

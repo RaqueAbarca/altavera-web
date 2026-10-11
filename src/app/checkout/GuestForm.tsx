@@ -629,7 +629,7 @@ export default function GuestForm() {
         })}
       </div>
 
-      <div className="checkout-promo">
+      <div className="checkout-promo checkout-promo--summary">
         <span className="checkout-promo__label">¿Tenés un código promocional?</span>
         {appliedPromo ? (
           <div className="checkout-promo__applied">
@@ -709,6 +709,38 @@ export default function GuestForm() {
           </summary>
           {summary}
         </details>
+
+        <div className="checkout-promo checkout-promo--mobile">
+          <span className="checkout-promo__label">¿Tenés un código promocional?</span>
+          {appliedPromo ? (
+            <div className="checkout-promo__applied">
+              <div>
+                <strong>{appliedPromo.code}</strong>
+                <span>{appliedPromo.label}</span>
+              </div>
+              <button type="button" onClick={removePromoCode}>Quitar</button>
+            </div>
+          ) : (
+            <div className="checkout-promo__controls">
+              <input
+                value={promoInput}
+                onChange={(event) => {
+                  setPromoInput(event.target.value.toUpperCase().replace(/\s/g, ""));
+                  setPromoMessage("");
+                }}
+                placeholder="Ej. FAMILIA"
+                maxLength={40}
+                autoComplete="off"
+              />
+              <button type="button" onClick={applyPromoCode} disabled={promoLoading}>
+                {promoLoading ? "Validando..." : "Aplicar"}
+              </button>
+            </div>
+          )}
+          {promoMessage && (
+            <small className={appliedPromo ? "is-success" : "is-error"}>{promoMessage}</small>
+          )}
+        </div>
       </div>
 
       <div className="checkout-layout">
