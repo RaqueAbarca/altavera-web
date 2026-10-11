@@ -16,6 +16,7 @@ import { isPaymentMethod } from "@/lib/paymentMethods";
 import { isValidProductQuantity } from "@/lib/productUnits";
 import { getDeliveryFeeForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
 import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
+import { claimPromoCode, normalizePromoCode, releasePromoCode } from "@/lib/promoCodes.server";
 import {
   consumeRateLimit,
   getClientFingerprint,
@@ -42,6 +43,7 @@ type IncomingOrder = {
   legal_accepted?: unknown;
   marketing_opt_in?: unknown;
   payment_method?: unknown;
+  promo_code?: unknown;
 };
 
 type IncomingBody = {
@@ -254,6 +256,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const requestedPromoCode = normalizePromoCode(incomingOrder.promo_code);
 
     const supabase = await createSupabaseServerClient();
     const {
@@ -596,11 +600,31 @@ export async function POST(request: Request) {
       )
     );
 
-    const shipping = roundMoney(
+    const baseShipping = roundMoney(
       await getDeliveryFeeForOrder({ latitude, longitude })
     );
-    const total = roundMoney(subtotal + shipping);
 
+    let promoClaim: Awaited<ReturnType<typeof claimPromoCode>> = null;
+    let shippingDiscount = 0;
+
+    if (requestedPromoCode) {
+      promoClaim = await claimPromoCode(requestedPromoCode);
+
+      if (!promoClaim || promoClaim.discountType !== "free_shipping") {
+        return NextResponse.json(
+          {
+            error: "El código promocional ya no está disponible. Quitalo o probá con otro código.",
+            code: "PROMO_INVALID",
+          },
+          { status: 409 }
+        );
+      }
+
+      shippingDiscount = baseShipping;
+    }
+
+    const shipping = promoClaim ? 0 : baseShipping;
+    const total = roundMoney(subtotal + shipping);
     const accessToken = randomUUID();
 
     const {
@@ -634,6 +658,10 @@ export async function POST(request: Request) {
       .single();
 
     if (orderError || !createdOrder) {
+      if (promoClaim) {
+        await releasePromoCode(promoClaim.id);
+      }
+
       if (
         orderError?.message?.includes("DELIVERY_CUTOFF_PASSED")
       ) {
@@ -663,6 +691,9 @@ export async function POST(request: Request) {
         marketing_opt_in_at: effectiveMarketingOptIn
           ? accountConsent?.marketing_opt_in_at ?? consentedNow
           : null,
+        promo_code_id: promoClaim?.id ?? null,
+        promo_code: promoClaim?.code ?? null,
+        shipping_discount: shippingDiscount,
       })
       .eq("id", orderResult.order_id);
 
@@ -673,6 +704,23 @@ export async function POST(request: Request) {
         "ERROR GUARDANDO ACEPTACIÓN LEGAL DEL PEDIDO:",
         legalRecordError
       );
+    }
+
+    if (promoClaim) {
+      const { error: redemptionError } = await supabaseAdmin
+        .from("promo_redemptions")
+        .insert({
+          promo_code_id: promoClaim.id,
+          order_id: orderResult.order_id,
+          user_id: user?.id ?? null,
+          guest_phone: phoneDigits,
+          discount_amount: shippingDiscount,
+        });
+
+      if (redemptionError) {
+        // El uso ya fue contabilizado de forma atómica al reclamar el código.
+        console.error("ERROR REGISTRANDO REDENCIÓN PROMOCIONAL:", redemptionError);
+      }
     }
 
     try {

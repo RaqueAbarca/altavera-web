@@ -33,22 +33,22 @@ export function buildOrderStatusWhatsAppMessage(input: {
 
   const messages: Record<OrderWhatsAppStatus, string[]> = {
     confirmed: [
-      `Hola ${customerName}, ya confirmamos el pago de tu pedido #${shortOrderId} de Altavera 🌿`,
+      `Hola ${customerName}, ya confirmamos el pago de tu pedido #${shortOrderId} de Altavera`,
       "Tu pedido quedó confirmado para la fecha de entrega seleccionada.",
       "Te avisaremos cuando comencemos a prepararlo.",
     ],
     preparing: [
-      `Hola ${customerName}, estamos preparando tu pedido #${shortOrderId} de Altavera 🌿`,
+      `Hola ${customerName}, estamos preparando tu pedido #${shortOrderId} de Altavera`,
       "Ya comenzamos a preparar tus productos para la fecha de entrega seleccionada.",
       "Te avisaremos cuando salga para entrega.",
     ],
     ready: [
-      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera ya va en camino 🚚`,
+      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera ya va en camino`,
       "Lo entregaremos en la ubicación que registraste al hacer tu pedido.",
       "¡Gracias por comprar con nosotros!",
     ],
     delivered: [
-      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera fue marcado como entregado 🌿`,
+      `Hola ${customerName}, tu pedido #${shortOrderId} de Altavera fue marcado como entregado`,
       "Muchas gracias por comprar con nosotros. Esperamos que disfrutés tus productos.",
       "Si necesitás ayuda con tu pedido, podés escribirnos por este mismo chat.",
     ],

@@ -41,7 +41,6 @@ export default function GuestForm() {
     usePublicAppSettings();
   const deliveryFee = settings.delivery.flatFeeCrc;
   const deliveryConfigured = settings.delivery.configured;
-  const checkoutTotal = totalPrice + (deliveryFee ?? 0);
   const SINPE_PHONE = settings.payment.sinpePhone;
   const SINPE_HOLDER = settings.payment.sinpeHolder;
   const BANK_ACCOUNTS = settings.payment.bankAccounts.filter(
@@ -60,6 +59,10 @@ export default function GuestForm() {
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
   const [copiedPaymentField, setCopiedPaymentField] = useState("");
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoMessage, setPromoMessage] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; label: string } | null>(null);
 
   const [customer, setCustomer] = useState({
     name: "",
@@ -93,6 +96,9 @@ export default function GuestForm() {
       deliveryCycles.find((cycle) => cycle.id === selectedDeliveryCycleId) ?? null,
     [deliveryCycles, selectedDeliveryCycleId]
   );
+
+  const effectiveDeliveryFee = appliedPromo ? 0 : (deliveryFee ?? 0);
+  const checkoutTotal = totalPrice + effectiveDeliveryFee;
 
   async function loadSavedAddresses(selectDefault = false) {
     try {
@@ -425,6 +431,50 @@ export default function GuestForm() {
     goToTop();
   }
 
+  async function applyPromoCode() {
+    const code = promoInput.trim().toUpperCase().replace(/\s+/g, "");
+    if (!code) {
+      setAppliedPromo(null);
+      setPromoMessage("Escribí un código promocional.");
+      return;
+    }
+
+    setPromoLoading(true);
+    setPromoMessage("");
+
+    try {
+      const response = await fetch("/api/promos/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
+        setAppliedPromo(null);
+        throw new Error(data.error ?? "Código promocional inválido o no disponible.");
+      }
+
+      setPromoInput(data.code);
+      setAppliedPromo({ code: data.code, label: data.label || "Envío gratis" });
+      setPromoMessage("Envío gratis aplicado.");
+    } catch (promoError) {
+      setPromoMessage(
+        promoError instanceof Error
+          ? promoError.message
+          : "No se pudo validar el código promocional."
+      );
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
+  function removePromoCode() {
+    setAppliedPromo(null);
+    setPromoInput("");
+    setPromoMessage("");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
@@ -481,6 +531,7 @@ export default function GuestForm() {
         customer_notes: customer.notes.trim() || null,
         delivery_cycle_id: selectedDeliveryCycleId,
         payment_method: paymentMethod,
+        promo_code: appliedPromo?.code ?? null,
         legal_accepted: requiresLegalConsent ? legalAccepted : false,
         marketing_opt_in: requiresLegalConsent ? marketingOptIn : false,
       };
@@ -492,12 +543,18 @@ export default function GuestForm() {
     } catch (error) {
       console.error("ERROR CREANDO PEDIDO:", error);
 
-      if (
-        error instanceof Error &&
-        (error as Error & { code?: string }).code === "DELIVERY_CUTOFF_PASSED"
-      ) {
-        await loadDeliveryCycles();
-        setStep(1);
+      if (error instanceof Error) {
+        const errorCode = (error as Error & { code?: string }).code;
+
+        if (errorCode === "DELIVERY_CUTOFF_PASSED") {
+          await loadDeliveryCycles();
+          setStep(1);
+        }
+
+        if (errorCode === "PROMO_INVALID") {
+          setAppliedPromo(null);
+          setPromoMessage(error.message);
+        }
       }
 
       setStepError(
@@ -572,6 +629,38 @@ export default function GuestForm() {
         })}
       </div>
 
+      <div className="checkout-promo">
+        <span className="checkout-promo__label">¿Tenés un código promocional?</span>
+        {appliedPromo ? (
+          <div className="checkout-promo__applied">
+            <div>
+              <strong>{appliedPromo.code}</strong>
+              <span>{appliedPromo.label}</span>
+            </div>
+            <button type="button" onClick={removePromoCode}>Quitar</button>
+          </div>
+        ) : (
+          <div className="checkout-promo__controls">
+            <input
+              value={promoInput}
+              onChange={(event) => {
+                setPromoInput(event.target.value.toUpperCase().replace(/\s/g, ""));
+                setPromoMessage("");
+              }}
+              placeholder="Ej. FAMILIA"
+              maxLength={40}
+              autoComplete="off"
+            />
+            <button type="button" onClick={applyPromoCode} disabled={promoLoading}>
+              {promoLoading ? "Validando..." : "Aplicar"}
+            </button>
+          </div>
+        )}
+        {promoMessage && (
+          <small className={appliedPromo ? "is-success" : "is-error"}>{promoMessage}</small>
+        )}
+      </div>
+
       <div className="checkout-summary__totals">
         <div>
           <span>Subtotal</span>
@@ -581,6 +670,12 @@ export default function GuestForm() {
           <span>Envío</span>
           <strong>{formatCRC(deliveryFee)}</strong>
         </div>
+        {appliedPromo && (
+          <div className="checkout-summary__promo-row">
+            <span>Código {appliedPromo.code}</span>
+            <strong>-{formatCRC(deliveryFee)}</strong>
+          </div>
+        )}
         <div className="checkout-summary__grand-total">
           <span>Total</span>
           <strong>{formatCRC(checkoutTotal)}</strong>

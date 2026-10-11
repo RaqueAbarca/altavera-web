@@ -18,6 +18,7 @@ import {
   Menu,
   Package,
   Settings,
+  TicketPercent,
   Truck,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const adminLinks = [
   { name: "Precios", href: "/admin/precios", icon: BadgeDollarSign },
   { name: "Productos", href: "/admin/productos", icon: Package },
   { name: "Cobertura", href: "/admin/cobertura", icon: MapPinned },
+  { name: "Códigos", href: "/admin/codigos", icon: TicketPercent },
   { name: "Configuración", href: "/admin/configuracion", icon: Settings },
 ];
 

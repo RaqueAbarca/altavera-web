@@ -15,6 +15,7 @@ export type OrderInput = {
   customer_notes: string | null;
   delivery_cycle_id: string;
   payment_method: PaymentMethod;
+  promo_code: string | null;
   legal_accepted: boolean;
   marketing_opt_in: boolean;
 };
