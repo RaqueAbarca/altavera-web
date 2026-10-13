@@ -3,11 +3,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import "./productos-admin.css";
-import { formatProductEquivalence } from "@/lib/productUnits";
+import { formatProductEquivalence, isKilogramUnit } from "@/lib/productUnits";
 import {
   calculateVariantPrice,
-  formatVariantWeightLabel,
+  formatVariantCalculationSummary,
+  formatVariantDescriptor,
   type ProductSizeVariant,
+  type VariantCalculationMode,
 } from "@/lib/productVariants";
 
 type Product = {
@@ -481,7 +483,7 @@ export default function AdminProductosPage() {
                           <span className="status-badge maturity">Con maduración</span>
                         )}
                         {product.variant_selection_enabled && (
-                          <span className="status-badge variants">Por tamaño</span>
+                          <span className="status-badge variants">Presentaciones</span>
                         )}
                       </div>
 
@@ -837,9 +839,9 @@ export default function AdminProductosPage() {
                     }
                   />
                   <span>
-                    <strong>Vender por tamaño</strong>
+                    <strong>Vender por presentación</strong>
                     <small>
-                      Para frutas completas como sandía o melón. El precio se calcula automáticamente desde el precio vigente por kg.
+                      Para tamaños, ramas, matas u otras presentaciones. Cada una puede calcularse por peso, fracción o factor del precio base.
                     </small>
                   </span>
                 </label>
@@ -851,105 +853,177 @@ export default function AdminProductosPage() {
                         ? Number(form.price)
                         : Number(editingProduct?.price ?? 0);
                       const derivedPrice = calculateVariantPrice(basePrice, variant);
-                      const weightLabel = formatVariantWeightLabel(variant);
+                      const descriptor = formatVariantDescriptor(variant);
+
+                      function updateVariant(
+                        updates: Partial<ProductSizeVariant>
+                      ) {
+                        setForm((current) => ({
+                          ...current,
+                          sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, ...updates } : item
+                          ),
+                        }));
+                      }
 
                       return (
                         <div className="products-admin-variant-row" key={variant.id}>
                           <label className="products-admin-variant-field">
-                            <span>Tamaño</span>
+                            <span>Presentación</span>
                             <input
                               type="text"
-                              placeholder="Mediana"
+                              placeholder="Ej. Rama, Mediana, Mata grande"
                               value={variant.label}
-                              onChange={(event) =>
-                                setForm((current) => ({
-                                  ...current,
-                                  sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                    itemIndex === index ? { ...item, label: event.target.value } : item
-                                  ),
-                                }))
-                              }
+                              onChange={(event) => updateVariant({ label: event.target.value })}
                             />
                           </label>
+
                           <label className="products-admin-variant-field">
-                            <span>Peso mínimo (kg)</span>
-                            <input
-                              type="number"
-                              min="0.1"
-                              step="0.1"
-                              placeholder="3"
-                              value={variant.minWeightKg ?? ""}
-                              onChange={(event) =>
-                                setForm((current) => ({
-                                  ...current,
-                                  sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, minWeightKg: event.target.value ? Number(event.target.value) : null }
-                                      : item
-                                  ),
-                                }))
-                              }
-                            />
+                            <span>Cómo calcular el precio</span>
+                            <select
+                              value={variant.calculationMode}
+                              onChange={(event) => {
+                                const calculationMode = event.target.value as VariantCalculationMode;
+                                updateVariant({
+                                  calculationMode,
+                                  calculationValue:
+                                    calculationMode === variant.calculationMode
+                                      ? variant.calculationValue
+                                      : null,
+                                  minWeightKg: calculationMode === "weight" ? variant.minWeightKg : null,
+                                  maxWeightKg: calculationMode === "weight" ? variant.maxWeightKg : null,
+                                  referenceWeightKg: calculationMode === "weight" ? variant.referenceWeightKg : null,
+                                  weightLabel: calculationMode === "weight" ? variant.weightLabel : "",
+                                });
+                              }}
+                            >
+                              <option value="weight">Por peso (kg × precio base)</option>
+                              <option value="fraction">Por fracción (precio base ÷ cantidad)</option>
+                              <option value="factor">Por factor (precio base × factor)</option>
+                            </select>
                           </label>
+
                           <label className="products-admin-variant-field">
-                            <span>Peso máximo (kg)</span>
+                            <span>Unidad que verá el cliente</span>
                             <input
-                              type="number"
-                              min="0.1"
-                              step="0.1"
-                              placeholder="5"
-                              value={variant.maxWeightKg ?? ""}
-                              onChange={(event) =>
-                                setForm((current) => ({
-                                  ...current,
-                                  sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, maxWeightKg: event.target.value ? Number(event.target.value) : null }
-                                      : item
-                                  ),
-                                }))
-                              }
+                              type="text"
+                              placeholder="und, rama, mata..."
+                              value={variant.unitLabel}
+                              onChange={(event) => updateVariant({ unitLabel: event.target.value })}
                             />
                           </label>
-                          <label className="products-admin-variant-field">
-                            <span>Peso para calcular precio (kg)</span>
-                            <input
-                              type="number"
-                              min="0.1"
-                              step="0.1"
-                              placeholder="4"
-                              value={variant.referenceWeightKg ?? ""}
-                              onChange={(event) =>
-                                setForm((current) => ({
-                                  ...current,
-                                  sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, referenceWeightKg: event.target.value ? Number(event.target.value) : null }
-                                      : item
-                                  ),
-                                }))
-                              }
-                            />
-                          </label>
+
+                          {variant.calculationMode === "weight" && (
+                            <div className="products-admin-variant-dynamic-fields products-admin-variant-dynamic-fields--weight">
+                              <label className="products-admin-variant-field">
+                                <span>Peso mínimo (kg)</span>
+                                <input
+                                  type="number"
+                                  min="0.1"
+                                  step="0.1"
+                                  placeholder="3"
+                                  value={variant.minWeightKg ?? ""}
+                                  onChange={(event) =>
+                                    updateVariant({
+                                      minWeightKg: event.target.value ? Number(event.target.value) : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label className="products-admin-variant-field">
+                                <span>Peso máximo (kg)</span>
+                                <input
+                                  type="number"
+                                  min="0.1"
+                                  step="0.1"
+                                  placeholder="5"
+                                  value={variant.maxWeightKg ?? ""}
+                                  onChange={(event) =>
+                                    updateVariant({
+                                      maxWeightKg: event.target.value ? Number(event.target.value) : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label className="products-admin-variant-field">
+                                <span>Peso para calcular precio (kg)</span>
+                                <input
+                                  type="number"
+                                  min="0.1"
+                                  step="0.1"
+                                  placeholder="4"
+                                  value={variant.referenceWeightKg ?? ""}
+                                  onChange={(event) =>
+                                    updateVariant({
+                                      referenceWeightKg: event.target.value ? Number(event.target.value) : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                            </div>
+                          )}
+
+                          {variant.calculationMode === "fraction" && (
+                            <div className="products-admin-variant-dynamic-fields">
+                              <label className="products-admin-variant-field">
+                                <span>Dividir el precio base entre</span>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  placeholder="13"
+                                  value={variant.calculationValue ?? ""}
+                                  onChange={(event) =>
+                                    updateVariant({
+                                      calculationValue: event.target.value ? Number(event.target.value) : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <div className="products-admin-variant-example">
+                                Ejemplo: si una mata trae 13 ramas, poné 13.
+                              </div>
+                            </div>
+                          )}
+
+                          {variant.calculationMode === "factor" && (
+                            <div className="products-admin-variant-dynamic-fields">
+                              <label className="products-admin-variant-field">
+                                <span>Multiplicar el precio base por</span>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  placeholder="1.2"
+                                  value={variant.calculationValue ?? ""}
+                                  onChange={(event) =>
+                                    updateVariant({
+                                      calculationValue: event.target.value ? Number(event.target.value) : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <div className="products-admin-variant-example">
+                                Ejemplo: 0,8 para una presentación menor o 1,2 para una mayor.
+                              </div>
+                            </div>
+                          )}
+
                           <div className="products-admin-variant-footer">
                             <div className="products-admin-variant-derived-price">
                               <span>Precio calculado</span>
                               <strong>{derivedPrice !== null ? formatPrice(derivedPrice) : "—"}</strong>
-                              <small>{weightLabel || "Completa el rango"}</small>
+                              <small>
+                                {formatVariantCalculationSummary(variant)}
+                                {descriptor ? ` · ${descriptor}` : ""}
+                              </small>
                             </div>
                             <div className="products-admin-variant-actions">
                               <label className="products-admin-variant-active">
                                 <input
                                   type="checkbox"
                                   checked={variant.active}
-                                  onChange={(event) =>
-                                    setForm((current) => ({
-                                      ...current,
-                                      sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                        itemIndex === index ? { ...item, active: event.target.checked } : item
-                                      ),
-                                    }))
-                                  }
+                                  onChange={(event) => updateVariant({ active: event.target.checked })}
                                 />
                                 Activo
                               </label>
@@ -970,8 +1044,9 @@ export default function AdminProductosPage() {
                         </div>
                       );
                     })}
+
                     <small className="products-admin-variant-help">
-                      “Kg para precio” es el peso de referencia que se multiplica por el precio vigente por kg. Cuando publiques un nuevo precio del producto, los tamaños se actualizan automáticamente.
+                      El precio base sigue administrándose desde Admin → Precios. Las presentaciones se recalculan automáticamente cuando ese precio cambia.
                     </small>
                     <button
                       type="button"
@@ -982,12 +1057,15 @@ export default function AdminProductosPage() {
                           sizeVariants: [
                             ...current.sizeVariants,
                             {
-                              id: `size-${Date.now()}-${current.sizeVariants.length}`,
+                              id: `presentation-${Date.now()}-${current.sizeVariants.length}`,
                               label: "",
+                              calculationMode: isKilogramUnit(form.unit) ? "weight" : "factor",
+                              calculationValue: null,
                               minWeightKg: null,
                               maxWeightKg: null,
                               referenceWeightKg: null,
                               weightLabel: "",
+                              unitLabel: "und",
                               price: null,
                               active: true,
                             },
@@ -995,7 +1073,7 @@ export default function AdminProductosPage() {
                         }))
                       }
                     >
-                      + Agregar tamaño
+                      + Agregar presentación
                     </button>
                   </div>
                 )}

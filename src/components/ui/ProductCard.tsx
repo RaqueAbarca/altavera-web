@@ -14,7 +14,10 @@ import {
 } from "@/lib/productUnits";
 import {
   calculateVariantPrice,
-  formatVariantWeightLabel,
+  formatVariantDescriptor,
+  getVariantPriceUnitLabel,
+  getVariantQuantityUnit,
+  getVariantSelectorLabel,
   type ProductSizeVariant,
 } from "@/lib/productVariants";
 
@@ -103,9 +106,16 @@ export default function ProductCard({
   const singleVariantPrice = singleVariant
     ? calculateVariantPrice(price, singleVariant)
     : null;
-  const singleVariantWeightLabel = singleVariant
-    ? formatVariantWeightLabel(singleVariant)
+  const singleVariantDescriptor = singleVariant
+    ? formatVariantDescriptor(singleVariant)
     : "";
+  const singleVariantPriceUnit = getVariantPriceUnitLabel(singleVariant);
+  const selectorLabel = getVariantSelectorLabel(activeVariants);
+  const activePriceUnits = activeVariants.map((variant) => getVariantPriceUnitLabel(variant));
+  const commonVariantPriceUnit =
+    activePriceUnits.length > 0 && activePriceUnits.every((value) => value === activePriceUnits[0])
+      ? activePriceUnits[0]
+      : null;
 
   const equivalence = hasVariants
     ? null
@@ -177,20 +187,25 @@ export default function ProductCard({
 
         <p className="price">
           {hasSingleVariant && singleVariantPrice !== null ? (
-            <>₡{singleVariantPrice.toLocaleString("es-CR")}<span> / unidad</span></>
+            <>₡{singleVariantPrice.toLocaleString("es-CR")}<span> / {singleVariantPriceUnit}</span></>
           ) : hasMultipleVariants && minimumVariantPrice !== null ? (
-            <>Desde ₡{minimumVariantPrice.toLocaleString("es-CR")}<span> / unidad</span></>
+            <>
+              Desde ₡{minimumVariantPrice.toLocaleString("es-CR")}
+              {commonVariantPriceUnit ? <span> / {commonVariantPriceUnit}</span> : null}
+            </>
           ) : (
             <>₡{price.toLocaleString("es-CR")}<span> / {unit}</span></>
           )}
         </p>
 
         {hasMultipleVariants && !selecting && quantity === 0 && (
-          <p className="product-equivalence">Elegí el tamaño antes de agregar.</p>
+          <p className="product-equivalence">
+            Elegí {selectorLabel === "Tamaño" ? "el tamaño" : "la presentación"} antes de agregar.
+          </p>
         )}
 
-        {hasSingleVariant && singleVariantWeightLabel && !selecting && (
-          <p className="product-equivalence">{singleVariantWeightLabel} aprox. por unidad</p>
+        {hasSingleVariant && singleVariantDescriptor && !selecting && (
+          <p className="product-equivalence">{singleVariantDescriptor}</p>
         )}
 
         {equivalence && <p className="product-equivalence">{equivalence}</p>}
@@ -207,27 +222,27 @@ export default function ProductCard({
           <>
             {hasMultipleVariants && (
               <label className="product-variant-picker">
-                <span>Tamaño</span>
+                <span>{selectorLabel}</span>
                 <select
                   value={tempVariantId ?? ""}
                   onChange={(event) => setTempVariantId(event.target.value || null)}
                 >
                   {activeVariants.map((variant) => {
                     const variantPrice = calculateVariantPrice(price, variant);
-                    const weightLabel = formatVariantWeightLabel(variant);
+                    const descriptor = formatVariantDescriptor(variant);
 
                     return (
                       <option key={variant.id} value={variant.id}>
-                        {variant.label}{weightLabel ? ` · ${weightLabel}` : ""}{variantPrice !== null ? ` · ₡${variantPrice.toLocaleString("es-CR")}` : ""}
+                        {variant.label}{descriptor ? ` · ${descriptor}` : ""}{variantPrice !== null ? ` · ₡${variantPrice.toLocaleString("es-CR")}` : ""}
                       </option>
                     );
                   })}
                 </select>
                 {tempVariant && (
                   <small>
-                    {formatVariantWeightLabel(tempVariant) || "Venta por unidad"}
+                    {formatVariantDescriptor(tempVariant) || `Venta por ${getVariantPriceUnitLabel(tempVariant)}`}
                     {calculateVariantPrice(price, tempVariant) !== null
-                      ? ` · ₡${calculateVariantPrice(price, tempVariant)!.toLocaleString("es-CR")} por unidad`
+                      ? ` · ₡${calculateVariantPrice(price, tempVariant)!.toLocaleString("es-CR")} por ${getVariantPriceUnitLabel(tempVariant)}`
                       : ""}
                   </small>
                 )}
@@ -237,16 +252,16 @@ export default function ProductCard({
 
             {hasSingleVariant && tempVariant && (
               <p className="product-equivalence">
-                {formatVariantWeightLabel(tempVariant) || "Venta por unidad"}
+                {formatVariantDescriptor(tempVariant) || `Venta por ${getVariantPriceUnitLabel(tempVariant)}`}
                 {calculateVariantPrice(price, tempVariant) !== null
-                  ? ` · ₡${calculateVariantPrice(price, tempVariant)!.toLocaleString("es-CR")} por unidad`
+                  ? ` · ₡${calculateVariantPrice(price, tempVariant)!.toLocaleString("es-CR")} por ${getVariantPriceUnitLabel(tempVariant)}`
                   : ""}
               </p>
             )}
 
             <div className="quantity-controls">
               <button className="qty-btn" onClick={decreaseTemp}>−</button>
-              <span className="qty">{tempQuantity} {hasVariants ? "und" : unit}</span>
+              <span className="qty">{tempQuantity} {hasVariants ? getVariantQuantityUnit(tempVariant) : unit}</span>
               <button className="qty-btn" onClick={increaseTemp}>+</button>
             </div>
 
@@ -276,13 +291,13 @@ export default function ProductCard({
 
         {quantity > 0 && !selecting && (
           <>
-            <p className="added-message">✓ En carrito: {quantity} {hasVariants ? "und" : unit}</p>
+            <p className="added-message">✓ En carrito: {quantity} {hasVariants ? getVariantQuantityUnit(selectedVariant) : unit}</p>
 
             {hasVariants && selectedVariant && (
               <p className="selected-variant-note">
                 {hasSingleVariant
-                  ? (formatVariantWeightLabel(selectedVariant) || "Venta por unidad")
-                  : `${selectedVariant.label}${formatVariantWeightLabel(selectedVariant) ? ` · ${formatVariantWeightLabel(selectedVariant)}` : ""}`}
+                  ? (formatVariantDescriptor(selectedVariant) || `Venta por ${getVariantPriceUnitLabel(selectedVariant)}`)
+                  : `${selectedVariant.label}${formatVariantDescriptor(selectedVariant) ? ` · ${formatVariantDescriptor(selectedVariant)}` : ""}`}
               </p>
             )}
 

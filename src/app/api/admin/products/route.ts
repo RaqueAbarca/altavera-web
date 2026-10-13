@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   getAutomaticVariantValidationError,
+  hasWeightBasedVariants,
   normalizeProductSizeVariants,
 } from "@/lib/productVariants";
 import { isKilogramUnit } from "@/lib/productUnits";
@@ -214,14 +215,18 @@ export async function POST(request: Request) {
 
     if (variantSelectionEnabled && activeVariants.length === 0) {
       return NextResponse.json(
-        { error: "Agrega al menos un tamaño activo antes de habilitar la venta por tamaño" },
+        { error: "Agrega al menos una presentación activa antes de habilitar la venta por presentación" },
         { status: 400 }
       );
     }
 
-    if (variantSelectionEnabled && !isKilogramUnit(unit)) {
+    if (
+      variantSelectionEnabled &&
+      hasWeightBasedVariants(activeVariants) &&
+      !isKilogramUnit(unit)
+    ) {
       return NextResponse.json(
-        { error: "La venta por tamaño calcula el precio desde el valor por kg. La unidad base debe ser Kg." },
+        { error: "Las presentaciones calculadas por peso necesitan que la unidad base del producto sea Kg." },
         { status: 400 }
       );
     }

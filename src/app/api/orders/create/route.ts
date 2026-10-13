@@ -22,6 +22,7 @@ import {
   calculateVariantPrice,
   findProductSizeVariant,
   formatVariantSnapshotName,
+  getVariantQuantityUnit,
   normalizeProductSizeVariants,
 } from "@/lib/productVariants";
 import {
@@ -568,10 +569,10 @@ export async function POST(request: Request) {
         : null;
 
       if (product.variant_selection_enabled && (!selectedVariant || selectedVariant.active === false)) {
-        throw new Error(`Selecciona un tamaño disponible para ${product.name}`);
+        throw new Error(`Selecciona una presentación disponible para ${product.name}`);
       }
 
-      const effectiveUnit = selectedVariant ? "und" : product.unit;
+      const effectiveUnit = selectedVariant ? getVariantQuantityUnit(selectedVariant) : product.unit;
 
       if (!isValidProductQuantity(item.quantity, effectiveUnit)) {
         throw new Error(`Cantidad inválida para ${product.name}`);

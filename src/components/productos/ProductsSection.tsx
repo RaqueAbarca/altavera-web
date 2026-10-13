@@ -13,7 +13,8 @@ import { SEASONAL_CATEGORY } from "./productFilters";
 import type { MaturityPreference } from "@/lib/maturity";
 import {
   calculateVariantPrice,
-  formatVariantWeightLabel,
+  formatVariantDescriptor,
+  getVariantQuantityUnit,
   type ProductSizeVariant,
 } from "@/lib/productVariants";
 
@@ -178,7 +179,7 @@ export default function ProductsSection({
                   description: product.description,
                   category: product.category,
                   price: variant ? calculateVariantPrice(product.price, variant) ?? product.price : product.price,
-                  unit: variant ? "und" : product.unit,
+                  unit: variant ? getVariantQuantityUnit(variant) : product.unit,
                   image: product.image_url,
                   quantity,
                   maturity_selection_enabled:
@@ -188,7 +189,7 @@ export default function ProductsSection({
                   size_variants: product.size_variants ?? [],
                   variant_id: variant?.id ?? null,
                   variant_label: variant?.label ?? null,
-                  variant_weight_label: variant ? formatVariantWeightLabel(variant) || null : null,
+                  variant_weight_label: variant ? formatVariantDescriptor(variant) || null : null,
                 });
               }}
               onIncrease={() =>
