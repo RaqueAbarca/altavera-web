@@ -14,7 +14,7 @@ import {
 } from "@/lib/legalConsent";
 import { isPaymentMethod } from "@/lib/paymentMethods";
 import { isValidProductQuantity } from "@/lib/productUnits";
-import { getDeliveryFeeForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
+import { getDeliveryQuoteForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
 import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
 import { claimPromoCode, normalizePromoCode, releasePromoCode } from "@/lib/promoCodes.server";
 import {
@@ -600,9 +600,8 @@ export async function POST(request: Request) {
       )
     );
 
-    const baseShipping = roundMoney(
-      await getDeliveryFeeForOrder({ latitude, longitude })
-    );
+    const deliveryQuote = await getDeliveryQuoteForOrder({ latitude, longitude });
+    const baseShipping = roundMoney(deliveryQuote.shippingCrc);
 
     let promoClaim: Awaited<ReturnType<typeof claimPromoCode>> = null;
     let shippingDiscount = 0;
@@ -693,7 +692,10 @@ export async function POST(request: Request) {
           : null,
         promo_code_id: promoClaim?.id ?? null,
         promo_code: promoClaim?.code ?? null,
+        shipping_base: baseShipping,
         shipping_discount: shippingDiscount,
+        shipping_cost_estimated: deliveryQuote.estimatedCostCrc,
+        shipping_calculation: deliveryQuote.snapshot,
       })
       .eq("id", orderResult.order_id);
 

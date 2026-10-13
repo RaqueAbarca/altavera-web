@@ -1,4 +1,5 @@
 export type DeliveryFeeMode = "flat" | "distance";
+export type FuelType = "super" | "regular" | "diesel";
 
 export type DeliveryScheduleRule = {
   deliveryWeekday: number;
@@ -28,6 +29,67 @@ export const EMPTY_BANK_ACCOUNT: BankAccountSettings = {
   accountHolder: "",
   accountNumber: "",
   iban: "",
+};
+
+export type FuelPriceSettings = Record<FuelType, number | null>;
+
+export type DeliveryVehicleSettings = {
+  id: string;
+  name: string;
+  fuelType: FuelType;
+  consumptionLPer100Km: number | null;
+  maintenanceCrcPerKm: number | null;
+  active: boolean;
+};
+
+export type DeliveryDistanceSettings = {
+  originLatitude: number | null;
+  originLongitude: number | null;
+  fuelPricesCrcPerLiter: FuelPriceSettings;
+  laborRateCrcPerHour: number | null;
+  roadDistanceFactor: number | null;
+  averageSpeedKmh: number | null;
+  stopMinutes: number | null;
+  marginPercent: number;
+  roundingCrc: number;
+  vehicles: DeliveryVehicleSettings[];
+};
+
+export const EMPTY_DELIVERY_DISTANCE_SETTINGS: DeliveryDistanceSettings = {
+  originLatitude: null,
+  originLongitude: null,
+  fuelPricesCrcPerLiter: {
+    super: 764,
+    regular: null,
+    diesel: null,
+  },
+  laborRateCrcPerHour: 1400,
+  roadDistanceFactor: null,
+  averageSpeedKmh: null,
+  stopMinutes: null,
+  marginPercent: 0,
+  roundingCrc: 100,
+  vehicles: [
+    {
+      id: "jeep",
+      name: "Jeep",
+      fuelType: "super",
+      consumptionLPer100Km: 13.4,
+      maintenanceCrcPerKm: null,
+      active: true,
+    },
+  ],
+};
+
+export type DeliveryQuote = {
+  mode: DeliveryFeeMode;
+  shippingCrc: number;
+  estimatedCostCrc: number | null;
+  oneWayDistanceKm: number | null;
+  roundTripDistanceKm: number | null;
+  estimatedMinutes: number | null;
+  calculationMethod: "flat" | "estimated_distance";
+  snapshot: Record<string, unknown>;
 };
 
 export type PublicAppSettings = {
@@ -65,7 +127,9 @@ export const EMPTY_PUBLIC_APP_SETTINGS: PublicAppSettings = {
 };
 
 export type AdminAppSettings = {
+  deliveryMode: DeliveryFeeMode;
   deliveryFlatFeeCrc: number | null;
+  deliveryDistance: DeliveryDistanceSettings;
   deliverySchedule: DeliveryScheduleRule[];
   deliveryScheduleConfigured: boolean;
   sinpePhone: string;

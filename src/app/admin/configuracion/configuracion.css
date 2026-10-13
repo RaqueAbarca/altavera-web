@@ -494,3 +494,273 @@
     align-items: stretch;
   }
 }
+
+/* Organización por pestañas */
+.admin-settings-page {
+  max-width: 1120px;
+}
+
+.settings-main-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px;
+  margin-bottom: 18px;
+  background: #eee9e0;
+  border-radius: 14px;
+}
+
+.settings-main-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #5f625f;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.settings-main-tab:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.settings-main-tab.active {
+  background: #fff;
+  color: #1f402a;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.06);
+}
+
+.settings-tab-content,
+.settings-tab-stack {
+  width: 100%;
+}
+
+.settings-tab-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-tab-stack .admin-business-card,
+.settings-tab-stack .admin-sound-card {
+  margin: 0;
+}
+
+.shipping-mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.shipping-mode-option {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border: 1px solid #dce4dd;
+  border-radius: 14px;
+  background: #fff;
+  color: #536157;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.shipping-mode-option strong {
+  color: #26352b;
+  font-size: 0.95rem;
+}
+
+.shipping-mode-option span {
+  color: #6f7a72;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.shipping-mode-option.is-active {
+  border-color: #6aa777;
+  background: #f0f7f1;
+  box-shadow: 0 0 0 2px rgba(67, 123, 78, 0.08);
+}
+
+.settings-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.settings-section-heading h3 {
+  margin-bottom: 4px;
+}
+
+.settings-section-heading p {
+  margin: 0;
+  color: #6f7a72;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.delivery-vehicles {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.delivery-vehicle-card {
+  padding: 16px;
+  border: 1px solid #e1e8e2;
+  border-radius: 14px;
+  background: #fafcf9;
+}
+
+.delivery-vehicle-card.is-active {
+  border-color: #9cc7a6;
+  background: #f4faf5;
+}
+
+.delivery-vehicle-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.delivery-vehicle-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #2e4935;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.delivery-vehicle-active input {
+  accent-color: var(--green);
+}
+
+.delivery-vehicle-delete {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #ead6d0;
+  border-radius: 10px;
+  background: #fff;
+  color: #9a4935;
+  cursor: pointer;
+}
+
+.delivery-vehicle-fields {
+  margin-top: 14px;
+}
+
+.settings-cost-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-unit-input {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #ccd7cf;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.admin-unit-input:focus-within {
+  border-color: #6aa777;
+  box-shadow: 0 0 0 3px rgba(67, 123, 78, 0.11);
+}
+
+.admin-unit-input input {
+  border: 0;
+  box-shadow: none;
+}
+
+.admin-unit-input input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.admin-unit-input > span {
+  padding: 0 12px;
+  color: #667268;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.delivery-cost-preview {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid #dfe8e1;
+  border-radius: 13px;
+  background: #f7faf7;
+}
+
+.delivery-cost-preview__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #e8f3ea;
+  color: var(--green);
+}
+
+.delivery-cost-preview span {
+  display: block;
+  color: #748077;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.delivery-cost-preview strong {
+  display: block;
+  margin-top: 2px;
+  color: #26352b;
+}
+
+.delivery-cost-preview p {
+  margin: 4px 0 0;
+  color: #647067;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .settings-main-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .settings-main-tab {
+    justify-content: flex-start;
+  }
+
+  .shipping-mode-options,
+  .settings-cost-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-section-heading {
+    flex-direction: column;
+  }
+
+  .settings-section-heading .admin-setting-button {
+    width: 100%;
+  }
+}

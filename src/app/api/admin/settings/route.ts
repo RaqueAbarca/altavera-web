@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { syncDeliveryCycles } from "@/lib/deliveryCycles.server";
-import type { DeliveryScheduleRule } from "@/lib/appSettings";
+import type {
+  DeliveryDistanceSettings,
+  DeliveryFeeMode,
+  DeliveryScheduleRule,
+  DeliveryVehicleSettings,
+  FuelPriceSettings,
+  FuelType,
+} from "@/lib/appSettings";
 import {
   APP_SETTINGS_ID,
   getAdminAppSettings,
   getRawAppSettings,
+  isDistanceDeliveryConfigured,
 } from "@/lib/appSettings.server";
 
 export const runtime = "nodejs";
@@ -16,20 +24,50 @@ function text(value: unknown, maxLength = 180) {
   return value.trim().slice(0, maxLength);
 }
 
-function parseFee(value: unknown) {
-  if (value === null || value === "") return null;
+function hasOwn(object: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function parseNullableNumber(
+  value: unknown,
+  label: string,
+  options: { min?: number; max?: number; positive?: boolean } = {}
+) {
+  if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1_000_000) {
-    throw new Error("La tarifa de envío debe ser un monto válido entre ₡0 y ₡1.000.000.");
+  if (!Number.isFinite(parsed)) throw new Error(`${label} debe ser un número válido.`);
+  if (options.positive && parsed <= 0) throw new Error(`${label} debe ser mayor que 0.`);
+  if (options.min !== undefined && parsed < options.min) {
+    throw new Error(`${label} debe ser mayor o igual a ${options.min}.`);
   }
-  return Math.round(parsed);
+  if (options.max !== undefined && parsed > options.max) {
+    throw new Error(`${label} debe ser menor o igual a ${options.max}.`);
+  }
+  return parsed;
+}
+
+function parseFee(value: unknown) {
+  const parsed = parseNullableNumber(value, "La tarifa de envío", { min: 0, max: 1_000_000 });
+  return parsed === null ? null : Math.round(parsed);
+}
+
+function parseMode(value: unknown): DeliveryFeeMode {
+  if (value === "flat" || value === "distance") return value;
+  throw new Error("El modo de cálculo de envío no es válido.");
+}
+
+function parseFuelType(value: unknown): FuelType {
+  if (value === "super" || value === "regular" || value === "diesel") return value;
+  throw new Error("El tipo de combustible del vehículo no es válido.");
 }
 
 function parseBankAccounts(value: unknown) {
   if (!Array.isArray(value)) return [];
 
   return value.slice(0, 2).map((account) => {
-    const source = account && typeof account === "object" ? account as Record<string, unknown> : {};
+    const source = account && typeof account === "object"
+      ? account as Record<string, unknown>
+      : {};
     return {
       bank_name: text(source.bankName),
       account_holder: text(source.accountHolder),
@@ -37,11 +75,6 @@ function parseBankAccounts(value: unknown) {
       iban: text(source.iban, 80),
     };
   });
-}
-
-
-function hasOwn(object: Record<string, unknown>, key: string) {
-  return Object.prototype.hasOwnProperty.call(object, key);
 }
 
 function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
@@ -71,9 +104,7 @@ function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
       cutoffWeekday > 6 ||
       !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(cutoffTime)
     ) {
-      throw new Error(
-        "Revisa el día y la hora de corte de cada día de entrega."
-      );
+      throw new Error("Revisa el día y la hora de corte de cada día de entrega.");
     }
 
     if (seen.has(deliveryWeekday)) {
@@ -93,6 +124,98 @@ function serializeDeliverySchedule(schedule: DeliveryScheduleRule[]) {
     cutoff_weekday: rule.cutoffWeekday,
     cutoff_time: rule.cutoffTime,
   }));
+}
+
+function parseFuelPrices(value: unknown): FuelPriceSettings {
+  const source = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+
+  return {
+    super: parseNullableNumber(source.super, "El precio de gasolina Súper", { min: 0, max: 100_000 }),
+    regular: parseNullableNumber(source.regular, "El precio de gasolina Regular", { min: 0, max: 100_000 }),
+    diesel: parseNullableNumber(source.diesel, "El precio de diésel", { min: 0, max: 100_000 }),
+  };
+}
+
+function parseVehicles(value: unknown): DeliveryVehicleSettings[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Agrega al menos un vehículo para el cálculo de entregas.");
+  }
+
+  const vehicles = value.slice(0, 8).map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error("Hay un vehículo inválido en la configuración.");
+    }
+    const source = item as Record<string, unknown>;
+    const name = text(source.name, 80);
+    if (!name) throw new Error(`Escribe el nombre del vehículo ${index + 1}.`);
+
+    return {
+      id: text(source.id, 80) || `vehicle-${index + 1}`,
+      name,
+      fuelType: parseFuelType(source.fuelType),
+      consumptionLPer100Km: parseNullableNumber(
+        source.consumptionLPer100Km,
+        `El consumo de ${name}`,
+        { positive: true, max: 100 }
+      ),
+      maintenanceCrcPerKm: parseNullableNumber(
+        source.maintenanceCrcPerKm,
+        `El mantenimiento por km de ${name}`,
+        { min: 0, max: 1_000_000 }
+      ),
+      active: Boolean(source.active),
+    } satisfies DeliveryVehicleSettings;
+  });
+
+  const activeIndex = vehicles.findIndex((vehicle) => vehicle.active);
+  return vehicles.map((vehicle, index) => ({
+    ...vehicle,
+    active: index === (activeIndex >= 0 ? activeIndex : 0),
+  }));
+}
+
+function parseDistanceSettings(value: unknown): DeliveryDistanceSettings {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("La configuración de costos de entrega no es válida.");
+  }
+
+  const source = value as Record<string, unknown>;
+  return {
+    originLatitude: parseNullableNumber(source.originLatitude, "La latitud del punto de salida", { min: -90, max: 90 }),
+    originLongitude: parseNullableNumber(source.originLongitude, "La longitud del punto de salida", { min: -180, max: 180 }),
+    fuelPricesCrcPerLiter: parseFuelPrices(source.fuelPricesCrcPerLiter),
+    laborRateCrcPerHour: parseNullableNumber(source.laborRateCrcPerHour, "El pago por hora", { min: 0, max: 1_000_000 }),
+    roadDistanceFactor: parseNullableNumber(source.roadDistanceFactor, "El factor de distancia por carretera", { min: 1, max: 5 }),
+    averageSpeedKmh: parseNullableNumber(source.averageSpeedKmh, "La velocidad promedio", { positive: true, max: 200 }),
+    stopMinutes: parseNullableNumber(source.stopMinutes, "Los minutos por parada", { min: 0, max: 240 }),
+    marginPercent: parseNullableNumber(source.marginPercent, "El margen del envío", { min: 0, max: 500 }) ?? 0,
+    roundingCrc: parseNullableNumber(source.roundingCrc, "El redondeo del envío", { positive: true, max: 100_000 }) ?? 100,
+    vehicles: parseVehicles(source.vehicles),
+  };
+}
+
+function serializeDistanceSettings(settings: DeliveryDistanceSettings) {
+  return {
+    origin_latitude: settings.originLatitude,
+    origin_longitude: settings.originLongitude,
+    fuel_prices_crc_per_liter: settings.fuelPricesCrcPerLiter,
+    labor_rate_crc_per_hour: settings.laborRateCrcPerHour,
+    road_distance_factor: settings.roadDistanceFactor,
+    average_speed_kmh: settings.averageSpeedKmh,
+    stop_minutes: settings.stopMinutes,
+    margin_percent: settings.marginPercent,
+    rounding_crc: settings.roundingCrc,
+    vehicles: settings.vehicles.map((vehicle) => ({
+      id: vehicle.id,
+      name: vehicle.name,
+      fuel_type: vehicle.fuelType,
+      consumption_l_per_100km: vehicle.consumptionLPer100Km,
+      maintenance_crc_per_km: vehicle.maintenanceCrcPerKm,
+      active: vehicle.active,
+    })),
+  };
 }
 
 export async function GET() {
@@ -131,9 +254,36 @@ export async function PUT(request: Request) {
     const nextContact = { ...currentContact };
     let deliveryScheduleChanged = false;
 
+    if (hasOwn(body, "deliveryMode")) {
+      nextDelivery.mode = parseMode(body.deliveryMode);
+    }
+
     if (hasOwn(body, "deliveryFlatFeeCrc")) {
-      nextDelivery.mode = "flat";
       nextDelivery.flat_fee_crc = parseFee(body.deliveryFlatFeeCrc);
+    }
+
+    if (hasOwn(body, "deliveryDistance")) {
+      const distanceSettings = parseDistanceSettings(body.deliveryDistance);
+      nextDelivery.distance_pricing = serializeDistanceSettings(distanceSettings);
+
+      const requestedMode = hasOwn(body, "deliveryMode")
+        ? parseMode(body.deliveryMode)
+        : (nextDelivery.mode === "distance" ? "distance" : "flat");
+
+      if (requestedMode === "distance" && !isDistanceDeliveryConfigured(distanceSettings)) {
+        throw new Error(
+          "Para activar el envío calculado completa el punto de salida, combustible del vehículo activo, consumo, mantenimiento por km, pago por hora, factor de carretera, velocidad promedio y minutos por parada."
+        );
+      }
+    }
+
+    const deliveryPricingTouched =
+      hasOwn(body, "deliveryMode") ||
+      hasOwn(body, "deliveryFlatFeeCrc") ||
+      hasOwn(body, "deliveryDistance");
+
+    if (deliveryPricingTouched && nextDelivery.mode === "flat" && nextDelivery.flat_fee_crc == null) {
+      throw new Error("Define una tarifa fija antes de guardar el modo de tarifa fija.");
     }
 
     if (hasOwn(body, "deliverySchedule")) {
@@ -160,8 +310,6 @@ export async function PUT(request: Request) {
       };
 
       nextPayment.bank_accounts = bankAccounts;
-      // Conservamos también la primera cuenta en las claves antiguas para
-      // mantener compatibilidad con cualquier despliegue previo.
       nextPayment.bank_name = firstBankAccount.bank_name;
       nextPayment.bank_account_holder = firstBankAccount.account_holder;
       nextPayment.bank_account_number = firstBankAccount.account_number;
@@ -200,10 +348,7 @@ export async function PUT(request: Request) {
     console.error("ERROR GUARDANDO CONFIGURACIÓN ADMIN:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "No se pudo guardar la configuración",
+        error: error instanceof Error ? error.message : "No se pudo guardar la configuración",
       },
       { status: 400 }
     );

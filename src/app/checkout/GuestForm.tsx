@@ -44,8 +44,10 @@ export default function GuestForm() {
   const router = useRouter();
   const { settings, loading: settingsLoading, error: settingsError } =
     usePublicAppSettings();
-  const deliveryFee = settings.delivery.flatFeeCrc;
   const deliveryConfigured = settings.delivery.configured;
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
+  const [deliveryQuoteError, setDeliveryQuoteError] = useState("");
   const SINPE_PHONE = settings.payment.sinpePhone;
   const SINPE_HOLDER = settings.payment.sinpeHolder;
   const BANK_ACCOUNTS = settings.payment.bankAccounts.filter(
@@ -93,6 +95,7 @@ export default function GuestForm() {
   const [savingAddress, setSavingAddress] = useState(false);
   const [addressFeedback, setAddressFeedback] = useState("");
   const savedAddressCheckIdRef = useRef(0);
+  const deliveryQuoteRequestIdRef = useRef(0);
   const checkoutTopRef = useRef<HTMLFormElement>(null);
   const checkoutStepMountedRef = useRef(false);
 
@@ -101,6 +104,15 @@ export default function GuestForm() {
       deliveryCycles.find((cycle) => cycle.id === selectedDeliveryCycleId) ?? null,
     [deliveryCycles, selectedDeliveryCycleId]
   );
+
+  useEffect(() => {
+    if (settings.delivery.mode === "flat") {
+      setDeliveryFee(settings.delivery.flatFeeCrc);
+      setDeliveryQuoteError("");
+    } else {
+      setDeliveryFee(null);
+    }
+  }, [settings.delivery.mode, settings.delivery.flatFeeCrc]);
 
   const effectiveDeliveryFee = appliedPromo ? 0 : (deliveryFee ?? 0);
   const checkoutTotal = totalPrice + effectiveDeliveryFee;
@@ -272,6 +284,42 @@ export default function GuestForm() {
     if (stepError) setStepError("");
   }
 
+  async function requestDeliveryQuote(lat: number, lng: number) {
+    if (!deliveryConfigured) {
+      setDeliveryFee(null);
+      return;
+    }
+
+    if (settings.delivery.mode === "flat") {
+      setDeliveryFee(settings.delivery.flatFeeCrc);
+      setDeliveryQuoteError("");
+      return;
+    }
+
+    const requestId = ++deliveryQuoteRequestIdRef.current;
+    setDeliveryQuoteLoading(true);
+    setDeliveryQuoteError("");
+
+    try {
+      const response = await fetch("/api/delivery/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "No se pudo calcular el envío");
+      if (requestId !== deliveryQuoteRequestIdRef.current) return;
+      setDeliveryFee(Number(data.shipping));
+      setDeliveryQuoteError("");
+    } catch (error) {
+      if (requestId !== deliveryQuoteRequestIdRef.current) return;
+      setDeliveryFee(null);
+      setDeliveryQuoteError(error instanceof Error ? error.message : "No se pudo calcular el envío");
+    } finally {
+      if (requestId === deliveryQuoteRequestIdRef.current) setDeliveryQuoteLoading(false);
+    }
+  }
+
   async function validateSavedAddress(address: SavedAddress) {
     const requestId = ++savedAddressCheckIdRef.current;
     setDeliveryAvailability(null);
@@ -295,11 +343,17 @@ export default function GuestForm() {
 
       if (requestId !== savedAddressCheckIdRef.current) return;
 
-      setDeliveryAvailability({
+      const nextAvailability = {
         available: Boolean(data.available),
-        status: data.available ? "covered" : "outside",
+        status: data.available ? "covered" as const : "outside" as const,
         zone: data.available && typeof data.zone === "string" ? data.zone : null,
-      });
+      };
+      setDeliveryAvailability(nextAvailability);
+      if (nextAvailability.available) {
+        void requestDeliveryQuote(Number(address.latitude), Number(address.longitude));
+      } else {
+        setDeliveryFee(settings.delivery.mode === "flat" ? settings.delivery.flatFeeCrc : null);
+      }
     } catch (error) {
       if (requestId !== savedAddressCheckIdRef.current) return;
 
@@ -308,6 +362,7 @@ export default function GuestForm() {
         status: "outside",
         zone: null,
       });
+      setDeliveryFee(settings.delivery.mode === "flat" ? settings.delivery.flatFeeCrc : null);
       setSavedAddressValidationError(
         error instanceof Error
           ? error.message
@@ -346,6 +401,8 @@ export default function GuestForm() {
     setSavedAddressValidationError("");
     setLocation({ lat: 0, lng: 0 });
     setDeliveryAvailability(null);
+    setDeliveryFee(settings.delivery.mode === "flat" ? settings.delivery.flatFeeCrc : null);
+    setDeliveryQuoteError("");
     setCustomer((current) => ({ ...current, address: "" }));
     setAddressFeedback("");
     setStepError("");
@@ -454,6 +511,8 @@ export default function GuestForm() {
     }
 
     if (!deliveryAvailability?.available) return DELIVERY_UNAVAILABLE_MESSAGE;
+    if (deliveryQuoteLoading) return "Estamos calculando el costo de envío para esta ubicación.";
+    if (deliveryFee === null) return deliveryQuoteError || "No pudimos calcular el costo de envío. Vuelve a marcar tu ubicación.";
 
     return "";
   }
@@ -624,7 +683,7 @@ export default function GuestForm() {
     return <div className="checkout-loading">Preparando tu compra...</div>;
   }
 
-  if (settingsError || !deliveryConfigured || deliveryFee === null) {
+  if (settingsError || !deliveryConfigured) {
     return (
       <div className="checkout-empty">
         <h1>El checkout está temporalmente pausado</h1>
@@ -722,17 +781,17 @@ export default function GuestForm() {
         </div>
         <div>
           <span>Envío</span>
-          <strong>{formatCRC(deliveryFee)}</strong>
+          <strong>{deliveryQuoteLoading ? "Calculando..." : deliveryFee === null ? "Según ubicación" : formatCRC(deliveryFee)}</strong>
         </div>
         {appliedPromo && (
           <div className="checkout-summary__promo-row">
             <span>Código {appliedPromo.code}</span>
-            <strong>-{formatCRC(deliveryFee)}</strong>
+            <strong>{deliveryFee === null ? "Envío gratis" : `-${formatCRC(deliveryFee)}`}</strong>
           </div>
         )}
         <div className="checkout-summary__grand-total">
           <span>Total</span>
-          <strong>{formatCRC(checkoutTotal)}</strong>
+          <strong>{deliveryFee === null && !appliedPromo ? "—" : formatCRC(checkoutTotal)}</strong>
         </div>
       </div>
 
@@ -759,7 +818,7 @@ export default function GuestForm() {
         <details>
           <summary>
             <span>Ver resumen</span>
-            <strong>{formatCRC(checkoutTotal)}</strong>
+            <strong>{deliveryFee === null && !appliedPromo ? "—" : formatCRC(checkoutTotal)}</strong>
           </summary>
           {summary}
         </details>
@@ -977,6 +1036,14 @@ export default function GuestForm() {
                     onChange={(lat, lng, availability) => {
                       setLocation({ lat, lng });
                       setDeliveryAvailability(availability);
+                      if (availability?.available) {
+                        void requestDeliveryQuote(lat, lng);
+                      } else {
+                        deliveryQuoteRequestIdRef.current += 1;
+                        setDeliveryQuoteLoading(false);
+                        setDeliveryFee(settings.delivery.mode === "flat" ? settings.delivery.flatFeeCrc : null);
+                        setDeliveryQuoteError("");
+                      }
 
                       if (selectedSavedAddressId) {
                         const selectedAddress = savedAddresses.find(
