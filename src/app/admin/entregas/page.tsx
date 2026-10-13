@@ -47,12 +47,21 @@ type DeliveryCycle = {
   cutoff_at: string;
   status: "open" | "closed";
   closed_at: string | null;
+  window_start_time: string | null;
+  window_end_time: string | null;
   orders: DeliveryOrder[];
 };
 
 type AdminResponse = {
   cycles: DeliveryCycle[];
   error?: string;
+};
+
+type RoutePlanStop = {
+  orderId: string;
+  arrivalMinutesFromStart: number;
+  estimatedArrivalIso: string;
+  estimatedArrivalLabel: string;
 };
 
 type RoutePlan = {
@@ -62,6 +71,13 @@ type RoutePlan = {
   serviceMinutesPerStop: number;
   orderedOrderIds: string[];
   unassignedOrderIds: string[];
+  stops: RoutePlanStop[];
+  deliveryWindowLabel: string;
+  routeStartIso: string;
+  routeStartLabel: string;
+  routeEndIso: string;
+  routeEndLabel: string;
+  exceedsDeliveryWindow: boolean;
   distanceKm: number;
   drivingMinutes: number;
   serviceMinutes: number;
@@ -326,20 +342,10 @@ export default function AdminDeliveriesPage() {
     setWorkingOrderId(order.id);
 
     const shouldOpenWhatsApp = status === "ready" || status === "delivered";
-    const whatsappUrl = shouldOpenWhatsApp
-      ? buildWhatsAppUrl({
-          phone: order.guest_phone,
-          message: buildOrderStatusWhatsAppMessage({
-            customerName: order.guest_name,
-            orderId: order.id,
-            status: status as "ready" | "delivered",
-          }),
-        })
-      : null;
 
     // Abrimos una pestaña vacía durante el click para evitar que el navegador
-    // bloquee WhatsApp por ocurrir después de una operación asíncrona.
-    const whatsappWindow = whatsappUrl
+    // bloquee WhatsApp mientras el servidor calcula la hora estimada.
+    const whatsappWindow = shouldOpenWhatsApp
       ? window.open("about:blank", "_blank")
       : null;
 
@@ -369,10 +375,26 @@ export default function AdminDeliveriesPage() {
       // Para los cambios operativos de entrega también abrimos WhatsApp con el
       // mensaje listo para que el admin lo envíe manualmente.
       if (shouldOpenWhatsApp) {
+        const whatsappUrl = buildWhatsAppUrl({
+          phone: order.guest_phone,
+          message: buildOrderStatusWhatsAppMessage({
+            customerName: order.guest_name,
+            orderId: order.id,
+            status: status as "ready" | "delivered",
+            deliveryWindowLabel: data.deliveryWindowLabel ?? routePlan?.deliveryWindowLabel ?? null,
+            estimatedArrivalLabel:
+              data.estimatedArrivalLabel ??
+              routePlan?.stops.find((stop) => stop.orderId === order.id)?.estimatedArrivalLabel ??
+              null,
+            reviewUrl: data.reviewUrl ?? null,
+          }),
+        });
+
         if (whatsappUrl && whatsappWindow) {
           whatsappWindow.opener = null;
           whatsappWindow.location.href = whatsappUrl;
         } else if (!whatsappUrl) {
+          whatsappWindow?.close();
           alert(
             "El estado del pedido cambió, pero no tiene un teléfono válido para abrir WhatsApp."
           );
@@ -542,6 +564,8 @@ export default function AdminDeliveriesPage() {
                     </button>
                   </div>
                   <div className="delivery-route-summary__metrics">
+                    <div><span>Inicio estimado</span><strong>{routePlan.routeStartLabel}</strong></div>
+                    <div><span>Horario general</span><strong>{routePlan.deliveryWindowLabel}</strong></div>
                     <div><span>Distancia total</span><strong>{routePlan.distanceKm.toLocaleString("es-CR", { maximumFractionDigits: 1 })} km</strong></div>
                     <div><span>Conducción</span><strong>{formatRouteMinutes(routePlan.drivingMinutes)}</strong></div>
                     <div><span>Tiempo en paradas</span><strong>{formatRouteMinutes(routePlan.serviceMinutes)}</strong></div>
@@ -550,6 +574,11 @@ export default function AdminDeliveriesPage() {
                   {routePlan.unassignedOrderIds.length > 0 && (
                     <p className="delivery-route-summary__warning">
                       {routePlan.unassignedOrderIds.length} pedido{routePlan.unassignedOrderIds.length === 1 ? "" : "s"} no pudo asignarse a la ruta.
+                    </p>
+                  )}
+                  {routePlan.exceedsDeliveryWindow && (
+                    <p className="delivery-route-summary__warning">
+                      Con esta cantidad de pedidos, la ruta terminaría aproximadamente a las {routePlan.routeEndLabel}, después del horario general de {routePlan.deliveryWindowLabel}.
                     </p>
                   )}
                   <p className="delivery-route-summary__note">
@@ -641,6 +670,12 @@ export default function AdminDeliveriesPage() {
                                 {statusLabel(order.status)}
                               </span>
                             </div>
+
+                            {routePlan?.stops.find((stop) => stop.orderId === order.id)?.estimatedArrivalLabel && (
+                              <div className="delivery-stop-eta">
+                                Llegada estimada: <strong>{routePlan.stops.find((stop) => stop.orderId === order.id)?.estimatedArrivalLabel}</strong>
+                              </div>
+                            )}
 
                             <div className="delivery-stop-details">
                               <div>

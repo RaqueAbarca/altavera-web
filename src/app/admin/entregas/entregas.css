@@ -701,3 +701,20 @@
     flex-direction: column;
   }
 }
+
+.delivery-stop-eta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin: 8px 0 2px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #eef5ef;
+  color: #49614f;
+  font-size: 0.82rem;
+}
+
+.delivery-stop-eta strong {
+  color: #21472d;
+}

@@ -5,6 +5,7 @@ import {
   formatCountdown,
   formatCutoffLabel,
   formatDeliveryDate,
+  formatDeliveryWindow,
   getRemainingMilliseconds,
   isUnder24Hours,
   type DeliveryCycleSummary,
@@ -59,6 +60,10 @@ export default function DeliveryNotice() {
 
   const deliveryLabel = formatDeliveryDate(cycle.delivery_date);
   const urgent = isUnder24Hours(cycle.cutoff_at, now);
+  const deliveryWindow = formatDeliveryWindow(
+    cycle.window_start_time,
+    cycle.window_end_time
+  );
 
   return (
     <div className={`delivery-notice ${urgent ? "delivery-notice--urgent" : ""}`}>
@@ -67,11 +72,13 @@ export default function DeliveryNotice() {
           <>
             <strong>Recibí tu pedido este {deliveryLabel.split(",")[0]}</strong>
             <span>Pedí en {formatCountdown(remaining)}</span>
+            <span>Entrega: {deliveryWindow}</span>
             <span>Cierre: {formatCutoffLabel(cycle.cutoff_at)}</span>
           </>
         ) : (
           <>
             <strong>Próxima entrega: {deliveryLabel}</strong>
+            <span>Entrega: {deliveryWindow}</span>
             <span>Pedidos hasta {formatCutoffLabel(cycle.cutoff_at)}</span>
           </>
         )}

@@ -77,6 +77,11 @@ function parseBankAccounts(value: unknown) {
   });
 }
 
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error("Selecciona al menos un día de entrega.");
@@ -94,6 +99,9 @@ function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
     const deliveryWeekday = Number(source.deliveryWeekday);
     const cutoffWeekday = Number(source.cutoffWeekday);
     const cutoffTime = text(source.cutoffTime, 5);
+    const windowStartTime = text(source.windowStartTime, 5) || "12:00";
+    const windowEndTime = text(source.windowEndTime, 5) || "16:00";
+    const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
     if (
       !Number.isInteger(deliveryWeekday) ||
@@ -102,9 +110,15 @@ function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
       !Number.isInteger(cutoffWeekday) ||
       cutoffWeekday < 0 ||
       cutoffWeekday > 6 ||
-      !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(cutoffTime)
+      !timePattern.test(cutoffTime) ||
+      !timePattern.test(windowStartTime) ||
+      !timePattern.test(windowEndTime)
     ) {
-      throw new Error("Revisa el día y la hora de corte de cada día de entrega.");
+      throw new Error("Revisa el día, la hora de corte y el horario de entrega.");
+    }
+
+    if (timeToMinutes(windowStartTime) >= timeToMinutes(windowEndTime)) {
+      throw new Error("La hora final de entrega debe ser posterior a la hora inicial.");
     }
 
     if (seen.has(deliveryWeekday)) {
@@ -112,7 +126,13 @@ function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
     }
 
     seen.add(deliveryWeekday);
-    schedule.push({ deliveryWeekday, cutoffWeekday, cutoffTime });
+    schedule.push({
+      deliveryWeekday,
+      cutoffWeekday,
+      cutoffTime,
+      windowStartTime,
+      windowEndTime,
+    });
   }
 
   return schedule;
@@ -123,6 +143,8 @@ function serializeDeliverySchedule(schedule: DeliveryScheduleRule[]) {
     delivery_weekday: rule.deliveryWeekday,
     cutoff_weekday: rule.cutoffWeekday,
     cutoff_time: rule.cutoffTime,
+    window_start_time: rule.windowStartTime,
+    window_end_time: rule.windowEndTime,
   }));
 }
 

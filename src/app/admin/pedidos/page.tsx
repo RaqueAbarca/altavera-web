@@ -18,6 +18,7 @@ import {
   formatCutoffLabel,
   formatDeliveryDate,
   formatDeliveryDateShort,
+  formatDeliveryWindow,
   getCostaRicaDateKey,
 } from "@/lib/deliverySchedule";
 import "../admin.css";
@@ -71,6 +72,8 @@ type DeliveryCycle = {
   cutoff_at: string;
   status: "open" | "closed";
   closed_at: string | null;
+  window_start_time: string | null;
+  window_end_time: string | null;
   orders: Order[];
   shoppingList: {
     id: string;
@@ -155,13 +158,17 @@ function contactCustomerUrl(order: Order) {
   });
 }
 
-function paymentInstructionsUrl(order: Order, deliveryDate: string) {
+function paymentInstructionsUrl(order: Order, cycle: DeliveryCycle) {
   return buildWhatsAppUrl({
     phone: order.guest_phone,
     message: buildOrderPaymentInstructionsMessage({
       customerName: order.guest_name,
       orderId: order.id,
-      deliveryDate: formatDeliveryDate(deliveryDate),
+      deliveryDate: formatDeliveryDate(cycle.delivery_date),
+      deliveryWindowLabel: formatDeliveryWindow(
+        cycle.window_start_time,
+        cycle.window_end_time
+      ),
       total: formatMoney(order.total),
       paymentMethod: getPaymentMethodLabel(order.payment_method),
     }),
@@ -321,20 +328,10 @@ export default function AdminOrdersPage() {
       "cancelled",
     ]);
     const shouldOpenWhatsApp = whatsappStatuses.has(status);
-    const whatsappUrl = shouldOpenWhatsApp
-      ? buildWhatsAppUrl({
-          phone: order.guest_phone,
-          message: buildOrderStatusWhatsAppMessage({
-            customerName: order.guest_name,
-            orderId: order.id,
-            status: status as "confirmed" | "preparing" | "ready" | "delivered" | "cancelled",
-          }),
-        })
-      : null;
 
     // Abrimos una pestaña vacía durante el click para evitar que el navegador
-    // bloquee WhatsApp por ocurrir después de una operación asíncrona.
-    const whatsappWindow = whatsappUrl
+    // bloquee WhatsApp mientras el servidor calcula la hora estimada.
+    const whatsappWindow = shouldOpenWhatsApp
       ? window.open("about:blank", "_blank")
       : null;
 
@@ -368,10 +365,23 @@ export default function AdminOrdersPage() {
       // Además abrimos WhatsApp con el mensaje correspondiente para que el admin
       // lo revise y lo envíe manualmente.
       if (shouldOpenWhatsApp) {
+        const whatsappUrl = buildWhatsAppUrl({
+          phone: order.guest_phone,
+          message: buildOrderStatusWhatsAppMessage({
+            customerName: order.guest_name,
+            orderId: order.id,
+            status: status as "confirmed" | "preparing" | "ready" | "delivered" | "cancelled",
+            deliveryWindowLabel: data.deliveryWindowLabel ?? null,
+            estimatedArrivalLabel: data.estimatedArrivalLabel ?? null,
+            reviewUrl: data.reviewUrl ?? null,
+          }),
+        });
+
         if (whatsappUrl && whatsappWindow) {
           whatsappWindow.opener = null;
           whatsappWindow.location.href = whatsappUrl;
         } else if (!whatsappUrl) {
+          whatsappWindow?.close();
           alert(
             "El estado del pedido cambió, pero no tiene un teléfono válido para abrir WhatsApp."
           );
@@ -558,7 +568,7 @@ export default function AdminOrdersPage() {
                       const action = nextAction(order);
                       const isPaymentPending = belongsToTab(order.status, "pending");
                       const contactUrl = isPaymentPending
-                        ? paymentInstructionsUrl(order, selectedCycle.delivery_date)
+                        ? paymentInstructionsUrl(order, selectedCycle)
                         : contactCustomerUrl(order);
                       const calculatedSubtotal = order.order_item.reduce(
                         (sum, item) => sum + itemSubtotal(item),

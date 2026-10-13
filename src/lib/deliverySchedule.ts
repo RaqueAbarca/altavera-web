@@ -1,3 +1,5 @@
+import type { DeliveryScheduleRule } from "@/lib/appSettings";
+
 export const DELIVERY_TIMEZONE = "America/Costa_Rica";
 
 export type DeliveryCycleSummary = {
@@ -5,6 +7,8 @@ export type DeliveryCycleSummary = {
   delivery_date: string;
   cutoff_at: string;
   status: "open" | "closed";
+  window_start_time?: string | null;
+  window_end_time?: string | null;
 };
 
 function deliveryDateToDate(deliveryDate: string) {
@@ -48,6 +52,70 @@ export function formatCutoffLabel(cutoffAt: string) {
   }).format(cutoff);
 
   return `${day} · ${time}`;
+}
+
+export function formatClockTime(value: string | null | undefined) {
+  const match = String(value ?? "").match(/^(\d{2}):(\d{2})$/);
+  if (!match) return "";
+  const date = new Date(`2000-01-01T${match[1]}:${match[2]}:00-06:00`);
+  return new Intl.DateTimeFormat("es-CR", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: DELIVERY_TIMEZONE,
+  }).format(date);
+}
+
+export function formatDeliveryWindow(
+  startTime: string | null | undefined,
+  endTime: string | null | undefined
+) {
+  const start = formatClockTime(startTime);
+  const end = formatClockTime(endTime);
+  if (!start || !end) return "";
+  return `${start} – ${end}`;
+}
+
+export function getDeliveryWeekday(deliveryDate: string) {
+  return deliveryDateToDate(deliveryDate).getUTCDay();
+}
+
+export function getDeliveryWindowRule(
+  schedule: DeliveryScheduleRule[],
+  deliveryDate: string
+) {
+  const weekday = getDeliveryWeekday(deliveryDate);
+  return schedule.find((rule) => rule.deliveryWeekday === weekday) ?? null;
+}
+
+export function getDeliveryWindowLabel(
+  schedule: DeliveryScheduleRule[],
+  deliveryDate: string
+) {
+  const rule = getDeliveryWindowRule(schedule, deliveryDate);
+  if (!rule) return "";
+  return formatDeliveryWindow(rule.windowStartTime, rule.windowEndTime);
+}
+
+export function getDeliveryRouteStart(
+  deliveryDate: string,
+  windowStartTime: string,
+  now = new Date()
+) {
+  const scheduled = new Date(`${deliveryDate}T${windowStartTime}:00-06:00`);
+  if (!Number.isFinite(scheduled.getTime())) return now;
+  return new Date(Math.max(scheduled.getTime(), now.getTime()));
+}
+
+export function formatEstimatedArrival(value: Date | string) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat("es-CR", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: DELIVERY_TIMEZONE,
+  }).format(date);
 }
 
 export function getRemainingMilliseconds(

@@ -5,6 +5,8 @@ export type DeliveryScheduleRule = {
   deliveryWeekday: number;
   cutoffWeekday: number;
   cutoffTime: string;
+  windowStartTime: string;
+  windowEndTime: string;
 };
 
 export const DELIVERY_WEEKDAYS = [

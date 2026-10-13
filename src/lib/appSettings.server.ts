@@ -70,8 +70,13 @@ function isWeekday(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 6;
 }
 
-function isCutoffTime(value: unknown): value is string {
+function isClockTime(value: unknown): value is string {
   return typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
 }
 
 export function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
@@ -86,18 +91,33 @@ export function parseDeliverySchedule(value: unknown): DeliveryScheduleRule[] {
     const deliveryWeekday = Number(source.delivery_weekday ?? source.deliveryWeekday);
     const cutoffWeekday = Number(source.cutoff_weekday ?? source.cutoffWeekday);
     const cutoffTime = cleanString(source.cutoff_time ?? source.cutoffTime);
+    const windowStartTime = cleanString(
+      source.window_start_time ?? source.windowStartTime
+    ) || "12:00";
+    const windowEndTime = cleanString(
+      source.window_end_time ?? source.windowEndTime
+    ) || "16:00";
 
     if (
       !isWeekday(deliveryWeekday) ||
       !isWeekday(cutoffWeekday) ||
-      !isCutoffTime(cutoffTime) ||
+      !isClockTime(cutoffTime) ||
+      !isClockTime(windowStartTime) ||
+      !isClockTime(windowEndTime) ||
+      timeToMinutes(windowStartTime) >= timeToMinutes(windowEndTime) ||
       seen.has(deliveryWeekday)
     ) {
       continue;
     }
 
     seen.add(deliveryWeekday);
-    schedule.push({ deliveryWeekday, cutoffWeekday, cutoffTime });
+    schedule.push({
+      deliveryWeekday,
+      cutoffWeekday,
+      cutoffTime,
+      windowStartTime,
+      windowEndTime,
+    });
   }
 
   return schedule;

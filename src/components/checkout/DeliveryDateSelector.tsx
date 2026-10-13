@@ -5,6 +5,7 @@ import {
   formatCountdown,
   formatCutoffLabel,
   formatDeliveryDate,
+  formatDeliveryWindow,
   getRemainingMilliseconds,
   isUnder24Hours,
   type DeliveryCycleSummary,
@@ -104,6 +105,10 @@ export default function DeliveryDateSelector({
                     Cierre de pedidos: {formatCutoffLabel(cycle.cutoff_at)}
                   </span>
                 )}
+
+                <span className="delivery-date-cutoff">
+                  Entregas entre {formatDeliveryWindow(cycle.window_start_time, cycle.window_end_time)}
+                </span>
               </span>
             </label>
           );
@@ -112,7 +117,7 @@ export default function DeliveryDateSelector({
 
       {selectedCycle && (
         <p className="delivery-date-confirmation">
-          Tu pedido quedará programado para {formatDeliveryDate(selectedCycle.delivery_date)}.
+          Tu pedido quedará programado para {formatDeliveryDate(selectedCycle.delivery_date)}, entre {formatDeliveryWindow(selectedCycle.window_start_time, selectedCycle.window_end_time)}.
         </p>
       )}
     </section>

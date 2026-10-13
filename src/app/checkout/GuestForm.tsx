@@ -27,6 +27,7 @@ import {
 } from "@/lib/deliveryCoverage";
 import {
   formatDeliveryDate,
+  formatDeliveryWindow,
   type DeliveryCycleSummary,
 } from "@/lib/deliverySchedule";
 import { getMaturityLabel } from "@/lib/maturity";
@@ -799,6 +800,7 @@ export default function GuestForm() {
         <div className="checkout-summary__delivery">
           <span>Entrega seleccionada</span>
           <strong>{formatDeliveryDate(selectedCycle.delivery_date)}</strong>
+          <small>{formatDeliveryWindow(selectedCycle.window_start_time, selectedCycle.window_end_time)}</small>
         </div>
       )}
     </aside>

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { getPublicAppSettings } from "@/lib/appSettings.server";
+import { getOrderDeliveryTiming } from "@/lib/deliveryTiming.server";
 import {
   isOrderStatusEmailStatus,
   sendOrderStatusEmail,
 } from "@/lib/orderStatusEmail.server";
+import { ALTAVERA_REVIEW_URL } from "@/lib/whatsapp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -50,6 +52,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         guest_name,
         guest_email,
         order_access_token,
+        delivery_cycle_id,
         delivery_cycles(
           delivery_date
         )
@@ -95,6 +98,14 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    const deliveryDate = getDeliveryDate(order.delivery_cycles);
+    const timing = await getOrderDeliveryTiming({
+      orderId: order.id,
+      deliveryCycleId: String(order.delivery_cycle_id ?? "").trim() || null,
+      deliveryDate,
+      includeEstimatedArrival: status === "ready",
+    });
+
     let email:
       | { status: "sent"; id: string | null }
       | { status: "skipped"; reason: string }
@@ -107,10 +118,13 @@ export async function PATCH(request: Request, context: RouteContext) {
         customerName: order.guest_name,
         orderId: order.id,
         accessToken: String(order.order_access_token ?? ""),
-        deliveryDate: getDeliveryDate(order.delivery_cycles),
+        deliveryDate,
         status,
         contactEmail: settings.contact.email,
         requestOrigin: new URL(request.url).origin,
+        deliveryWindowLabel: timing.deliveryWindowLabel,
+        estimatedArrivalLabel: timing.estimatedArrivalLabel,
+        reviewUrl: status === "delivered" ? ALTAVERA_REVIEW_URL : null,
       });
     } catch (emailError) {
       const reason =
@@ -126,6 +140,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       ok: true,
       status,
       email,
+      deliveryWindowLabel: timing.deliveryWindowLabel,
+      estimatedArrivalLabel: timing.estimatedArrivalLabel,
+      estimatedArrivalIso: timing.estimatedArrivalIso,
+      reviewUrl: status === "delivered" ? ALTAVERA_REVIEW_URL : null,
     });
   } catch (error) {
     console.error("ERROR ACTUALIZANDO ESTADO DEL PEDIDO:", error);

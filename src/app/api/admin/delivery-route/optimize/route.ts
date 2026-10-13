@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { getAdminAppSettings } from "@/lib/appSettings.server";
 import {
+  formatDeliveryWindow,
+  formatEstimatedArrival,
+  getDeliveryRouteStart,
+  getDeliveryWindowRule,
+} from "@/lib/deliverySchedule";
+import {
   isOpenRouteServiceConfigured,
   optimizeOpenRouteServiceDeliveries,
 } from "@/lib/routing/openRouteService.server";
@@ -53,12 +59,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("orders")
-      .select("id,status,latitude,longitude")
-      .eq("delivery_cycle_id", cycleId);
+    const [{ data: cycle, error: cycleError }, { data, error }] = await Promise.all([
+      supabaseAdmin
+        .from("delivery_cycles")
+        .select("id,delivery_date")
+        .eq("id", cycleId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("orders")
+        .select("id,status,latitude,longitude")
+        .eq("delivery_cycle_id", cycleId),
+    ]);
 
+    if (cycleError) throw cycleError;
     if (error) throw error;
+    if (!cycle) {
+      return NextResponse.json({ error: "Ciclo de entrega no encontrado." }, { status: 404 });
+    }
 
     const stops = (data ?? []).flatMap((order) => {
       if (!ELIGIBLE_STATUSES.has(String(order.status))) return [];
@@ -87,6 +104,41 @@ export async function POST(request: Request) {
       serviceMinutesPerStop,
     });
 
+    const rule = getDeliveryWindowRule(
+      settings.deliverySchedule,
+      cycle.delivery_date
+    );
+    const windowStartTime = rule?.windowStartTime ?? "12:00";
+    const windowEndTime = rule?.windowEndTime ?? "16:00";
+    const deliveryWindowLabel = formatDeliveryWindow(
+      windowStartTime,
+      windowEndTime
+    );
+    const routeStart = getDeliveryRouteStart(
+      cycle.delivery_date,
+      windowStartTime,
+      new Date()
+    );
+
+    const routeStops = plan.stops.map((stop) => {
+      const estimatedArrival = new Date(
+        routeStart.getTime() + stop.arrivalMinutesFromStart * 60_000
+      );
+      return {
+        orderId: stop.orderId,
+        arrivalMinutesFromStart: round2(stop.arrivalMinutesFromStart),
+        estimatedArrivalIso: estimatedArrival.toISOString(),
+        estimatedArrivalLabel: formatEstimatedArrival(estimatedArrival),
+      };
+    });
+    const routeEnd = new Date(routeStart.getTime() + plan.totalMinutes * 60_000);
+    const promisedWindowEnd = new Date(
+      `${cycle.delivery_date}T${windowEndTime}:00-06:00`
+    );
+    const exceedsDeliveryWindow =
+      Number.isFinite(promisedWindowEnd.getTime()) &&
+      routeEnd.getTime() > promisedWindowEnd.getTime();
+
     return NextResponse.json(
       {
         provider: "openrouteservice",
@@ -95,6 +147,13 @@ export async function POST(request: Request) {
         serviceMinutesPerStop,
         orderedOrderIds: plan.orderedOrderIds,
         unassignedOrderIds: plan.unassignedOrderIds,
+        stops: routeStops,
+        deliveryWindowLabel,
+        routeStartIso: routeStart.toISOString(),
+        routeStartLabel: formatEstimatedArrival(routeStart),
+        routeEndIso: routeEnd.toISOString(),
+        routeEndLabel: formatEstimatedArrival(routeEnd),
+        exceedsDeliveryWindow,
         distanceKm: round2(plan.distanceKm),
         drivingMinutes: round2(plan.drivingMinutes),
         serviceMinutes: round2(plan.serviceMinutes),

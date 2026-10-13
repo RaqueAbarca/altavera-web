@@ -19,9 +19,15 @@ export type OptimizationStop = RoutingPoint & {
   orderId: string;
 };
 
+export type OptimizedDeliveryStop = {
+  orderId: string;
+  arrivalMinutesFromStart: number;
+};
+
 export type OptimizedDeliveryRoute = {
   orderedOrderIds: string[];
   unassignedOrderIds: string[];
+  stops: OptimizedDeliveryStop[];
   distanceKm: number;
   drivingMinutes: number;
   serviceMinutes: number;
@@ -49,7 +55,12 @@ type VroomResponse = {
     distance?: number;
     duration?: number;
     service?: number;
-    steps?: Array<{ type?: string; id?: number }>;
+    steps?: Array<{
+      type?: string;
+      id?: number;
+      arrival?: number;
+      duration?: number;
+    }>;
   }>;
   unassigned?: Array<{ id?: number }>;
 };
@@ -177,6 +188,7 @@ export async function optimizeOpenRouteServiceDeliveries(input: {
     return {
       orderedOrderIds: [],
       unassignedOrderIds: [],
+      stops: [],
       distanceKm: 0,
       drivingMinutes: 0,
       serviceMinutes: 0,
@@ -224,10 +236,26 @@ export async function optimizeOpenRouteServiceDeliveries(input: {
     throw new Error("OpenRouteService no devolvió una ruta optimizada.");
   }
 
-  const orderedOrderIds = (route.steps ?? [])
-    .filter((step) => step.type === "job" && typeof step.id === "number")
+  const jobSteps = (route.steps ?? []).filter(
+    (step) => step.type === "job" && typeof step.id === "number"
+  );
+
+  const orderedOrderIds = jobSteps
     .map((step) => idToOrderId.get(step.id!))
     .filter((value): value is string => Boolean(value));
+
+  const stops = jobSteps.flatMap((step) => {
+    const orderId = idToOrderId.get(step.id!);
+    if (!orderId) return [];
+
+    const arrivalSeconds = Number(step.arrival ?? step.duration ?? 0);
+    return [{
+      orderId,
+      arrivalMinutesFromStart: Number.isFinite(arrivalSeconds)
+        ? Math.max(0, arrivalSeconds / 60)
+        : 0,
+    }];
+  });
 
   const unassignedOrderIds = (data.unassigned ?? [])
     .map((item) => (typeof item.id === "number" ? idToOrderId.get(item.id) : undefined))
@@ -240,6 +268,7 @@ export async function optimizeOpenRouteServiceDeliveries(input: {
   return {
     orderedOrderIds,
     unassignedOrderIds,
+    stops,
     distanceKm: Number.isFinite(distanceMeters) ? distanceMeters / 1000 : 0,
     drivingMinutes: Number.isFinite(drivingSeconds) ? drivingSeconds / 60 : 0,
     serviceMinutes: Number.isFinite(serviceSeconds) ? serviceSeconds / 60 : 0,

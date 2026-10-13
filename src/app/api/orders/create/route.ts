@@ -14,8 +14,9 @@ import {
 } from "@/lib/legalConsent";
 import { isPaymentMethod } from "@/lib/paymentMethods";
 import { isValidProductQuantity } from "@/lib/productUnits";
-import { getDeliveryQuoteForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
+import { getAdminAppSettings, getDeliveryQuoteForOrder, getPublicAppSettings } from "@/lib/appSettings.server";
 import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
+import { getDeliveryWindowLabel } from "@/lib/deliverySchedule";
 import { claimPromoCode, normalizePromoCode, releasePromoCode } from "@/lib/promoCodes.server";
 import {
   consumeRateLimit,
@@ -738,13 +739,21 @@ export async function POST(request: Request) {
 
     if (orderEmail) {
       try {
-        const emailSettings = await getPublicAppSettings();
+        const [emailSettings, adminSettings] = await Promise.all([
+          getPublicAppSettings(),
+          getAdminAppSettings(),
+        ]);
+        const deliveryWindowLabel = getDeliveryWindowLabel(
+          adminSettings.deliverySchedule,
+          deliveryCycle.delivery_date
+        );
         const emailResult = await sendOrderConfirmationEmail({
           to: orderEmail,
           customerName: guestName,
           orderId: orderResult.order_id,
           accessToken: orderResult.access_token,
           deliveryDate: deliveryCycle.delivery_date,
+          deliveryWindowLabel,
           subtotal: Number(orderResult.order_subtotal),
           shipping: Number(orderResult.order_shipping),
           total: Number(orderResult.order_total),

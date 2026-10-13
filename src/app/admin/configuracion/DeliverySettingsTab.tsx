@@ -26,6 +26,8 @@ const SATURDAY_DELIVERY_DRAFT: DeliveryScheduleRule = {
   deliveryWeekday: 6,
   cutoffWeekday: 5,
   cutoffTime: "",
+  windowStartTime: "12:00",
+  windowEndTime: "16:00",
 };
 
 function cloneDistanceDefaults(): DeliveryDistanceSettings {
@@ -239,7 +241,13 @@ export default function DeliverySettingsTab() {
         ? current.deliverySchedule.filter((rule) => rule.deliveryWeekday !== deliveryWeekday)
         : [
             ...current.deliverySchedule,
-            { deliveryWeekday, cutoffWeekday: (deliveryWeekday + 6) % 7, cutoffTime: "" },
+            {
+              deliveryWeekday,
+              cutoffWeekday: (deliveryWeekday + 6) % 7,
+              cutoffTime: "",
+              windowStartTime: "12:00",
+              windowEndTime: "16:00",
+            },
           ];
       return { ...current, deliverySchedule };
     });
@@ -248,7 +256,7 @@ export default function DeliverySettingsTab() {
 
   function updateDeliveryRule(
     deliveryWeekday: number,
-    changes: Partial<Pick<DeliveryScheduleRule, "cutoffWeekday" | "cutoffTime">>
+    changes: Partial<Pick<DeliveryScheduleRule, "cutoffWeekday" | "cutoffTime" | "windowStartTime" | "windowEndTime">>
   ) {
     setSettings((current) => ({
       ...current,
@@ -322,7 +330,7 @@ export default function DeliverySettingsTab() {
         <div className="admin-setting-content">
           <span className="admin-setting-kicker">Calendario</span>
           <h2>Días de entrega y corte</h2>
-          <p>Elegí uno o varios días de entrega. Cada día puede tener su propio día y hora de corte.</p>
+          <p>Elegí uno o varios días de entrega. Cada día puede tener su propio corte y una ventana general de entrega para mostrar al cliente.</p>
 
           {!settings.deliveryScheduleConfigured && (
             <div className="admin-setting-note">
@@ -379,6 +387,24 @@ export default function DeliverySettingsTab() {
                       type="time"
                       value={rule.cutoffTime}
                       onChange={(event) => updateDeliveryRule(rule.deliveryWeekday, { cutoffTime: event.target.value })}
+                      disabled={loading}
+                    />
+                  </label>
+                  <label className="admin-business-field">
+                    <span>Entregas desde</span>
+                    <input
+                      type="time"
+                      value={rule.windowStartTime}
+                      onChange={(event) => updateDeliveryRule(rule.deliveryWeekday, { windowStartTime: event.target.value })}
+                      disabled={loading}
+                    />
+                  </label>
+                  <label className="admin-business-field">
+                    <span>Entregas hasta</span>
+                    <input
+                      type="time"
+                      value={rule.windowEndTime}
+                      onChange={(event) => updateDeliveryRule(rule.deliveryWeekday, { windowEndTime: event.target.value })}
                       disabled={loading}
                     />
                   </label>

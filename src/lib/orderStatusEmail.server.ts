@@ -16,6 +16,9 @@ type SendOrderStatusEmailInput = {
   status: OrderStatusEmailStatus;
   contactEmail?: string | null;
   requestOrigin: string;
+  deliveryWindowLabel?: string | null;
+  estimatedArrivalLabel?: string | null;
+  reviewUrl?: string | null;
 };
 
 type ResendResponse = {
@@ -62,7 +65,7 @@ const STATUS_COPY: Record<OrderStatusEmailStatus, StatusCopy> = {
     eyebrow: "En camino",
     title: "Tu pedido va en camino",
     description:
-      "Tu pedido ya salió para entrega. Puedes consultar su estado desde el enlace de seguimiento.",
+      "Tu pedido ya salió para entrega. La hora estimada puede variar un poco según el tránsito y las entregas anteriores.",
     subject: (shortOrderId) =>
       `Tu pedido #${shortOrderId} va en camino | Altavera`,
     preheader: (shortOrderId) =>
@@ -153,6 +156,9 @@ export async function sendOrderStatusEmail(
   const customerName = input.customerName.trim();
   const greeting = customerName ? `Hola ${customerName},` : "Hola,";
   const replyTo = cleanEmail(input.contactEmail);
+  const deliveryWindowLabel = String(input.deliveryWindowLabel ?? "").trim();
+  const estimatedArrivalLabel = String(input.estimatedArrivalLabel ?? "").trim();
+  const reviewUrl = String(input.reviewUrl ?? "").trim();
 
   if (!input.accessToken.trim()) {
     return {
@@ -160,6 +166,27 @@ export async function sendOrderStatusEmail(
       reason: "El pedido no tiene un enlace privado de seguimiento.",
     };
   }
+
+  let timingTitle = "";
+  let timingText = "";
+  if (input.status === "preparing" && deliveryWindowLabel) {
+    timingTitle = "Horario general de entrega";
+    timingText = deliveryWindowLabel;
+  } else if (input.status === "ready" && estimatedArrivalLabel) {
+    timingTitle = "Hora estimada de llegada";
+    timingText = `Alrededor de las ${estimatedArrivalLabel}`;
+  } else if ((input.status === "confirmed" || input.status === "ready") && deliveryWindowLabel) {
+    timingTitle = "Horario general de entrega";
+    timingText = deliveryWindowLabel;
+  }
+
+  const timingHtml = timingTitle && timingText
+    ? `<tr><td style="padding:8px 28px 0;"><div style="padding:14px 16px;border-radius:14px;background:#f3f7f1;text-align:center;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#728075;">${escapeHtml(timingTitle)}</div><div style="margin-top:5px;font-size:17px;font-weight:800;color:#1f402a;">${escapeHtml(timingText)}</div></div></td></tr>`
+    : "";
+
+  const reviewHtml = input.status === "delivered" && reviewUrl
+    ? `<p style="margin:22px auto 10px;max-width:430px;color:#606862;font-size:13px;line-height:1.6;">Si querés contarnos cómo fue tu experiencia, podés dejarnos una reseña en Google.</p><a href="${escapeHtml(reviewUrl)}" style="display:inline-block;padding:12px 20px;border-radius:999px;border:1px solid #1f402a;color:#1f402a;text-decoration:none;font-size:13px;font-weight:800;">Dejar una reseña</a>`
+    : "";
 
   const html = `<!doctype html>
 <html lang="es">
@@ -198,9 +225,11 @@ export async function sendOrderStatusEmail(
                 </table>
               </td>
             </tr>
+            ${timingHtml}
             <tr>
               <td style="padding:24px 28px 30px;text-align:center;">
                 <a href="${escapeHtml(trackingUrl)}" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#1f402a;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Seguir mi pedido</a>
+                ${reviewHtml}
                 <p style="margin:22px 0 0;color:#777e78;font-size:11px;line-height:1.55;">Este correo corresponde a una actualización de tu pedido en Altavera.</p>
               </td>
             </tr>
@@ -211,6 +240,11 @@ export async function sendOrderStatusEmail(
   </body>
 </html>`;
 
+  const timingTextLine = timingTitle && timingText ? `${timingTitle}: ${timingText}` : "";
+  const reviewTextLine = input.status === "delivered" && reviewUrl
+    ? `Dejar una reseña: ${reviewUrl}`
+    : "";
+
   const text = [
     greeting,
     copy.description,
@@ -218,11 +252,15 @@ export async function sendOrderStatusEmail(
     `Pedido #${shortOrderId}`,
     `Entrega: ${deliveryLabel}`,
     `Estado: ${copy.eyebrow}`,
+    timingTextLine,
     "",
     `Seguir mi pedido: ${trackingUrl}`,
+    reviewTextLine,
     "",
     "Este es un correo transaccional relacionado con tu pedido en Altavera.",
-  ].join("\n");
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",

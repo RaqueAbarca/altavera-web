@@ -19,6 +19,7 @@ type SendOrderConfirmationEmailInput = {
   orderId: string;
   accessToken: string;
   deliveryDate: string;
+  deliveryWindowLabel?: string | null;
   subtotal: number;
   shipping: number;
   total: number;
@@ -199,6 +200,7 @@ export async function sendOrderConfirmationEmail(
   });
   const replyTo = cleanEmail(input.settings.contact.email);
   const deliveryLabel = formatDeliveryDate(input.deliveryDate);
+  const deliveryWindowLabel = String(input.deliveryWindowLabel ?? "").trim();
 
   const itemRows = input.items
     .map((item) => {
@@ -260,7 +262,7 @@ export async function sendOrderConfirmationEmail(
                     </td>
                     <td style="padding:14px 16px;background:#faf9f6;border-radius:0 14px 14px 0;text-align:right;">
                       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#777d78;">Entrega</div>
-                      <div style="margin-top:4px;font-size:14px;font-weight:800;color:#26382c;text-transform:capitalize;">${escapeHtml(deliveryLabel)}</div>
+                      <div style="margin-top:4px;font-size:14px;font-weight:800;color:#26382c;text-transform:capitalize;">${escapeHtml(deliveryLabel)}</div>${deliveryWindowLabel ? `<div style="margin-top:4px;font-size:12px;color:#647067;">${escapeHtml(deliveryWindowLabel)}</div>` : ""}
                     </td>
                   </tr>
                 </table>
@@ -312,6 +314,7 @@ export async function sendOrderConfirmationEmail(
     `Hola ${input.customerName}, recibimos tu pedido en Altavera.`,
     `Pedido #${shortOrderId}`,
     `Entrega: ${deliveryLabel}`,
+    deliveryWindowLabel ? `Horario general: ${deliveryWindowLabel}` : "",
     `Estado: Pago por confirmar`,
     "",
     "Tu compra:",
