@@ -10,6 +10,8 @@ import {
   MapPin,
   Navigation,
   Phone,
+  RefreshCw,
+  Route,
   Truck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -53,6 +55,19 @@ type AdminResponse = {
   error?: string;
 };
 
+type RoutePlan = {
+  provider: "openrouteservice";
+  origin: { latitude: number; longitude: number };
+  stopCount: number;
+  serviceMinutesPerStop: number;
+  orderedOrderIds: string[];
+  unassignedOrderIds: string[];
+  distanceKm: number;
+  drivingMinutes: number;
+  serviceMinutes: number;
+  totalMinutes: number;
+};
+
 type DeliveryFilter = "all" | "pending" | "route" | "delivered";
 
 const FILTERS: Array<{ key: DeliveryFilter; label: string }> = [
@@ -82,6 +97,19 @@ function isPaymentPending(status: string) {
 
 function isPendingDelivery(status: string) {
   return status === "confirmed" || status === "preparing";
+}
+
+function isRouteEligible(status: string) {
+  return status === "confirmed" || status === "preparing" || status === "ready";
+}
+
+function formatRouteMinutes(value: number) {
+  const rounded = Math.max(0, Math.round(value));
+  const hours = Math.floor(rounded / 60);
+  const minutes = rounded % 60;
+  if (hours === 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours} h`;
+  return `${hours} h ${minutes} min`;
 }
 
 function belongsToFilter(order: DeliveryOrder, filter: DeliveryFilter) {
@@ -125,6 +153,9 @@ export default function AdminDeliveriesPage() {
   const [activeFilter, setActiveFilter] = useState<DeliveryFilter>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [workingOrderId, setWorkingOrderId] = useState<string | null>(null);
+  const [routePlan, setRoutePlan] = useState<RoutePlan | null>(null);
+  const [optimizingRoute, setOptimizingRoute] = useState(false);
+  const [routeError, setRouteError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -197,11 +228,20 @@ export default function AdminDeliveriesPage() {
         .filter((order) => order.status !== "cancelled")
         .filter(hasCoordinates)
         .sort((a, b) => {
+          if (routePlan) {
+            const aRouteIndex = routePlan.orderedOrderIds.indexOf(a.id);
+            const bRouteIndex = routePlan.orderedOrderIds.indexOf(b.id);
+            const aInRoute = aRouteIndex >= 0;
+            const bInRoute = bRouteIndex >= 0;
+            if (aInRoute && bInRoute) return aRouteIndex - bRouteIndex;
+            if (aInRoute) return -1;
+            if (bInRoute) return 1;
+          }
           const rank = statusRank(a.status) - statusRank(b.status);
           if (rank !== 0) return rank;
           return a.guest_name.localeCompare(b.guest_name, "es");
         }),
-    [selectedCycle]
+    [selectedCycle, routePlan]
   );
 
   const missingLocationCount = useMemo(
@@ -240,6 +280,47 @@ export default function AdminDeliveriesPage() {
     }),
     [validOrders]
   );
+
+  const routeEligibleCount = useMemo(
+    () => validOrders.filter((order) => isRouteEligible(order.status)).length,
+    [validOrders]
+  );
+
+  async function optimizeRoute() {
+    if (!selectedCycleId) return;
+    setOptimizingRoute(true);
+    setRouteError("");
+
+    try {
+      const response = await fetch("/api/admin/delivery-route/optimize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cycleId: selectedCycleId }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (response.status === 401 || response.status === 403) {
+        router.push("/admin");
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo optimizar la ruta.");
+      }
+
+      setRoutePlan(data as RoutePlan);
+      setActiveFilter("all");
+      setSelectedOrderId(null);
+    } catch (routeLoadError) {
+      setRoutePlan(null);
+      setRouteError(
+        routeLoadError instanceof Error
+          ? routeLoadError.message
+          : "No se pudo optimizar la ruta."
+      );
+    } finally {
+      setOptimizingRoute(false);
+    }
+  }
 
   async function updateStatus(order: DeliveryOrder, status: string) {
     setWorkingOrderId(order.id);
@@ -313,6 +394,8 @@ export default function AdminDeliveriesPage() {
       return;
     }
 
+    setRoutePlan(null);
+    setRouteError("");
     await loadData();
     setWorkingOrderId(null);
   }
@@ -382,6 +465,8 @@ export default function AdminDeliveriesPage() {
                     setSelectedCycleId(cycle.id);
                     setActiveFilter("all");
                     setSelectedOrderId(null);
+                    setRoutePlan(null);
+                    setRouteError("");
                   }}
                 >
                   <strong>{formatDeliveryDateShort(cycle.delivery_date)}</strong>
@@ -398,10 +483,21 @@ export default function AdminDeliveriesPage() {
                   <span className="delivery-cycle-eyebrow">Ruta seleccionada</span>
                   <h2>{formatDeliveryDate(selectedCycle.delivery_date)}</h2>
                 </div>
-                <span className="deliveries-location-count">
-                  <MapPin size={16} aria-hidden="true" />
-                  {counts.total} ubicaciones
-                </span>
+                <div className="deliveries-heading-actions">
+                  <span className="deliveries-location-count">
+                    <MapPin size={16} aria-hidden="true" />
+                    {counts.total} ubicaciones
+                  </span>
+                  <button
+                    type="button"
+                    className="delivery-optimize-button"
+                    onClick={() => void optimizeRoute()}
+                    disabled={optimizingRoute || routeEligibleCount === 0}
+                  >
+                    {optimizingRoute ? <RefreshCw size={16} className="is-spinning" aria-hidden="true" /> : <Route size={16} aria-hidden="true" />}
+                    {optimizingRoute ? "Optimizando..." : routePlan ? "Recalcular ruta" : "Optimizar ruta"}
+                  </button>
+                </div>
               </section>
 
               <section className="delivery-stats-grid" aria-label="Resumen de entregas">
@@ -426,6 +522,43 @@ export default function AdminDeliveriesPage() {
                   <strong>{counts.delivered}</strong>
                 </div>
               </section>
+
+              {routePlan && (
+                <section className="delivery-route-summary" aria-label="Ruta optimizada">
+                  <div className="delivery-route-summary__heading">
+                    <div>
+                      <span>Ruta optimizada con OpenRouteService</span>
+                      <strong>{routePlan.stopCount} parada{routePlan.stopCount === 1 ? "" : "s"}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      className="delivery-route-reset"
+                      onClick={() => {
+                        setRoutePlan(null);
+                        setRouteError("");
+                      }}
+                    >
+                      Volver al orden normal
+                    </button>
+                  </div>
+                  <div className="delivery-route-summary__metrics">
+                    <div><span>Distancia total</span><strong>{routePlan.distanceKm.toLocaleString("es-CR", { maximumFractionDigits: 1 })} km</strong></div>
+                    <div><span>Conducción</span><strong>{formatRouteMinutes(routePlan.drivingMinutes)}</strong></div>
+                    <div><span>Tiempo en paradas</span><strong>{formatRouteMinutes(routePlan.serviceMinutes)}</strong></div>
+                    <div><span>Tiempo estimado</span><strong>{formatRouteMinutes(routePlan.totalMinutes)}</strong></div>
+                  </div>
+                  {routePlan.unassignedOrderIds.length > 0 && (
+                    <p className="delivery-route-summary__warning">
+                      {routePlan.unassignedOrderIds.length} pedido{routePlan.unassignedOrderIds.length === 1 ? "" : "s"} no pudo asignarse a la ruta.
+                    </p>
+                  )}
+                  <p className="delivery-route-summary__note">
+                    Solo se incluyen pedidos confirmados, preparando o en camino. Los pedidos con pago por confirmar no se agregan a la ruta.
+                  </p>
+                </section>
+              )}
+
+              {routeError && <div className="delivery-location-warning">{routeError}</div>}
 
               {missingLocationCount > 0 && (
                 <div className="delivery-location-warning">
@@ -477,7 +610,7 @@ export default function AdminDeliveriesPage() {
                 <div className="delivery-stop-heading">
                   <div>
                     <h2>Paradas</h2>
-                    <p>El número de cada tarjeta corresponde al pin del mapa.</p>
+                    <p>{routePlan ? "Orden recomendado por OpenRouteService; el número corresponde al pin del mapa." : "El número de cada tarjeta corresponde al pin del mapa."}</p>
                   </div>
                 </div>
 

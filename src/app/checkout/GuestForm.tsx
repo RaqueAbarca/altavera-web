@@ -781,7 +781,7 @@ export default function GuestForm() {
         </div>
         <div>
           <span>Envío</span>
-          <strong>{deliveryQuoteLoading ? "Calculando..." : deliveryFee === null ? "Según ubicación" : formatCRC(deliveryFee)}</strong>
+          <strong>{deliveryQuoteLoading ? "Calculando..." : deliveryFee === null ? "—" : formatCRC(deliveryFee)}</strong>
         </div>
         {appliedPromo && (
           <div className="checkout-summary__promo-row">

@@ -187,11 +187,10 @@ function parseDistanceSettings(value: unknown): DeliveryDistanceSettings {
     originLongitude: parseNullableNumber(source.originLongitude, "La longitud del punto de salida", { min: -180, max: 180 }),
     fuelPricesCrcPerLiter: parseFuelPrices(source.fuelPricesCrcPerLiter),
     laborRateCrcPerHour: parseNullableNumber(source.laborRateCrcPerHour, "El pago por hora", { min: 0, max: 1_000_000 }),
-    roadDistanceFactor: parseNullableNumber(source.roadDistanceFactor, "El factor de distancia por carretera", { min: 1, max: 5 }),
-    averageSpeedKmh: parseNullableNumber(source.averageSpeedKmh, "La velocidad promedio", { positive: true, max: 200 }),
     stopMinutes: parseNullableNumber(source.stopMinutes, "Los minutos por parada", { min: 0, max: 240 }),
     marginPercent: parseNullableNumber(source.marginPercent, "El margen del envío", { min: 0, max: 500 }) ?? 0,
     roundingCrc: parseNullableNumber(source.roundingCrc, "El redondeo del envío", { positive: true, max: 100_000 }) ?? 100,
+    minimumShippingCrc: parseNullableNumber(source.minimumShippingCrc, "El envío mínimo", { min: 0, max: 1_000_000 }) ?? 1500,
     vehicles: parseVehicles(source.vehicles),
   };
 }
@@ -202,11 +201,10 @@ function serializeDistanceSettings(settings: DeliveryDistanceSettings) {
     origin_longitude: settings.originLongitude,
     fuel_prices_crc_per_liter: settings.fuelPricesCrcPerLiter,
     labor_rate_crc_per_hour: settings.laborRateCrcPerHour,
-    road_distance_factor: settings.roadDistanceFactor,
-    average_speed_kmh: settings.averageSpeedKmh,
     stop_minutes: settings.stopMinutes,
     margin_percent: settings.marginPercent,
     rounding_crc: settings.roundingCrc,
+    minimum_shipping_crc: settings.minimumShippingCrc,
     vehicles: settings.vehicles.map((vehicle) => ({
       id: vehicle.id,
       name: vehicle.name,
@@ -272,7 +270,7 @@ export async function PUT(request: Request) {
 
       if (requestedMode === "distance" && !isDistanceDeliveryConfigured(distanceSettings)) {
         throw new Error(
-          "Para activar el envío calculado completa el punto de salida, combustible del vehículo activo, consumo, mantenimiento por km, pago por hora, factor de carretera, velocidad promedio y minutos por parada."
+          "Para activar el envío calculado completa el punto de salida, combustible del vehículo activo, consumo, mantenimiento por km, pago por hora y minutos por parada, y configura OpenRouteService."
         );
       }
     }

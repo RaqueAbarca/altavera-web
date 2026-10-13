@@ -1,5 +1,9 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
+  getOpenRouteServiceRoundTrip,
+  isOpenRouteServiceConfigured,
+} from "@/lib/routing/openRouteService.server";
+import {
   EMPTY_BANK_ACCOUNT,
   EMPTY_DELIVERY_DISTANCE_SETTINGS,
   EMPTY_PUBLIC_APP_SETTINGS,
@@ -216,17 +220,13 @@ export function parseDeliveryDistanceSettings(value: unknown): DeliveryDistanceS
     laborRateCrcPerHour: nullableNonNegativeNumber(
       source.labor_rate_crc_per_hour ?? source.laborRateCrcPerHour
     ) ?? EMPTY_DELIVERY_DISTANCE_SETTINGS.laborRateCrcPerHour,
-    roadDistanceFactor: nullablePositiveNumber(
-      source.road_distance_factor ?? source.roadDistanceFactor
-    ),
-    averageSpeedKmh: nullablePositiveNumber(
-      source.average_speed_kmh ?? source.averageSpeedKmh
-    ),
     stopMinutes: nullableNonNegativeNumber(source.stop_minutes ?? source.stopMinutes),
     marginPercent: nullableNonNegativeNumber(source.margin_percent ?? source.marginPercent)
       ?? EMPTY_DELIVERY_DISTANCE_SETTINGS.marginPercent,
     roundingCrc: nullablePositiveNumber(source.rounding_crc ?? source.roundingCrc)
       ?? EMPTY_DELIVERY_DISTANCE_SETTINGS.roundingCrc,
+    minimumShippingCrc: nullableNonNegativeNumber(source.minimum_shipping_crc ?? source.minimumShippingCrc)
+      ?? EMPTY_DELIVERY_DISTANCE_SETTINGS.minimumShippingCrc,
     vehicles: parseVehicles(source.vehicles),
   };
 }
@@ -242,17 +242,16 @@ export function isDistanceDeliveryConfigured(settings: DeliveryDistanceSettings)
   const vehicle = settings.vehicles.find((item) => item.active);
   if (!vehicle || !coordinatesAreValid(settings)) return false;
   const fuelPrice = settings.fuelPricesCrcPerLiter[vehicle.fuelType];
-
   return Boolean(
+    isOpenRouteServiceConfigured() &&
     vehicle.consumptionLPer100Km !== null && vehicle.consumptionLPer100Km > 0 &&
     vehicle.maintenanceCrcPerKm !== null && vehicle.maintenanceCrcPerKm >= 0 &&
     fuelPrice !== null && fuelPrice > 0 &&
     settings.laborRateCrcPerHour !== null && settings.laborRateCrcPerHour >= 0 &&
-    settings.roadDistanceFactor !== null && settings.roadDistanceFactor >= 1 &&
-    settings.averageSpeedKmh !== null && settings.averageSpeedKmh > 0 &&
     settings.stopMinutes !== null && settings.stopMinutes >= 0 &&
     settings.marginPercent >= 0 &&
-    settings.roundingCrc > 0
+    settings.roundingCrc > 0 &&
+    settings.minimumShippingCrc >= 0
   );
 }
 
@@ -326,20 +325,6 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
   };
 }
 
-function toRadians(value: number) {
-  return (value * Math.PI) / 180;
-}
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const earthRadiusKm = 6371.0088;
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) ** 2;
-  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
@@ -392,15 +377,27 @@ export async function getDeliveryQuoteForOrder(location?: {
 
   const vehicle = distance.vehicles.find((item) => item.active)!;
   const fuelPrice = distance.fuelPricesCrcPerLiter[vehicle.fuelType]!;
-  const straightLineKm = haversineKm(
-    distance.originLatitude!,
-    distance.originLongitude!,
-    location.latitude,
-    location.longitude
-  );
-  const oneWayDistanceKm = straightLineKm * distance.roadDistanceFactor!;
-  const roundTripDistanceKm = oneWayDistanceKm * 2;
-  const drivingMinutes = (roundTripDistanceKm / distance.averageSpeedKmh!) * 60;
+  const origin = {
+    latitude: distance.originLatitude!,
+    longitude: distance.originLongitude!,
+  };
+
+  if (!isOpenRouteServiceConfigured()) {
+    throw new Error("El servicio de rutas no está configurado. Intenta de nuevo más tarde.");
+  }
+
+  let route;
+  try {
+    route = await getOpenRouteServiceRoundTrip(origin, location);
+  } catch (error) {
+    console.error("ERROR OPENROUTESERVICE:", error);
+    throw new Error("No pudimos calcular el envío en este momento. Intenta de nuevo.");
+  }
+
+  const oneWayDistanceKm = route.oneWayDistanceKm;
+  const roundTripDistanceKm = route.roundTripDistanceKm;
+  const drivingMinutes = route.drivingMinutes;
+  const calculationMethod: DeliveryQuote["calculationMethod"] = "openrouteservice";
   const estimatedMinutes = drivingMinutes + distance.stopMinutes!;
   const fuelCrcPerKm = (vehicle.consumptionLPer100Km! / 100) * fuelPrice;
   const fuelCostCrc = roundTripDistanceKm * fuelCrcPerKm;
@@ -408,7 +405,8 @@ export async function getDeliveryQuoteForOrder(location?: {
   const laborCostCrc = (estimatedMinutes / 60) * distance.laborRateCrcPerHour!;
   const estimatedCostCrc = fuelCostCrc + maintenanceCostCrc + laborCostCrc;
   const priceBeforeRounding = estimatedCostCrc * (1 + distance.marginPercent / 100);
-  const shippingCrc = ceilTo(priceBeforeRounding, distance.roundingCrc);
+  const roundedShippingCrc = ceilTo(priceBeforeRounding, distance.roundingCrc);
+  const shippingCrc = Math.max(distance.minimumShippingCrc, roundedShippingCrc);
 
   return {
     mode: "distance",
@@ -417,19 +415,17 @@ export async function getDeliveryQuoteForOrder(location?: {
     oneWayDistanceKm: round2(oneWayDistanceKm),
     roundTripDistanceKm: round2(roundTripDistanceKm),
     estimatedMinutes: round2(estimatedMinutes),
-    calculationMethod: "estimated_distance",
+    calculationMethod,
     snapshot: {
       mode: "distance",
-      calculation_method: "estimated_distance",
+      calculation_method: calculationMethod,
       origin_latitude: distance.originLatitude,
       origin_longitude: distance.originLongitude,
       destination_latitude: location.latitude,
       destination_longitude: location.longitude,
-      straight_line_km: round2(straightLineKm),
-      road_distance_factor: distance.roadDistanceFactor,
       one_way_distance_km: round2(oneWayDistanceKm),
       round_trip_distance_km: round2(roundTripDistanceKm),
-      average_speed_kmh: distance.averageSpeedKmh,
+      driving_minutes: round2(drivingMinutes),
       stop_minutes: distance.stopMinutes,
       estimated_minutes: round2(estimatedMinutes),
       vehicle: {
@@ -448,6 +444,7 @@ export async function getDeliveryQuoteForOrder(location?: {
       estimated_cost_crc: round2(estimatedCostCrc),
       margin_percent: distance.marginPercent,
       rounding_crc: distance.roundingCrc,
+      minimum_shipping_crc: distance.minimumShippingCrc,
       shipping_crc: Math.round(shippingCrc),
     },
   };

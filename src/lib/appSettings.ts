@@ -47,11 +47,10 @@ export type DeliveryDistanceSettings = {
   originLongitude: number | null;
   fuelPricesCrcPerLiter: FuelPriceSettings;
   laborRateCrcPerHour: number | null;
-  roadDistanceFactor: number | null;
-  averageSpeedKmh: number | null;
   stopMinutes: number | null;
   marginPercent: number;
   roundingCrc: number;
+  minimumShippingCrc: number;
   vehicles: DeliveryVehicleSettings[];
 };
 
@@ -64,11 +63,10 @@ export const EMPTY_DELIVERY_DISTANCE_SETTINGS: DeliveryDistanceSettings = {
     diesel: null,
   },
   laborRateCrcPerHour: 1400,
-  roadDistanceFactor: null,
-  averageSpeedKmh: null,
   stopMinutes: null,
   marginPercent: 0,
   roundingCrc: 100,
+  minimumShippingCrc: 1500,
   vehicles: [
     {
       id: "jeep",
@@ -88,7 +86,7 @@ export type DeliveryQuote = {
   oneWayDistanceKm: number | null;
   roundTripDistanceKm: number | null;
   estimatedMinutes: number | null;
-  calculationMethod: "flat" | "estimated_distance";
+  calculationMethod: "flat" | "openrouteservice";
   snapshot: Record<string, unknown>;
 };
 

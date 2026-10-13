@@ -96,9 +96,11 @@ export default function DeliverySettingsTab() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [locating, setLocating] = useState(false);
+  const [routingConfigured, setRoutingConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
     void loadSettings();
+    void loadRoutingStatus();
   }, []);
 
   const activeVehicle = useMemo(
@@ -117,6 +119,16 @@ export default function DeliverySettingsTab() {
     fuelPerKm !== null && activeVehicle?.maintenanceCrcPerKm !== null && activeVehicle?.maintenanceCrcPerKm !== undefined
       ? fuelPerKm + activeVehicle.maintenanceCrcPerKm
       : null;
+
+  async function loadRoutingStatus() {
+    try {
+      const response = await fetch("/api/admin/routing/status", { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      setRoutingConfigured(response.ok ? Boolean(data.configured) : false);
+    } catch {
+      setRoutingConfigured(false);
+    }
+  }
 
   async function loadSettings() {
     setLoading(true);
@@ -579,37 +591,26 @@ export default function DeliverySettingsTab() {
           </div>
 
           <div className="admin-business-subsection">
-            <h3>Estimación del recorrido</h3>
+            <h3>Ruta y duración</h3>
+            <div className={`admin-routing-status${routingConfigured === true ? " is-ready" : ""}`}>
+              <div>
+                <strong>OpenRouteService</strong>
+                <span>
+                  {routingConfigured === null
+                    ? "Revisando configuración..."
+                    : routingConfigured
+                      ? "Configurado. Los pedidos usan distancia y duración reales por carretera."
+                      : "Falta la variable OPENROUTESERVICE_API_KEY en el servidor."}
+                </span>
+              </div>
+              <span className="admin-routing-status__badge">
+                {routingConfigured === null ? "..." : routingConfigured ? "Listo" : "Pendiente"}
+              </span>
+            </div>
             <p className="admin-business-help">
-              Esta primera versión no depende de un proveedor externo de rutas. Calcula la distancia en línea recta y la multiplica por un factor configurable para aproximar la carretera. Más adelante podemos sustituirlo por rutas reales sin cambiar la estructura de costos.
+              OpenRouteService calcula automáticamente la distancia y la duración por carretera. No necesitás configurar velocidades ni factores de distancia manualmente.
             </p>
             <div className="admin-business-fields">
-              <label className="admin-business-field">
-                <span>Factor de carretera</span>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={settings.deliveryDistance.roadDistanceFactor ?? ""}
-                  onChange={(event) => updateDistance("roadDistanceFactor", numberOrNull(event.target.value))}
-                  placeholder="Ej: 1.20"
-                />
-                <small>Ejemplo: 1,20 significa que 5 km en línea recta se estiman como 6 km por carretera.</small>
-              </label>
-              <label className="admin-business-field">
-                <span>Velocidad promedio de reparto</span>
-                <div className="admin-unit-input">
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={settings.deliveryDistance.averageSpeedKmh ?? ""}
-                    onChange={(event) => updateDistance("averageSpeedKmh", numberOrNull(event.target.value))}
-                    placeholder="Ej: 30"
-                  />
-                  <span>km/h</span>
-                </div>
-              </label>
               <label className="admin-business-field">
                 <span>Tiempo por parada</span>
                 <div className="admin-unit-input">
@@ -623,7 +624,7 @@ export default function DeliverySettingsTab() {
                   />
                   <span>min</span>
                 </div>
-                <small>Tiempo para estacionar, entregar y confirmar.</small>
+                <small>Tiempo adicional para estacionar, bajar el pedido, entregar y confirmar.</small>
               </label>
             </div>
           </div>
@@ -644,6 +645,20 @@ export default function DeliverySettingsTab() {
                   <span>%</span>
                 </div>
                 <small>0% significa cobrar únicamente el costo estimado.</small>
+              </label>
+              <label className="admin-business-field">
+                <span>Envío mínimo</span>
+                <div className="admin-money-input">
+                  <span>₡</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={settings.deliveryDistance.minimumShippingCrc}
+                    onChange={(event) => updateDistance("minimumShippingCrc", Math.max(0, Number(event.target.value) || 0))}
+                  />
+                </div>
+                <small>La tarifa calculada nunca bajará de este monto. Inicialmente: ₡1.500.</small>
               </label>
               <label className="admin-business-field">
                 <span>Redondear hacia arriba a</span>

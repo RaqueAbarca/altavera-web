@@ -35,8 +35,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
       shipping: quote.shippingCrc,
       mode: quote.mode,
-      oneWayDistanceKm: quote.oneWayDistanceKm,
-      estimatedMinutes: quote.estimatedMinutes,
     }, {
       headers: { "Cache-Control": "no-store" },
     });

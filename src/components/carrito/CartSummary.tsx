@@ -64,7 +64,7 @@ export default function CartSummary() {
           {settingsLoading
             ? "Calculando..."
             : deliveryConfigured && usesDistancePricing
-              ? "Según ubicación"
+              ? "—"
               : deliveryConfigured && deliveryFee !== null
                 ? formatCRC(deliveryFee)
                 : "Por definir"}
@@ -80,9 +80,9 @@ export default function CartSummary() {
         {settingsError
           ? "No pudimos consultar la tarifa de envío en este momento."
           : deliveryConfigured && usesDistancePricing
-            ? "El envío se calcula en checkout según tu ubicación de entrega."
+            ? "El total final se confirma en checkout."
             : deliveryConfigured
-              ? "El total final se confirma en checkout junto con tu dirección de entrega."
+              ? "El total final se confirma en checkout."
               : "La tarifa de envío debe configurarse antes de completar una compra."}
       </p>
 
