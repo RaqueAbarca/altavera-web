@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { normalizeProductSizeVariants } from "@/lib/productVariants";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,8 @@ type CreateProductBody = {
   averageUnitWeightGrams?: unknown;
   unitsPerKgMin?: unknown;
   unitsPerKgMax?: unknown;
+  variantSelectionEnabled?: unknown;
+  sizeVariants?: unknown;
 };
 
 function toBoolean(value: unknown) {
@@ -50,7 +53,9 @@ export async function GET() {
       average_unit_weight_g,
       approx_units_per_kg_min,
       approx_units_per_kg_max,
-      is_seasonal
+      is_seasonal,
+      variant_selection_enabled,
+      size_variants
     `)
     .order("name");
 
@@ -86,6 +91,8 @@ export async function GET() {
         product.approx_units_per_kg_max === null
           ? null
           : Number(product.approx_units_per_kg_max),
+      variant_selection_enabled: product.variant_selection_enabled ?? false,
+      size_variants: normalizeProductSizeVariants(product.size_variants),
     })),
   });
 }
@@ -111,6 +118,8 @@ export async function POST(request: Request) {
     const maturitySelectionEnabled = toBoolean(
       body.maturitySelectionEnabled
     );
+    const variantSelectionEnabled = toBoolean(body.variantSelectionEnabled);
+    const sizeVariants = normalizeProductSizeVariants(body.sizeVariants);
     const averageUnitWeightGrams =
       body.averageUnitWeightGrams === null ||
       body.averageUnitWeightGrams === undefined ||
@@ -197,6 +206,20 @@ export async function POST(request: Request) {
       );
     }
 
+    if (variantSelectionEnabled && sizeVariants.filter((variant) => variant.active).length === 0) {
+      return NextResponse.json(
+        { error: "Agrega al menos un tamaño activo antes de habilitar la venta por tamaño" },
+        { status: 400 }
+      );
+    }
+
+    if (sizeVariants.some((variant) => variant.price <= 0)) {
+      return NextResponse.json(
+        { error: "Cada tamaño debe tener un precio mayor a cero" },
+        { status: 400 }
+      );
+    }
+
     if (isActive && price <= 0) {
       return NextResponse.json(
         {
@@ -244,6 +267,8 @@ export async function POST(request: Request) {
         average_unit_weight_g: averageUnitWeightGrams,
         approx_units_per_kg_min: unitsPerKgMin,
         approx_units_per_kg_max: unitsPerKgMax,
+        variant_selection_enabled: variantSelectionEnabled,
+        size_variants: sizeVariants,
       })
       .select(`
         id,
@@ -259,7 +284,9 @@ export async function POST(request: Request) {
         average_unit_weight_g,
         approx_units_per_kg_min,
         approx_units_per_kg_max,
-        is_seasonal
+        is_seasonal,
+        variant_selection_enabled,
+        size_variants
       `)
       .single();
 
@@ -284,6 +311,8 @@ export async function POST(request: Request) {
             data.approx_units_per_kg_max === null
               ? null
               : Number(data.approx_units_per_kg_max),
+          variant_selection_enabled: data.variant_selection_enabled ?? false,
+          size_variants: normalizeProductSizeVariants(data.size_variants),
         },
       },
       { status: 201 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { normalizeProductSizeVariants } from "@/lib/productVariants";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,8 @@ type UpdateProductBody = {
   averageUnitWeightGrams?: unknown;
   unitsPerKgMin?: unknown;
   unitsPerKgMax?: unknown;
+  variantSelectionEnabled?: unknown;
+  sizeVariants?: unknown;
 };
 
 function cleanText(value: unknown) {
@@ -288,6 +291,45 @@ export async function PATCH(
       }
     }
 
+    if (Object.prototype.hasOwnProperty.call(body, "variantSelectionEnabled")) {
+      updates.variant_selection_enabled = body.variantSelectionEnabled === true;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "sizeVariants")) {
+      const sizeVariants = normalizeProductSizeVariants(body.sizeVariants);
+      if (sizeVariants.some((variant) => variant.price <= 0)) {
+        return NextResponse.json(
+          { error: "Cada tamaño debe tener un precio mayor a cero" },
+          { status: 400 }
+        );
+      }
+      updates.size_variants = sizeVariants;
+    }
+
+    if (
+      updates.variant_selection_enabled === true ||
+      Object.prototype.hasOwnProperty.call(updates, "size_variants")
+    ) {
+      const { data: currentVariantData, error: currentVariantError } = await supabaseAdmin
+        .from("products")
+        .select("variant_selection_enabled,size_variants")
+        .eq("id", id)
+        .maybeSingle();
+      if (currentVariantError) throw currentVariantError;
+      const enabled = Object.prototype.hasOwnProperty.call(updates, "variant_selection_enabled")
+        ? updates.variant_selection_enabled === true
+        : currentVariantData?.variant_selection_enabled === true;
+      const variants = Object.prototype.hasOwnProperty.call(updates, "size_variants")
+        ? normalizeProductSizeVariants(updates.size_variants)
+        : normalizeProductSizeVariants(currentVariantData?.size_variants);
+      if (enabled && variants.filter((variant) => variant.active).length === 0) {
+        return NextResponse.json(
+          { error: "Agrega al menos un tamaño activo antes de habilitar la venta por tamaño" },
+          { status: 400 }
+        );
+      }
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { error: "No hay cambios para guardar" },
@@ -313,7 +355,9 @@ export async function PATCH(
         average_unit_weight_g,
         approx_units_per_kg_min,
         approx_units_per_kg_max,
-        is_seasonal
+        is_seasonal,
+        variant_selection_enabled,
+        size_variants
       `)
       .maybeSingle();
 
@@ -347,6 +391,8 @@ export async function PATCH(
           data.approx_units_per_kg_max === null
             ? null
             : Number(data.approx_units_per_kg_max),
+        variant_selection_enabled: data.variant_selection_enabled ?? false,
+        size_variants: normalizeProductSizeVariants(data.size_variants),
       },
     });
   } catch (error) {

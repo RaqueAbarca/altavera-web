@@ -13,11 +13,8 @@ export default function CartSummary() {
 
   const deliveryFee = settings.delivery.flatFeeCrc;
   const deliveryConfigured = settings.delivery.configured;
-  const usesDistancePricing = settings.delivery.mode === "distance";
   const estimatedTotal =
-    deliveryConfigured && !usesDistancePricing && deliveryFee !== null
-      ? totalPrice + deliveryFee
-      : null;
+    deliveryConfigured && deliveryFee !== null ? totalPrice + deliveryFee : null;
 
   return (
     <aside className="cart-summary">
@@ -35,6 +32,12 @@ export default function CartSummary() {
                 <span className="summary-details">
                   {item.quantity} × ₡{item.price.toLocaleString("es-CR")}
                 </span>
+
+                {item.variant_label && (
+                  <span className="summary-details">
+                    {item.variant_label}{item.variant_weight_label ? ` · ${item.variant_weight_label}` : ""}
+                  </span>
+                )}
 
                 {maturityLabel && (
                   <span className="summary-details">
@@ -63,11 +66,9 @@ export default function CartSummary() {
         <strong>
           {settingsLoading
             ? "Calculando..."
-            : deliveryConfigured && usesDistancePricing
-              ? "—"
-              : deliveryConfigured && deliveryFee !== null
-                ? formatCRC(deliveryFee)
-                : "Por definir"}
+            : deliveryConfigured && deliveryFee !== null
+              ? formatCRC(deliveryFee)
+              : "Por definir"}
         </strong>
       </div>
 
@@ -79,11 +80,9 @@ export default function CartSummary() {
       <p className="summary-checkout-note">
         {settingsError
           ? "No pudimos consultar la tarifa de envío en este momento."
-          : deliveryConfigured && usesDistancePricing
-            ? "El total final se confirma en checkout."
-            : deliveryConfigured
-              ? "El total final se confirma en checkout."
-              : "La tarifa de envío debe configurarse antes de completar una compra."}
+          : deliveryConfigured
+            ? "El total final se confirma en checkout junto con tu dirección de entrega."
+            : "La tarifa de envío debe configurarse antes de completar una compra."}
       </p>
 
       <Link href="/checkout" className="checkout-btn">

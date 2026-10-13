@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import "./productos-admin.css";
 import { formatProductEquivalence } from "@/lib/productUnits";
+import type { ProductSizeVariant } from "@/lib/productVariants";
 
 type Product = {
   id: number;
@@ -20,6 +21,8 @@ type Product = {
   average_unit_weight_g: number | null;
   approx_units_per_kg_min: number | null;
   approx_units_per_kg_max: number | null;
+  variant_selection_enabled: boolean;
+  size_variants: ProductSizeVariant[];
 };
 
 type Filter = "all" | "active" | "inactive" | "seasonal";
@@ -37,6 +40,8 @@ type ProductForm = {
   averageUnitWeightGrams: string;
   unitsPerKgMin: string;
   unitsPerKgMax: string;
+  variantSelectionEnabled: boolean;
+  sizeVariants: ProductSizeVariant[];
 };
 
 const EMPTY_FORM: ProductForm = {
@@ -52,6 +57,8 @@ const EMPTY_FORM: ProductForm = {
   averageUnitWeightGrams: "",
   unitsPerKgMin: "",
   unitsPerKgMax: "",
+  variantSelectionEnabled: false,
+  sizeVariants: [],
 };
 
 function formatPrice(value: number | null) {
@@ -218,6 +225,8 @@ export default function AdminProductosPage() {
         product.approx_units_per_kg_min?.toString() ?? "",
       unitsPerKgMax:
         product.approx_units_per_kg_max?.toString() ?? "",
+      variantSelectionEnabled: product.variant_selection_enabled ?? false,
+      sizeVariants: product.size_variants ?? [],
     });
     setMessage("");
     setError("");
@@ -270,6 +279,8 @@ export default function AdminProductosPage() {
             unitsPerKgMax: form.unitsPerKgMax
               ? Number(form.unitsPerKgMax)
               : null,
+            variantSelectionEnabled: form.variantSelectionEnabled,
+            sizeVariants: form.sizeVariants,
           }
         : {
             name: form.name,
@@ -289,6 +300,8 @@ export default function AdminProductosPage() {
             unitsPerKgMax: form.unitsPerKgMax
               ? Number(form.unitsPerKgMax)
               : null,
+            variantSelectionEnabled: form.variantSelectionEnabled,
+            sizeVariants: form.sizeVariants,
           };
 
       const response = await fetch(endpoint, {
@@ -461,9 +474,10 @@ export default function AdminProductosPage() {
                         )}
 
                         {product.maturity_selection_enabled && (
-                          <span className="status-badge maturity">
-                            Con maduración
-                          </span>
+                          <span className="status-badge maturity">Con maduración</span>
+                        )}
+                        {product.variant_selection_enabled && (
+                          <span className="status-badge variants">Por tamaño</span>
                         )}
                       </div>
 
@@ -805,6 +819,123 @@ export default function AdminProductosPage() {
                   }
                 />
               </label>
+
+              <section className="products-admin-variants-editor">
+                <label className="products-admin-variant-enable">
+                  <input
+                    type="checkbox"
+                    checked={form.variantSelectionEnabled}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        variantSelectionEnabled: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>
+                    <strong>Vender por tamaño</strong>
+                    <small>Para productos completos como sandía o melón. El precio se define por cada tamaño.</small>
+                  </span>
+                </label>
+
+                {form.variantSelectionEnabled && (
+                  <div className="products-admin-variant-list">
+                    {form.sizeVariants.map((variant, index) => (
+                      <div className="products-admin-variant-row" key={variant.id}>
+                        <input
+                          type="text"
+                          placeholder="Tamaño (ej. Mediana)"
+                          value={variant.label}
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, label: event.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <input
+                          type="text"
+                          placeholder="Peso aprox. (ej. 3–5 kg aprox.)"
+                          value={variant.weightLabel}
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, weightLabel: event.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="Precio"
+                          value={variant.price || ""}
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, price: Number(event.target.value) } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <label className="products-admin-variant-active">
+                          <input
+                            type="checkbox"
+                            checked={variant.active}
+                            onChange={(event) =>
+                              setForm((current) => ({
+                                ...current,
+                                sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                  itemIndex === index ? { ...item, active: event.target.checked } : item
+                                ),
+                              }))
+                            }
+                          />
+                          Activo
+                        </label>
+                        <button
+                          type="button"
+                          className="products-admin-variant-remove"
+                          onClick={() =>
+                            setForm((current) => ({
+                              ...current,
+                              sizeVariants: current.sizeVariants.filter((_, itemIndex) => itemIndex !== index),
+                            }))
+                          }
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="products-admin-variant-add"
+                      onClick={() =>
+                        setForm((current) => ({
+                          ...current,
+                          sizeVariants: [
+                            ...current.sizeVariants,
+                            {
+                              id: `size-${Date.now()}-${current.sizeVariants.length}`,
+                              label: "",
+                              weightLabel: "",
+                              price: 0,
+                              active: true,
+                            },
+                          ],
+                        }))
+                      }
+                    >
+                      + Agregar tamaño
+                    </button>
+                  </div>
+                )}
+              </section>
 
               <div className="products-admin-modal-toggles">
                 <label>

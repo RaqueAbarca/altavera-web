@@ -1,7 +1,7 @@
 "use client";
 
 import "../productos/productos.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Heart } from "lucide-react";
 import {
   MATURITY_OPTIONS,
@@ -12,6 +12,7 @@ import {
   formatProductEquivalence,
   isKilogramUnit,
 } from "@/lib/productUnits";
+import type { ProductSizeVariant } from "@/lib/productVariants";
 
 type ProductCardProps = {
   image: string;
@@ -25,12 +26,16 @@ type ProductCardProps = {
   unitsPerKgMin?: number | null;
   unitsPerKgMax?: number | null;
   isSeasonal?: boolean;
+  variantSelectionEnabled?: boolean;
+  sizeVariants?: ProductSizeVariant[];
+  selectedVariantId?: string | null;
   isFavorite?: boolean;
   favoritePending?: boolean;
   onToggleFavorite?: () => void;
   onAdd: (
     quantity: number,
-    maturityPreference: MaturityPreference | null
+    maturityPreference: MaturityPreference | null,
+    variantId: string | null
   ) => void;
   onIncrease: () => void;
   onDecrease: () => void;
@@ -49,6 +54,9 @@ export default function ProductCard({
   unitsPerKgMin = null,
   unitsPerKgMax = null,
   isSeasonal = false,
+  variantSelectionEnabled = false,
+  sizeVariants = [],
+  selectedVariantId = null,
   isFavorite = false,
   favoritePending = false,
   onToggleFavorite,
@@ -57,28 +65,50 @@ export default function ProductCard({
   onDecrease,
   onRemove,
 }: ProductCardProps) {
+  const activeVariants = useMemo(
+    () => sizeVariants.filter((variant) => variant.active !== false),
+    [sizeVariants]
+  );
+  const hasVariants = variantSelectionEnabled && activeVariants.length > 0;
+  const initialVariantId =
+    selectedVariantId && activeVariants.some((variant) => variant.id === selectedVariantId)
+      ? selectedVariantId
+      : activeVariants[0]?.id ?? null;
+
   const [selecting, setSelecting] = useState(false);
   const [tempQuantity, setTempQuantity] = useState(
-    isKilogramUnit(unit) ? 0.5 : 1
+    hasVariants ? 1 : isKilogramUnit(unit) ? 0.5 : 1
   );
   const [tempMaturity, setTempMaturity] =
     useState<MaturityPreference | null>(maturityPreference);
+  const [tempVariantId, setTempVariantId] = useState<string | null>(initialVariantId);
 
-  const equivalence = formatProductEquivalence(
-    unit,
-    averageUnitWeightGrams,
-    unitsPerKgMin,
-    unitsPerKgMax
-  );
+  const selectedVariant =
+    activeVariants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const tempVariant =
+    activeVariants.find((variant) => variant.id === tempVariantId) ?? null;
+  const minimumVariantPrice = activeVariants.length
+    ? Math.min(...activeVariants.map((variant) => variant.price))
+    : null;
+
+  const equivalence = hasVariants
+    ? null
+    : formatProductEquivalence(
+        unit,
+        averageUnitWeightGrams,
+        unitsPerKgMin,
+        unitsPerKgMax
+      );
 
   useEffect(() => {
     if (!selecting) {
       setTempMaturity(maturityPreference ?? null);
+      setTempVariantId(initialVariantId);
     }
-  }, [maturityPreference, selecting]);
+  }, [maturityPreference, selecting, initialVariantId]);
 
   function getStep() {
-    return isKilogramUnit(unit) ? 0.5 : 1;
+    return hasVariants ? 1 : isKilogramUnit(unit) ? 0.5 : 1;
   }
 
   function increaseTemp() {
@@ -89,10 +119,7 @@ export default function ProductCard({
     const newQuantity = tempQuantity - getStep();
 
     if (newQuantity <= 0) {
-      if (quantity > 0) {
-        onRemove();
-      }
-
+      if (quantity > 0) onRemove();
       setSelecting(false);
       setTempQuantity(getStep());
       return;
@@ -102,24 +129,15 @@ export default function ProductCard({
   }
 
   function confirmAdd() {
-    onAdd(tempQuantity, tempMaturity);
+    if (hasVariants && !tempVariantId) return;
+    onAdd(tempQuantity, tempMaturity, hasVariants ? tempVariantId : null);
     setSelecting(false);
   }
 
   return (
-    <div
-      className={
-        isSeasonal
-          ? "product-card seasonal-product-card"
-          : "product-card"
-      }
-    >
+    <div className={isSeasonal ? "product-card seasonal-product-card" : "product-card"}>
       <div className="product-image-wrap">
-        <img
-          src={image}
-          alt={name}
-          className="product-image"
-        />
+        <img src={image} alt={name} className="product-image" />
 
         {onToggleFavorite && (
           <button
@@ -128,75 +146,68 @@ export default function ProductCard({
             onClick={onToggleFavorite}
             disabled={favoritePending}
             aria-pressed={isFavorite}
-            aria-label={
-              isFavorite
-                ? `Quitar ${name} de favoritos`
-                : `Guardar ${name} en favoritos`
-            }
+            aria-label={isFavorite ? `Quitar ${name} de favoritos` : `Guardar ${name} en favoritos`}
             title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
           >
-            <Heart
-              size={20}
-              strokeWidth={2.2}
-              fill={isFavorite ? "currentColor" : "none"}
-            />
+            <Heart size={20} strokeWidth={2.2} fill={isFavorite ? "currentColor" : "none"} />
           </button>
         )}
 
-        {isSeasonal && (
-          <span className="seasonal-badge">
-            De temporada
-          </span>
-        )}
+        {isSeasonal && <span className="seasonal-badge">De temporada</span>}
       </div>
 
       <div className="product-content">
         <h3>{name}</h3>
 
         <p className="price">
-          ₡{price.toLocaleString("es-CR")}
-          <span> / {unit}</span>
+          {hasVariants && minimumVariantPrice !== null ? (
+            <>Desde ₡{minimumVariantPrice.toLocaleString("es-CR")}<span> / unidad</span></>
+          ) : (
+            <>₡{price.toLocaleString("es-CR")}<span> / {unit}</span></>
+          )}
         </p>
 
-        {equivalence && (
-          <p className="product-equivalence">{equivalence}</p>
+        {hasVariants && !selecting && quantity === 0 && (
+          <p className="product-equivalence">Elegí el tamaño antes de agregar.</p>
         )}
 
+        {equivalence && <p className="product-equivalence">{equivalence}</p>}
+
         {maturitySelectionEnabled && !selecting && (
-          <p className="maturity-card-note">
-            Puedes elegir la maduración antes de agregarlo
-          </p>
+          <p className="maturity-card-note">Puedes elegir la maduración antes de agregarlo</p>
         )}
 
         {quantity === 0 && !selecting && (
-          <button
-            className="add-btn"
-            onClick={() => setSelecting(true)}
-          >
-            Agregar
-          </button>
+          <button className="add-btn" onClick={() => setSelecting(true)}>Agregar</button>
         )}
 
         {selecting && (
           <>
+            {hasVariants && (
+              <label className="product-variant-picker">
+                <span>Tamaño</span>
+                <select
+                  value={tempVariantId ?? ""}
+                  onChange={(event) => setTempVariantId(event.target.value || null)}
+                >
+                  {activeVariants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>
+                      {variant.label}{variant.weightLabel ? ` · ${variant.weightLabel}` : ""} · ₡{variant.price.toLocaleString("es-CR")}
+                    </option>
+                  ))}
+                </select>
+                {tempVariant && (
+                  <small>
+                    {tempVariant.weightLabel || "Venta por unidad"} · ₡{tempVariant.price.toLocaleString("es-CR")} por unidad
+                  </small>
+                )}
+              </label>
+            )}
+
             <div className="quantity-controls">
-              <button
-                className="qty-btn"
-                onClick={decreaseTemp}
-              >
-                −
-              </button>
-
-              <span className="qty">
-                {tempQuantity} {unit}
-              </span>
-
-              <button
-                className="qty-btn"
-                onClick={increaseTemp}
-              >
-                +
-              </button>
+              <button className="qty-btn" onClick={decreaseTemp}>−</button>
+              <span className="qty">{tempQuantity} {hasVariants ? "und" : unit}</span>
+              <button className="qty-btn" onClick={increaseTemp}>+</button>
             </div>
 
             {maturitySelectionEnabled && (
@@ -206,44 +217,35 @@ export default function ProductCard({
                   value={tempMaturity ?? ""}
                   onChange={(event) =>
                     setTempMaturity(
-                      event.target.value
-                        ? (event.target.value as MaturityPreference)
-                        : null
+                      event.target.value ? (event.target.value as MaturityPreference) : null
                     )
                   }
                 >
                   <option value="">Sin preferencia</option>
                   {MATURITY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                <small>
-                  Haremos lo posible por respetarla según disponibilidad.
-                </small>
+                <small>Haremos lo posible por respetarla según disponibilidad.</small>
               </label>
             )}
 
-            <button
-              className="add-btn"
-              onClick={confirmAdd}
-            >
-              Confirmar
-            </button>
+            <button className="add-btn" onClick={confirmAdd}>Confirmar</button>
           </>
         )}
 
         {quantity > 0 && !selecting && (
           <>
-            <p className="added-message">
-              ✓ En carrito: {quantity} {unit}
-            </p>
+            <p className="added-message">✓ En carrito: {quantity} {hasVariants ? "und" : unit}</p>
+
+            {hasVariants && selectedVariant && (
+              <p className="selected-variant-note">
+                {selectedVariant.label}{selectedVariant.weightLabel ? ` · ${selectedVariant.weightLabel}` : ""}
+              </p>
+            )}
 
             {maturitySelectionEnabled && maturityPreference && (
-              <p className="selected-maturity-note">
-                Maduración: {getMaturityLabel(maturityPreference)}
-              </p>
+              <p className="selected-maturity-note">Maduración: {getMaturityLabel(maturityPreference)}</p>
             )}
 
             <button
@@ -251,6 +253,7 @@ export default function ProductCard({
               onClick={() => {
                 setTempQuantity(quantity);
                 setTempMaturity(maturityPreference ?? null);
+                setTempVariantId(initialVariantId);
                 setSelecting(true);
               }}
             >

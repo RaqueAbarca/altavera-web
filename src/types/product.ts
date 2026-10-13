@@ -1,3 +1,5 @@
+import type { ProductSizeVariant } from "@/lib/productVariants";
+
 export interface Product {
   id: number;
   name: string;
@@ -11,4 +13,6 @@ export interface Product {
   approx_units_per_kg_min?: number | null;
   approx_units_per_kg_max?: number | null;
   is_seasonal?: boolean;
+  variant_selection_enabled?: boolean;
+  size_variants?: ProductSizeVariant[];
 }

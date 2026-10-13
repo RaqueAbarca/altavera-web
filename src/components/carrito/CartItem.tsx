@@ -33,8 +33,15 @@ export default function CartItem({ item }: Props) {
         <h3>{item.name}</h3>
 
         <p className="cart-unit">
-          ₡{item.price} / {item.unit}
+          ₡{item.price.toLocaleString("es-CR")} / {item.unit}
         </p>
+
+        {item.variant_label && (
+          <p className="cart-variant">
+            {item.variant_label}
+            {item.variant_weight_label ? ` · ${item.variant_weight_label}` : ""}
+          </p>
+        )}
 
         <div className="cart-controls">
           <button

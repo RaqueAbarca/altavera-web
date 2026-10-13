@@ -205,11 +205,19 @@ export async function GET() {
             ? null
             : productMetaById.get(Number(item.product_id))?.unit ?? null),
         cenada_reference_price:
-          item.product_id === null
+          item.product_id === null ||
+          (item.unit?.trim() &&
+            productMetaById.get(Number(item.product_id))?.unit?.trim() &&
+            item.unit.trim().toLowerCase() !==
+              productMetaById.get(Number(item.product_id))?.unit?.trim().toLowerCase())
             ? null
             : cenadaReferenceByProduct.get(Number(item.product_id))?.price ?? null,
         cenada_reference_date:
-          item.product_id === null
+          item.product_id === null ||
+          (item.unit?.trim() &&
+            productMetaById.get(Number(item.product_id))?.unit?.trim() &&
+            item.unit.trim().toLowerCase() !==
+              productMetaById.get(Number(item.product_id))?.unit?.trim().toLowerCase())
             ? null
             : cenadaReferenceByProduct.get(Number(item.product_id))?.date ?? null,
       })),

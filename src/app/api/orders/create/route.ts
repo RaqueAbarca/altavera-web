@@ -18,6 +18,7 @@ import { getAdminAppSettings, getDeliveryQuoteForOrder, getPublicAppSettings } f
 import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
 import { getDeliveryWindowLabel } from "@/lib/deliverySchedule";
 import { claimPromoCode, normalizePromoCode, releasePromoCode } from "@/lib/promoCodes.server";
+import { findProductSizeVariant, formatVariantSnapshotName, normalizeProductSizeVariants } from "@/lib/productVariants";
 import {
   consumeRateLimit,
   getClientFingerprint,
@@ -30,6 +31,7 @@ type IncomingItem = {
   productId?: unknown;
   quantity?: unknown;
   maturityPreference?: unknown;
+  variantId?: unknown;
 };
 
 type IncomingOrder = {
@@ -59,6 +61,8 @@ type ProductRow = {
   unit: string;
   is_active: boolean;
   maturity_selection_enabled: boolean;
+  variant_selection_enabled: boolean;
+  size_variants: unknown;
 };
 
 type CreatedOrderRpcRow = {
@@ -485,6 +489,10 @@ export async function POST(request: Request) {
         item.maturityPreference.trim()
           ? item.maturityPreference.trim()
           : null,
+      variantId:
+        typeof item.variantId === "string" && item.variantId.trim()
+          ? item.variantId.trim()
+          : null,
     }));
 
     if (
@@ -520,7 +528,7 @@ export async function POST(request: Request) {
     } = await supabaseAdmin
       .from("products")
       .select(
-        "id,name,price,unit,is_active,maturity_selection_enabled"
+        "id,name,price,unit,is_active,maturity_selection_enabled,variant_selection_enabled,size_variants"
       )
       .in("id", productIds)
       .eq("is_active", true);
@@ -549,18 +557,25 @@ export async function POST(request: Request) {
         throw new Error("Producto no encontrado");
       }
 
-      if (!isValidProductQuantity(item.quantity, product.unit)) {
-        throw new Error(
-          `Cantidad inválida para ${product.name}`
-        );
+      const variants = normalizeProductSizeVariants(product.size_variants);
+      const selectedVariant = product.variant_selection_enabled
+        ? findProductSizeVariant(variants, item.variantId)
+        : null;
+
+      if (product.variant_selection_enabled && (!selectedVariant || selectedVariant.active === false)) {
+        throw new Error(`Selecciona un tamaño disponible para ${product.name}`);
       }
 
-      const price = Number(product.price);
+      const effectiveUnit = selectedVariant ? "und" : product.unit;
+
+      if (!isValidProductQuantity(item.quantity, effectiveUnit)) {
+        throw new Error(`Cantidad inválida para ${product.name}`);
+      }
+
+      const price = selectedVariant ? Number(selectedVariant.price) : Number(product.price);
 
       if (!Number.isFinite(price) || price < 0) {
-        throw new Error(
-          `Precio inválido para ${product.name}`
-        );
+        throw new Error(`Precio inválido para ${product.name}`);
       }
 
       if (
@@ -583,10 +598,13 @@ export async function POST(request: Request) {
 
       return {
         product_id: product.id,
-        product_name: product.name,
+        product_name: selectedVariant
+          ? formatVariantSnapshotName(product.name, selectedVariant)
+          : product.name,
         price: roundMoney(price),
         quantity: item.quantity,
-        unit: product.unit?.trim() || null,
+        unit: effectiveUnit?.trim() || null,
+        variant_id: selectedVariant?.id ?? null,
         maturity_preference:
           product.maturity_selection_enabled
             ? item.maturityPreference
@@ -679,6 +697,23 @@ export async function POST(request: Request) {
     }
 
     const orderResult = createdOrder as CreatedOrderRpcRow;
+
+    for (const item of authoritativeItems) {
+      if (!item.variant_id) continue;
+      const { error: snapshotError } = await supabaseAdmin
+        .from("order_item")
+        .update({
+          product_name: item.product_name,
+          price: item.price,
+          unit: item.unit,
+        })
+        .eq("order_id", orderResult.order_id)
+        .eq("product_id", item.product_id);
+
+      if (snapshotError) {
+        console.error("ERROR GUARDANDO VARIANTE EN ITEM DEL PEDIDO:", snapshotError);
+      }
+    }
 
     const { error: legalRecordError } = await supabaseAdmin
       .from("orders")

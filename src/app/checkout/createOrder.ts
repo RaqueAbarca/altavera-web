@@ -24,6 +24,7 @@ export async function createOrder({
           item.maturity_selection_enabled
             ? item.maturity_preference ?? null
             : null,
+        variantId: item.variant_selection_enabled ? item.variant_id ?? null : null,
       })),
     }),
   });

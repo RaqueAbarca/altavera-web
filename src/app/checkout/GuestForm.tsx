@@ -730,6 +730,9 @@ export default function GuestForm() {
               </div>
               <div className="checkout-summary__item-copy">
                 <strong>{item.name}</strong>
+                {item.variant_label && (
+                  <small>{item.variant_label}{item.variant_weight_label ? ` · ${item.variant_weight_label}` : ""}</small>
+                )}
                 <small>
                   {item.quantity.toLocaleString("es-CR")} {item.unit} × {formatCRC(item.price)}
                 </small>

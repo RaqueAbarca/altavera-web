@@ -602,3 +602,91 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+.status-badge.variants {
+  background: #eef1fa;
+  color: #485b8a;
+}
+
+.products-admin-variants-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dedbd3;
+  border-radius: 14px;
+  background: #faf9f5;
+}
+
+.products-admin-variant-enable {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.products-admin-variant-enable > span {
+  display: grid;
+  gap: 3px;
+}
+
+.products-admin-variant-enable small {
+  color: #7c847d;
+  font-weight: 500;
+}
+
+.products-admin-variant-list {
+  display: grid;
+  gap: 10px;
+}
+
+.products-admin-variant-row {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 110px auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.products-admin-variant-row input[type="text"],
+.products-admin-variant-row input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d8d6cf;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: white;
+  color: #26342b;
+}
+
+.products-admin-variant-active {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 12px;
+  color: #55615a;
+}
+
+.products-admin-variant-add,
+.products-admin-variant-remove {
+  border-radius: 9px;
+  padding: 9px 11px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.products-admin-variant-add {
+  justify-self: start;
+  border: 1px solid #bfd0c3;
+  background: white;
+  color: #355843;
+}
+
+.products-admin-variant-remove {
+  border: 1px solid #e3c8c2;
+  background: #fff7f5;
+  color: #9a4b42;
+}
+
+@media (max-width: 720px) {
+  .products-admin-variant-row {
+    grid-template-columns: 1fr;
+  }
+}

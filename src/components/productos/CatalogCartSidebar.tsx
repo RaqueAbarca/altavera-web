@@ -126,6 +126,9 @@ export default function CatalogCartSidebar() {
                 <div key={item.id} className="catalog-cart-sidebar__item">
                   <div>
                     <strong>{item.name}</strong>
+                    {item.variant_label && (
+                      <span>{item.variant_label}{item.variant_weight_label ? ` · ${item.variant_weight_label}` : ""}</span>
+                    )}
                     <span>
                       {item.quantity} {item.unit}
                     </span>

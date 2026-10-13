@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import SearchBar from "@/components/productos/SearchBar";
 import LoginPromo from "@/components/home/LoginPromo";
 import CatalogCartSidebar from "@/components/productos/CatalogCartSidebar";
+import type { ProductSizeVariant } from "@/lib/productVariants";
 
 type Product = {
   id: number;
@@ -23,6 +24,8 @@ type Product = {
   approx_units_per_kg_min?: number | null;
   approx_units_per_kg_max?: number | null;
   is_seasonal?: boolean;
+  variant_selection_enabled?: boolean;
+  size_variants?: ProductSizeVariant[];
 };
 
 export default function ProductosPage() {

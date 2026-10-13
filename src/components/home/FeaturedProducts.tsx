@@ -11,6 +11,7 @@ import { useCart } from "@/hooks/useCart";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Product } from "@/types/product";
 import type { MaturityPreference } from "@/lib/maturity";
+import type { ProductSizeVariant } from "@/lib/productVariants";
 
 type SupabaseProduct = {
   id: number;
@@ -23,6 +24,8 @@ type SupabaseProduct = {
   approx_units_per_kg_min?: number | null;
   approx_units_per_kg_max?: number | null;
   is_seasonal?: boolean;
+  variant_selection_enabled?: boolean;
+  size_variants?: ProductSizeVariant[];
 };
 
 export default function FeaturedProducts() {
@@ -70,6 +73,8 @@ export default function FeaturedProducts() {
           approx_units_per_kg_max:
             product.approx_units_per_kg_max ?? null,
           is_seasonal: product.is_seasonal ?? false,
+          variant_selection_enabled: product.variant_selection_enabled ?? false,
+          size_variants: product.size_variants ?? [],
         })
       );
 
@@ -121,16 +126,27 @@ export default function FeaturedProducts() {
               unitsPerKgMin={product.approx_units_per_kg_min ?? null}
               unitsPerKgMax={product.approx_units_per_kg_max ?? null}
               isSeasonal={product.is_seasonal ?? false}
+              variantSelectionEnabled={product.variant_selection_enabled ?? false}
+              sizeVariants={product.size_variants ?? []}
+              selectedVariantId={cartItem?.variant_id ?? null}
               isFavorite={favoriteIds.has(product.id)}
               favoritePending={pendingIds.has(product.id)}
               onToggleFavorite={() => void handleToggleFavorite(product.id)}
-              onAdd={(quantity, maturityPreference: MaturityPreference | null) =>
+              onAdd={(quantity, maturityPreference: MaturityPreference | null, variantId) => {
+                const variant = (product.size_variants ?? []).find(
+                  (item) => item.id === variantId && item.active !== false
+                );
                 addToCart({
                   ...product,
+                  price: variant ? Number(variant.price) : product.price,
+                  unit: variant ? "und" : product.unit,
                   quantity,
                   maturity_preference: maturityPreference,
-                })
-              }
+                  variant_id: variant?.id ?? null,
+                  variant_label: variant?.label ?? null,
+                  variant_weight_label: variant?.weightLabel ?? null,
+                });
+              }}
               onIncrease={() =>
                 increaseQuantity(product.id)
               }

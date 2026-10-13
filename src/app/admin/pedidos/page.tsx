@@ -195,7 +195,7 @@ function buildLiveShoppingList(orders: Order[]) {
       order.order_item.forEach((item) => {
         const maturityPreference = item.maturity_preference ?? null;
         const unit = item.unit?.trim() || null;
-        const key = `${item.product_id ?? item.product_name}::${unit ?? "none"}::${maturityPreference ?? "none"}`;
+        const key = `${item.product_id ?? "none"}::${item.product_name}::${unit ?? "none"}::${maturityPreference ?? "none"}`;
         const current = map.get(key);
 
         map.set(key, {
