@@ -18,7 +18,12 @@ import { getAdminAppSettings, getDeliveryQuoteForOrder, getPublicAppSettings } f
 import { sendOrderConfirmationEmail } from "@/lib/orderConfirmationEmail.server";
 import { getDeliveryWindowLabel } from "@/lib/deliverySchedule";
 import { claimPromoCode, normalizePromoCode, releasePromoCode } from "@/lib/promoCodes.server";
-import { findProductSizeVariant, formatVariantSnapshotName, normalizeProductSizeVariants } from "@/lib/productVariants";
+import {
+  calculateVariantPrice,
+  findProductSizeVariant,
+  formatVariantSnapshotName,
+  normalizeProductSizeVariants,
+} from "@/lib/productVariants";
 import {
   consumeRateLimit,
   getClientFingerprint,
@@ -572,9 +577,11 @@ export async function POST(request: Request) {
         throw new Error(`Cantidad inválida para ${product.name}`);
       }
 
-      const price = selectedVariant ? Number(selectedVariant.price) : Number(product.price);
+      const price = selectedVariant
+        ? calculateVariantPrice(Number(product.price), selectedVariant)
+        : Number(product.price);
 
-      if (!Number.isFinite(price) || price < 0) {
+      if (price === null || !Number.isFinite(price) || price < 0) {
         throw new Error(`Precio inválido para ${product.name}`);
       }
 

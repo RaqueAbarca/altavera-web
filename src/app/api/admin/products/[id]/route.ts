@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { normalizeProductSizeVariants } from "@/lib/productVariants";
+import {
+  getAutomaticVariantValidationError,
+  normalizeProductSizeVariants,
+} from "@/lib/productVariants";
+import { isKilogramUnit } from "@/lib/productUnits";
 
 export const runtime = "nodejs";
 
@@ -296,14 +300,7 @@ export async function PATCH(
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "sizeVariants")) {
-      const sizeVariants = normalizeProductSizeVariants(body.sizeVariants);
-      if (sizeVariants.some((variant) => variant.price <= 0)) {
-        return NextResponse.json(
-          { error: "Cada tamaño debe tener un precio mayor a cero" },
-          { status: 400 }
-        );
-      }
-      updates.size_variants = sizeVariants;
+      updates.size_variants = normalizeProductSizeVariants(body.sizeVariants);
     }
 
     if (
@@ -312,7 +309,7 @@ export async function PATCH(
     ) {
       const { data: currentVariantData, error: currentVariantError } = await supabaseAdmin
         .from("products")
-        .select("variant_selection_enabled,size_variants")
+        .select("variant_selection_enabled,size_variants,unit,price")
         .eq("id", id)
         .maybeSingle();
       if (currentVariantError) throw currentVariantError;
@@ -322,11 +319,39 @@ export async function PATCH(
       const variants = Object.prototype.hasOwnProperty.call(updates, "size_variants")
         ? normalizeProductSizeVariants(updates.size_variants)
         : normalizeProductSizeVariants(currentVariantData?.size_variants);
-      if (enabled && variants.filter((variant) => variant.active).length === 0) {
+      const activeVariants = variants.filter((variant) => variant.active);
+      if (enabled && activeVariants.length === 0) {
         return NextResponse.json(
           { error: "Agrega al menos un tamaño activo antes de habilitar la venta por tamaño" },
           { status: 400 }
         );
+      }
+
+      if (enabled) {
+        const effectiveUnit = Object.prototype.hasOwnProperty.call(updates, "unit")
+          ? String(updates.unit ?? "")
+          : String(currentVariantData?.unit ?? "");
+
+        if (!isKilogramUnit(effectiveUnit)) {
+          return NextResponse.json(
+            { error: "La venta por tamaño calcula el precio desde el valor por kg. La unidad base debe ser Kg." },
+            { status: 400 }
+          );
+        }
+
+        if (!(Number(currentVariantData?.price) > 0)) {
+          return NextResponse.json(
+            { error: "El producto necesita un precio vigente por kg para calcular los tamaños" },
+            { status: 400 }
+          );
+        }
+
+        for (const variant of activeVariants) {
+          const validationError = getAutomaticVariantValidationError(variant);
+          if (validationError) {
+            return NextResponse.json({ error: validationError }, { status: 400 });
+          }
+        }
       }
     }
 

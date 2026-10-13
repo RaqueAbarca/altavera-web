@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { normalizeProductSizeVariants } from "@/lib/productVariants";
+import {
+  getAutomaticVariantValidationError,
+  normalizeProductSizeVariants,
+} from "@/lib/productVariants";
+import { isKilogramUnit } from "@/lib/productUnits";
 
 export const runtime = "nodejs";
 
@@ -206,18 +210,29 @@ export async function POST(request: Request) {
       );
     }
 
-    if (variantSelectionEnabled && sizeVariants.filter((variant) => variant.active).length === 0) {
+    const activeVariants = sizeVariants.filter((variant) => variant.active);
+
+    if (variantSelectionEnabled && activeVariants.length === 0) {
       return NextResponse.json(
         { error: "Agrega al menos un tamaño activo antes de habilitar la venta por tamaño" },
         { status: 400 }
       );
     }
 
-    if (sizeVariants.some((variant) => variant.price <= 0)) {
+    if (variantSelectionEnabled && !isKilogramUnit(unit)) {
       return NextResponse.json(
-        { error: "Cada tamaño debe tener un precio mayor a cero" },
+        { error: "La venta por tamaño calcula el precio desde el valor por kg. La unidad base debe ser Kg." },
         { status: 400 }
       );
+    }
+
+    if (variantSelectionEnabled) {
+      for (const variant of activeVariants) {
+        const validationError = getAutomaticVariantValidationError(variant);
+        if (validationError) {
+          return NextResponse.json({ error: validationError }, { status: 400 });
+        }
+      }
     }
 
     if (isActive && price <= 0) {

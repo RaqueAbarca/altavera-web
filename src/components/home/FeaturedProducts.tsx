@@ -11,7 +11,11 @@ import { useCart } from "@/hooks/useCart";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Product } from "@/types/product";
 import type { MaturityPreference } from "@/lib/maturity";
-import type { ProductSizeVariant } from "@/lib/productVariants";
+import {
+  calculateVariantPrice,
+  formatVariantWeightLabel,
+  type ProductSizeVariant,
+} from "@/lib/productVariants";
 
 type SupabaseProduct = {
   id: number;
@@ -138,13 +142,13 @@ export default function FeaturedProducts() {
                 );
                 addToCart({
                   ...product,
-                  price: variant ? Number(variant.price) : product.price,
+                  price: variant ? calculateVariantPrice(product.price, variant) ?? product.price : product.price,
                   unit: variant ? "und" : product.unit,
                   quantity,
                   maturity_preference: maturityPreference,
                   variant_id: variant?.id ?? null,
                   variant_label: variant?.label ?? null,
-                  variant_weight_label: variant?.weightLabel ?? null,
+                  variant_weight_label: variant ? formatVariantWeightLabel(variant) || null : null,
                 });
               }}
               onIncrease={() =>

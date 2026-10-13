@@ -11,7 +11,11 @@ import { useCart } from "@/hooks/useCart";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEASONAL_CATEGORY } from "./productFilters";
 import type { MaturityPreference } from "@/lib/maturity";
-import type { ProductSizeVariant } from "@/lib/productVariants";
+import {
+  calculateVariantPrice,
+  formatVariantWeightLabel,
+  type ProductSizeVariant,
+} from "@/lib/productVariants";
 
 type Product = {
   id: number;
@@ -173,7 +177,7 @@ export default function ProductsSection({
                   name: product.name,
                   description: product.description,
                   category: product.category,
-                  price: variant ? Number(variant.price) : product.price,
+                  price: variant ? calculateVariantPrice(product.price, variant) ?? product.price : product.price,
                   unit: variant ? "und" : product.unit,
                   image: product.image_url,
                   quantity,
@@ -184,7 +188,7 @@ export default function ProductsSection({
                   size_variants: product.size_variants ?? [],
                   variant_id: variant?.id ?? null,
                   variant_label: variant?.label ?? null,
-                  variant_weight_label: variant?.weightLabel ?? null,
+                  variant_weight_label: variant ? formatVariantWeightLabel(variant) || null : null,
                 });
               }}
               onIncrease={() =>

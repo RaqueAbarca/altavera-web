@@ -12,7 +12,11 @@ import {
   formatProductEquivalence,
   isKilogramUnit,
 } from "@/lib/productUnits";
-import type { ProductSizeVariant } from "@/lib/productVariants";
+import {
+  calculateVariantPrice,
+  formatVariantWeightLabel,
+  type ProductSizeVariant,
+} from "@/lib/productVariants";
 
 type ProductCardProps = {
   image: string;
@@ -87,8 +91,11 @@ export default function ProductCard({
     activeVariants.find((variant) => variant.id === selectedVariantId) ?? null;
   const tempVariant =
     activeVariants.find((variant) => variant.id === tempVariantId) ?? null;
-  const minimumVariantPrice = activeVariants.length
-    ? Math.min(...activeVariants.map((variant) => variant.price))
+  const variantPrices = activeVariants
+    .map((variant) => calculateVariantPrice(price, variant))
+    .filter((value): value is number => value !== null);
+  const minimumVariantPrice = variantPrices.length
+    ? Math.min(...variantPrices)
     : null;
 
   const equivalence = hasVariants
@@ -190,15 +197,23 @@ export default function ProductCard({
                   value={tempVariantId ?? ""}
                   onChange={(event) => setTempVariantId(event.target.value || null)}
                 >
-                  {activeVariants.map((variant) => (
-                    <option key={variant.id} value={variant.id}>
-                      {variant.label}{variant.weightLabel ? ` · ${variant.weightLabel}` : ""} · ₡{variant.price.toLocaleString("es-CR")}
-                    </option>
-                  ))}
+                  {activeVariants.map((variant) => {
+                    const variantPrice = calculateVariantPrice(price, variant);
+                    const weightLabel = formatVariantWeightLabel(variant);
+
+                    return (
+                      <option key={variant.id} value={variant.id}>
+                        {variant.label}{weightLabel ? ` · ${weightLabel}` : ""}{variantPrice !== null ? ` · ₡${variantPrice.toLocaleString("es-CR")}` : ""}
+                      </option>
+                    );
+                  })}
                 </select>
                 {tempVariant && (
                   <small>
-                    {tempVariant.weightLabel || "Venta por unidad"} · ₡{tempVariant.price.toLocaleString("es-CR")} por unidad
+                    {formatVariantWeightLabel(tempVariant) || "Venta por unidad"}
+                    {calculateVariantPrice(price, tempVariant) !== null
+                      ? ` · ₡${calculateVariantPrice(price, tempVariant)!.toLocaleString("es-CR")} por unidad`
+                      : ""}
                   </small>
                 )}
               </label>
@@ -240,7 +255,7 @@ export default function ProductCard({
 
             {hasVariants && selectedVariant && (
               <p className="selected-variant-note">
-                {selectedVariant.label}{selectedVariant.weightLabel ? ` · ${selectedVariant.weightLabel}` : ""}
+                {selectedVariant.label}{formatVariantWeightLabel(selectedVariant) ? ` · ${formatVariantWeightLabel(selectedVariant)}` : ""}
               </p>
             )}
 
