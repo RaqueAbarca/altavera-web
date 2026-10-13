@@ -74,6 +74,8 @@ export default function ProductCard({
     [sizeVariants]
   );
   const hasVariants = variantSelectionEnabled && activeVariants.length > 0;
+  const hasSingleVariant = hasVariants && activeVariants.length === 1;
+  const hasMultipleVariants = hasVariants && activeVariants.length > 1;
   const initialVariantId =
     selectedVariantId && activeVariants.some((variant) => variant.id === selectedVariantId)
       ? selectedVariantId
@@ -97,6 +99,13 @@ export default function ProductCard({
   const minimumVariantPrice = variantPrices.length
     ? Math.min(...variantPrices)
     : null;
+  const singleVariant = hasSingleVariant ? activeVariants[0] : null;
+  const singleVariantPrice = singleVariant
+    ? calculateVariantPrice(price, singleVariant)
+    : null;
+  const singleVariantWeightLabel = singleVariant
+    ? formatVariantWeightLabel(singleVariant)
+    : "";
 
   const equivalence = hasVariants
     ? null
@@ -167,15 +176,21 @@ export default function ProductCard({
         <h3>{name}</h3>
 
         <p className="price">
-          {hasVariants && minimumVariantPrice !== null ? (
+          {hasSingleVariant && singleVariantPrice !== null ? (
+            <>₡{singleVariantPrice.toLocaleString("es-CR")}<span> / unidad</span></>
+          ) : hasMultipleVariants && minimumVariantPrice !== null ? (
             <>Desde ₡{minimumVariantPrice.toLocaleString("es-CR")}<span> / unidad</span></>
           ) : (
             <>₡{price.toLocaleString("es-CR")}<span> / {unit}</span></>
           )}
         </p>
 
-        {hasVariants && !selecting && quantity === 0 && (
+        {hasMultipleVariants && !selecting && quantity === 0 && (
           <p className="product-equivalence">Elegí el tamaño antes de agregar.</p>
+        )}
+
+        {hasSingleVariant && singleVariantWeightLabel && !selecting && (
+          <p className="product-equivalence">{singleVariantWeightLabel} aprox. por unidad</p>
         )}
 
         {equivalence && <p className="product-equivalence">{equivalence}</p>}
@@ -190,7 +205,7 @@ export default function ProductCard({
 
         {selecting && (
           <>
-            {hasVariants && (
+            {hasMultipleVariants && (
               <label className="product-variant-picker">
                 <span>Tamaño</span>
                 <select
@@ -217,6 +232,16 @@ export default function ProductCard({
                   </small>
                 )}
               </label>
+            )}
+
+
+            {hasSingleVariant && tempVariant && (
+              <p className="product-equivalence">
+                {formatVariantWeightLabel(tempVariant) || "Venta por unidad"}
+                {calculateVariantPrice(price, tempVariant) !== null
+                  ? ` · ₡${calculateVariantPrice(price, tempVariant)!.toLocaleString("es-CR")} por unidad`
+                  : ""}
+              </p>
             )}
 
             <div className="quantity-controls">
@@ -255,7 +280,9 @@ export default function ProductCard({
 
             {hasVariants && selectedVariant && (
               <p className="selected-variant-note">
-                {selectedVariant.label}{formatVariantWeightLabel(selectedVariant) ? ` · ${formatVariantWeightLabel(selectedVariant)}` : ""}
+                {hasSingleVariant
+                  ? (formatVariantWeightLabel(selectedVariant) || "Venta por unidad")
+                  : `${selectedVariant.label}${formatVariantWeightLabel(selectedVariant) ? ` · ${formatVariantWeightLabel(selectedVariant)}` : ""}`}
               </p>
             )}
 
