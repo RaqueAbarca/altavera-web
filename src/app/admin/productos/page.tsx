@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import "./productos-admin.css";
 import { formatProductEquivalence, isKilogramUnit } from "@/lib/productUnits";
@@ -67,6 +67,25 @@ const EMPTY_FORM: ProductForm = {
   sizeVariants: [],
 };
 
+function productToForm(product: Product): ProductForm {
+  return {
+    name: product.name,
+    description: product.description ?? "",
+    category: product.category ?? "",
+    unit: product.unit ?? "",
+    imageUrl: product.image_url ?? "",
+    price: product.price?.toString() ?? "",
+    isActive: product.is_active,
+    isSeasonal: product.is_seasonal,
+    maturitySelectionEnabled: product.maturity_selection_enabled,
+    averageUnitWeightGrams: product.average_unit_weight_g?.toString() ?? "",
+    unitsPerKgMin: product.approx_units_per_kg_min?.toString() ?? "",
+    unitsPerKgMax: product.approx_units_per_kg_max?.toString() ?? "",
+    variantSelectionEnabled: product.variant_selection_enabled ?? false,
+    sizeVariants: product.size_variants ?? [],
+  };
+}
+
 function formatPrice(value: number | null) {
   if (value === null) {
     return "Sin precio";
@@ -88,6 +107,10 @@ export default function AdminProductosPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [savingForm, setSavingForm] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedImagePreview, setSelectedImagePreview] = useState("");
+  const [removeImageRequested, setRemoveImageRequested] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   async function loadProducts() {
     setLoading(true);
@@ -212,33 +235,29 @@ export default function AdminProductosPage() {
     }
   }
 
+  function resetImageSelection() {
+    if (selectedImagePreview) {
+      URL.revokeObjectURL(selectedImagePreview);
+    }
+    setSelectedImageFile(null);
+    setSelectedImagePreview("");
+    setRemoveImageRequested(false);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  }
+
   function openEdit(product: Product) {
+    resetImageSelection();
     setEditingProduct(product);
     setShowCreate(false);
-    setForm({
-      name: product.name,
-      description: product.description ?? "",
-      category: product.category ?? "",
-      unit: product.unit ?? "",
-      imageUrl: product.image_url ?? "",
-      price: product.price?.toString() ?? "",
-      isActive: product.is_active,
-      isSeasonal: product.is_seasonal,
-      maturitySelectionEnabled: product.maturity_selection_enabled,
-      averageUnitWeightGrams:
-        product.average_unit_weight_g?.toString() ?? "",
-      unitsPerKgMin:
-        product.approx_units_per_kg_min?.toString() ?? "",
-      unitsPerKgMax:
-        product.approx_units_per_kg_max?.toString() ?? "",
-      variantSelectionEnabled: product.variant_selection_enabled ?? false,
-      sizeVariants: product.size_variants ?? [],
-    });
+    setForm(productToForm(product));
     setMessage("");
     setError("");
   }
 
   function openCreate() {
+    resetImageSelection();
     setEditingProduct(null);
     setShowCreate(true);
     setForm(EMPTY_FORM);
@@ -247,9 +266,46 @@ export default function AdminProductosPage() {
   }
 
   function closeForm() {
+    resetImageSelection();
     setEditingProduct(null);
     setShowCreate(false);
     setForm(EMPTY_FORM);
+  }
+
+  function handleImageChange(file: File | null) {
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setError("La imagen debe ser JPG, PNG o WebP.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen debe pesar como máximo 5 MB.");
+      return;
+    }
+
+    if (selectedImagePreview) {
+      URL.revokeObjectURL(selectedImagePreview);
+    }
+
+    setSelectedImageFile(file);
+    setSelectedImagePreview(URL.createObjectURL(file));
+    setRemoveImageRequested(false);
+    setError("");
+  }
+
+  function requestImageRemoval() {
+    if (selectedImagePreview) {
+      URL.revokeObjectURL(selectedImagePreview);
+    }
+    setSelectedImageFile(null);
+    setSelectedImagePreview("");
+    setRemoveImageRequested(true);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -328,16 +384,68 @@ export default function AdminProductosPage() {
         );
       }
 
+      let savedProduct = data.product as Product;
+
+      try {
+        if (selectedImageFile) {
+          const imageFormData = new FormData();
+          imageFormData.append("file", selectedImageFile);
+
+          const imageResponse = await fetch(
+            `/api/admin/products/${savedProduct.id}/image`,
+            { method: "POST", body: imageFormData }
+          );
+          const imageData = await imageResponse.json();
+
+          if (!imageResponse.ok) {
+            throw new Error(imageData.error ?? "No se pudo subir la imagen");
+          }
+
+          savedProduct = { ...savedProduct, image_url: imageData.imageUrl };
+        } else if (!isCreating && removeImageRequested) {
+          const imageResponse = await fetch(
+            `/api/admin/products/${savedProduct.id}/image`,
+            { method: "DELETE" }
+          );
+          const imageData = await imageResponse.json();
+
+          if (!imageResponse.ok) {
+            throw new Error(imageData.error ?? "No se pudo quitar la imagen");
+          }
+
+          savedProduct = { ...savedProduct, image_url: imageData.imageUrl };
+        }
+      } catch (imageError) {
+        if (isCreating) {
+          setProducts((current) =>
+            [...current.filter((product) => product.id !== savedProduct.id), savedProduct].sort(
+              (a, b) => a.name.localeCompare(b.name, "es")
+            )
+          );
+          setShowCreate(false);
+        } else {
+          replaceProduct(savedProduct);
+        }
+
+        setEditingProduct(savedProduct);
+        setForm(productToForm(savedProduct));
+        throw new Error(
+          `Los datos se guardaron, pero la imagen no: ${
+            imageError instanceof Error ? imageError.message : "error desconocido"
+          }`
+        );
+      }
+
       if (isCreating) {
         setProducts((current) =>
-          [...current, data.product].sort((a, b) =>
-            a.name.localeCompare(b.name, "es")
+          [...current.filter((product) => product.id !== savedProduct.id), savedProduct].sort(
+            (a, b) => a.name.localeCompare(b.name, "es")
           )
         );
-        setMessage(`${data.product.name} fue creado correctamente.`);
+        setMessage(`${savedProduct.name} fue creado correctamente.`);
       } else {
-        replaceProduct(data.product);
-        setMessage(`${data.product.name} fue actualizado.`);
+        replaceProduct(savedProduct);
+        setMessage(`${savedProduct.name} fue actualizado.`);
       }
 
       closeForm();
@@ -797,20 +905,70 @@ export default function AdminProductosPage() {
                 </div>
               )}
 
-              <label>
-                Imagen
-                <input
-                  type="text"
-                  placeholder="/productos/mamon-chino.webp o URL"
-                  value={form.imageUrl}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      imageUrl: event.target.value,
-                    }))
-                  }
-                />
-              </label>
+              <section className="products-admin-image-editor">
+                <div className="products-admin-image-preview">
+                  <img
+                    src={
+                      selectedImagePreview ||
+                      (removeImageRequested ? "/logo.svg" : form.imageUrl || "/logo.svg")
+                    }
+                    alt="Vista previa del producto"
+                  />
+                </div>
+
+                <div className="products-admin-image-actions">
+                  <div>
+                    <strong>Imagen del producto</strong>
+                    <small>JPG, PNG o WebP · máximo 5 MB</small>
+                  </div>
+
+                  <input
+                    ref={imageInputRef}
+                    className="products-admin-image-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) =>
+                      handleImageChange(event.target.files?.[0] ?? null)
+                    }
+                  />
+
+                  <div className="products-admin-image-buttons">
+                    <button
+                      type="button"
+                      className="products-admin-image-change"
+                      onClick={() => imageInputRef.current?.click()}
+                    >
+                      {form.imageUrl && form.imageUrl !== "/logo.svg"
+                        ? "Cambiar imagen"
+                        : "Seleccionar imagen"}
+                    </button>
+
+                    {!showCreate &&
+                      form.imageUrl &&
+                      form.imageUrl !== "/logo.svg" &&
+                      !removeImageRequested && (
+                        <button
+                          type="button"
+                          className="products-admin-image-remove"
+                          onClick={requestImageRemoval}
+                        >
+                          Quitar imagen
+                        </button>
+                      )}
+                  </div>
+
+                  {selectedImageFile && (
+                    <small className="products-admin-image-status">
+                      Nueva imagen: {selectedImageFile.name}
+                    </small>
+                  )}
+                  {removeImageRequested && (
+                    <small className="products-admin-image-status">
+                      La imagen actual se quitará al guardar.
+                    </small>
+                  )}
+                </div>
+              </section>
 
               <label>
                 Descripción

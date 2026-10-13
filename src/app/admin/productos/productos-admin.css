@@ -827,3 +827,100 @@
     justify-content: space-between;
   }
 }
+
+/* Imagen de producto administrada desde Supabase Storage */
+.products-admin-image-editor {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #dedbd3;
+  border-radius: 14px;
+  background: #faf9f5;
+}
+
+.products-admin-image-preview {
+  width: 180px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid #e1ded6;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.products-admin-image-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.products-admin-image-actions {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.products-admin-image-actions > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.products-admin-image-actions strong {
+  color: #26342b;
+  font-size: 14px;
+}
+
+.products-admin-image-actions small {
+  color: #7c847d;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.products-admin-image-input {
+  display: none;
+}
+
+.products-admin-image-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.products-admin-image-change,
+.products-admin-image-remove {
+  border-radius: 9px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.products-admin-image-change {
+  border: 1px solid #bfd0c3;
+  background: #fff;
+  color: #355843;
+}
+
+.products-admin-image-remove {
+  border: 1px solid #e3c8c2;
+  background: #fff7f5;
+  color: #9a4b42;
+}
+
+.products-admin-image-status {
+  overflow-wrap: anywhere;
+  color: #566b5d !important;
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .products-admin-image-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .products-admin-image-preview {
+    width: 100%;
+    max-width: 320px;
+  }
+}
