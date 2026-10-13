@@ -346,11 +346,9 @@
 }
 
 .products-admin-modal {
-  width: min(1040px, calc(100vw - 40px));
-  max-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  width: min(680px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   background: #fffefa;
   border-radius: 20px;
   box-shadow: 0 22px 70px rgba(20, 35, 24, 0.22);
@@ -397,10 +395,7 @@
 .products-admin-form {
   display: grid;
   gap: 16px;
-  min-width: 0;
   padding: 22px 24px 26px;
-  overflow-x: hidden;
-  overflow-y: auto;
 }
 
 .products-admin-form > label,
@@ -446,7 +441,6 @@
 
 .products-admin-form-grid {
   display: grid;
-  min-width: 0;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
@@ -587,7 +581,6 @@
     width: 100%;
     max-height: 94vh;
     border-radius: 20px 20px 0 0;
-    overflow: hidden;
   }
 }
 
@@ -617,7 +610,6 @@
 
 .products-admin-variants-editor {
   display: grid;
-  min-width: 0;
   gap: 12px;
   padding: 14px;
   border: 1px solid #dedbd3;
@@ -643,15 +635,13 @@
 
 .products-admin-variant-list {
   display: grid;
-  min-width: 0;
   gap: 10px;
 }
 
 .products-admin-variant-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.35fr) repeat(3, minmax(130px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  min-width: 0;
   padding: 14px;
   border: 1px solid #e5e1d8;
   border-radius: 12px;
@@ -749,11 +739,7 @@
   color: #9a4b42;
 }
 
-@media (max-width: 980px) {
-  .products-admin-modal {
-    width: min(860px, calc(100vw - 32px));
-  }
-
+@media (max-width: 900px) {
   .products-admin-variant-row {
     grid-template-columns: 1fr 1fr;
   }

@@ -846,15 +846,6 @@ export default function AdminProductosPage() {
 
                 {form.variantSelectionEnabled && (
                   <div className="products-admin-variant-list">
-                    <div className="products-admin-variant-header" aria-hidden="true">
-                      <span>Tamaño</span>
-                      <span>Mín. kg</span>
-                      <span>Máx. kg</span>
-                      <span>Kg para precio</span>
-                      <span>Precio calculado</span>
-                      <span></span>
-                      <span></span>
-                    </div>
                     {form.sizeVariants.map((variant, index) => {
                       const basePrice = showCreate
                         ? Number(form.price)
@@ -864,105 +855,118 @@ export default function AdminProductosPage() {
 
                       return (
                         <div className="products-admin-variant-row" key={variant.id}>
-                          <input
-                            type="text"
-                            aria-label="Tamaño"
-                            placeholder="Mediana"
-                            value={variant.label}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                  itemIndex === index ? { ...item, label: event.target.value } : item
-                                ),
-                              }))
-                            }
-                          />
-                          <input
-                            type="number"
-                            aria-label="Peso mínimo en kg"
-                            min="0.1"
-                            step="0.1"
-                            placeholder="3"
-                            value={variant.minWeightKg ?? ""}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, minWeightKg: event.target.value ? Number(event.target.value) : null }
-                                    : item
-                                ),
-                              }))
-                            }
-                          />
-                          <input
-                            type="number"
-                            aria-label="Peso máximo en kg"
-                            min="0.1"
-                            step="0.1"
-                            placeholder="5"
-                            value={variant.maxWeightKg ?? ""}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, maxWeightKg: event.target.value ? Number(event.target.value) : null }
-                                    : item
-                                ),
-                              }))
-                            }
-                          />
-                          <input
-                            type="number"
-                            aria-label="Peso de referencia en kg"
-                            min="0.1"
-                            step="0.1"
-                            placeholder="4"
-                            value={variant.referenceWeightKg ?? ""}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, referenceWeightKg: event.target.value ? Number(event.target.value) : null }
-                                    : item
-                                ),
-                              }))
-                            }
-                          />
-                          <div className="products-admin-variant-derived-price">
-                            <strong>{derivedPrice !== null ? formatPrice(derivedPrice) : "—"}</strong>
-                            <small>{weightLabel || "Completa el rango"}</small>
-                          </div>
-                          <label className="products-admin-variant-active">
+                          <label className="products-admin-variant-field">
+                            <span>Tamaño</span>
                             <input
-                              type="checkbox"
-                              checked={variant.active}
+                              type="text"
+                              placeholder="Mediana"
+                              value={variant.label}
                               onChange={(event) =>
                                 setForm((current) => ({
                                   ...current,
                                   sizeVariants: current.sizeVariants.map((item, itemIndex) =>
-                                    itemIndex === index ? { ...item, active: event.target.checked } : item
+                                    itemIndex === index ? { ...item, label: event.target.value } : item
                                   ),
                                 }))
                               }
                             />
-                            Activo
                           </label>
-                          <button
-                            type="button"
-                            className="products-admin-variant-remove"
-                            onClick={() =>
-                              setForm((current) => ({
-                                ...current,
-                                sizeVariants: current.sizeVariants.filter((_, itemIndex) => itemIndex !== index),
-                              }))
-                            }
-                          >
-                            Quitar
-                          </button>
+                          <label className="products-admin-variant-field">
+                            <span>Peso mínimo (kg)</span>
+                            <input
+                              type="number"
+                              min="0.1"
+                              step="0.1"
+                              placeholder="3"
+                              value={variant.minWeightKg ?? ""}
+                              onChange={(event) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, minWeightKg: event.target.value ? Number(event.target.value) : null }
+                                      : item
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="products-admin-variant-field">
+                            <span>Peso máximo (kg)</span>
+                            <input
+                              type="number"
+                              min="0.1"
+                              step="0.1"
+                              placeholder="5"
+                              value={variant.maxWeightKg ?? ""}
+                              onChange={(event) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, maxWeightKg: event.target.value ? Number(event.target.value) : null }
+                                      : item
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="products-admin-variant-field">
+                            <span>Peso para calcular precio (kg)</span>
+                            <input
+                              type="number"
+                              min="0.1"
+                              step="0.1"
+                              placeholder="4"
+                              value={variant.referenceWeightKg ?? ""}
+                              onChange={(event) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, referenceWeightKg: event.target.value ? Number(event.target.value) : null }
+                                      : item
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                          <div className="products-admin-variant-footer">
+                            <div className="products-admin-variant-derived-price">
+                              <span>Precio calculado</span>
+                              <strong>{derivedPrice !== null ? formatPrice(derivedPrice) : "—"}</strong>
+                              <small>{weightLabel || "Completa el rango"}</small>
+                            </div>
+                            <div className="products-admin-variant-actions">
+                              <label className="products-admin-variant-active">
+                                <input
+                                  type="checkbox"
+                                  checked={variant.active}
+                                  onChange={(event) =>
+                                    setForm((current) => ({
+                                      ...current,
+                                      sizeVariants: current.sizeVariants.map((item, itemIndex) =>
+                                        itemIndex === index ? { ...item, active: event.target.checked } : item
+                                      ),
+                                    }))
+                                  }
+                                />
+                                Activo
+                              </label>
+                              <button
+                                type="button"
+                                className="products-admin-variant-remove"
+                                onClick={() =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    sizeVariants: current.sizeVariants.filter((_, itemIndex) => itemIndex !== index),
+                                  }))
+                                }
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
