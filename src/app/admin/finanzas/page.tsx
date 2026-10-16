@@ -189,6 +189,7 @@ export default function FinanzasPage() {
             ← Volver al panel
           </button>
           <h1>Finanzas</h1>
+          <button type="button" onClick={() => router.push("/admin/dinero")}>Registrar costos reales y pagos → Dinero</button>
           <p>
             Ventas, margen bruto estimado y salud de precios de Altavera.
           </p>

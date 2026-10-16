@@ -27,6 +27,7 @@ const adminLinks = [
   { name: "Panel", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Pedidos", href: "/admin/pedidos", icon: ClipboardList },
   { name: "Entregas", href: "/admin/entregas", icon: Truck },
+  { name: "Dinero", href: "/admin/dinero", icon: BadgeDollarSign },
   { name: "Finanzas", href: "/admin/finanzas", icon: ChartNoAxesCombined },
   { name: "Precios", href: "/admin/precios", icon: BadgeDollarSign },
   { name: "Productos", href: "/admin/productos", icon: Package },
