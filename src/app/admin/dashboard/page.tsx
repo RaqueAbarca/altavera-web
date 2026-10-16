@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   BadgeDollarSign,
-  ChartNoAxesCombined,
+  WalletCards,
   ClipboardList,
   History,
   MapPinned,
@@ -58,7 +58,7 @@ const menuItems: AdminMenuItem[] = [
     title: "Finanzas",
     description: "Revisar ventas, márgenes, utilidad estimada y salud de precios.",
     href: "/admin/finanzas",
-    icon: ChartNoAxesCombined,
+    icon: WalletCards,
   },
   {
     title: "Cobertura",
