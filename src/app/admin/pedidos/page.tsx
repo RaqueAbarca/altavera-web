@@ -22,6 +22,7 @@ import {
   getCostaRicaDateKey,
 } from "@/lib/deliverySchedule";
 import "../admin.css";
+import "./money-summary.css";
 
 type OrderItem = {
   id: string;
@@ -195,7 +196,7 @@ function buildLiveShoppingList(orders: Order[]) {
       order.order_item.forEach((item) => {
         const maturityPreference = item.maturity_preference ?? null;
         const unit = item.unit?.trim() || null;
-        const key = `${item.product_id ?? "none"}::${item.product_name}::${unit ?? "none"}::${maturityPreference ?? "none"}`;
+        const key = `${item.product_id ?? item.product_name}::${unit ?? "none"}::${maturityPreference ?? "none"}`;
         const current = map.get(key);
 
         map.set(key, {
@@ -318,6 +319,36 @@ export default function AdminOrdersPage() {
       ).length,
     [selectedCycle]
   );
+
+  const paidMoneySummary = useMemo(() => {
+    const paidOrders = (selectedCycle?.orders ?? []).filter(isPurchaseEligibleOrder);
+
+    return paidOrders.reduce(
+      (summary, order) => {
+        const calculatedSubtotal = order.order_item.reduce(
+          (sum, item) => sum + itemSubtotal(item),
+          0
+        );
+        const storedSubtotal =
+          order.subtotal === null || order.subtotal === undefined
+            ? Number.NaN
+            : Number(order.subtotal);
+        const productsSubtotal = Number.isFinite(storedSubtotal)
+          ? storedSubtotal
+          : calculatedSubtotal;
+        const shipping = Number(order.shipping ?? 0);
+        const total = Number(order.total ?? 0);
+
+        return {
+          orderCount: summary.orderCount + 1,
+          products: summary.products + (Number.isFinite(productsSubtotal) ? productsSubtotal : 0),
+          shipping: summary.shipping + (Number.isFinite(shipping) ? shipping : 0),
+          total: summary.total + (Number.isFinite(total) ? total : 0),
+        };
+      },
+      { orderCount: 0, products: 0, shipping: 0, total: 0 }
+    );
+  }, [selectedCycle]);
 
   async function updateStatus(order: Order, status: string) {
     const whatsappStatuses = new Set([
@@ -518,6 +549,41 @@ export default function AdminOrdersPage() {
                 </div>
                 <div className={`cycle-status-badge cycle-status-badge--${selectedCycle.status}`}>
                   {selectedCycle.status === "open" ? "Recibiendo pedidos" : "Corte realizado"}
+                </div>
+              </section>
+
+              <section className="orders-money-summary" aria-label="Resumen de dinero recibido">
+                <div className="orders-money-summary-heading">
+                  <div>
+                    <span className="orders-money-summary-eyebrow">Pagos confirmados</span>
+                    <h2>Dinero recibido</h2>
+                  </div>
+                  <p>
+                    {paidMoneySummary.orderCount === 0
+                      ? "Todavía no hay pagos confirmados para esta entrega."
+                      : `${paidMoneySummary.orderCount} ${paidMoneySummary.orderCount === 1 ? "pedido pagado" : "pedidos pagados"}.`}
+                    {" "}No incluye pedidos pendientes de pago ni cancelados.
+                  </p>
+                </div>
+
+                <div className="orders-money-summary-grid">
+                  <div className="orders-money-card orders-money-card--primary">
+                    <span>Total pagado por clientes</span>
+                    <strong>{formatMoney(paidMoneySummary.total)}</strong>
+                    <small>Total efectivamente cobrado en pedidos con pago confirmado.</small>
+                  </div>
+
+                  <div className="orders-money-card">
+                    <span>Productos cobrados</span>
+                    <strong>{formatMoney(paidMoneySummary.products)}</strong>
+                    <small>Subtotal de productos de esos pedidos.</small>
+                  </div>
+
+                  <div className="orders-money-card">
+                    <span>Envíos cobrados</span>
+                    <strong>{formatMoney(paidMoneySummary.shipping)}</strong>
+                    <small>Parte del total correspondiente a entregas.</small>
+                  </div>
                 </div>
               </section>
 
