@@ -24,7 +24,6 @@ type AdminMenuItem = {
 };
 
 const menuItems: AdminMenuItem[] = [
-  { title: "Dinero", description: "Cerrar entregas, repartir pagos y revisar el resultado mensual.", href: "/admin/dinero", icon: BadgeDollarSign },
   {
     title: "Pedidos",
     description: "Ver pedidos recibidos, estados y listas de compra.",
