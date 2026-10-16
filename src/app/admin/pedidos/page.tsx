@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, MapPin, MessageCircle, Navigation } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, MapPin, MessageCircle, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   buildOrderPaymentInstructionsMessage,
@@ -23,6 +23,7 @@ import {
 } from "@/lib/deliverySchedule";
 import "../admin.css";
 import "./money-summary.css";
+import "./move-order.css";
 
 type OrderItem = {
   id: string;
@@ -221,11 +222,15 @@ export default function AdminOrdersPage() {
   const [legacyOrders, setLegacyOrders] = useState<Order[]>([]);
   const [selectedCycleId, setSelectedCycleId] = useState("");
   const [activeTab, setActiveTab] = useState<StatusTab>("pending");
+  const [availableCycles, setAvailableCycles] = useState<DeliveryCycle[]>([]);
+  const [movingOrderId, setMovingOrderId] = useState<string | null>(null);
+  const [moveTargetCycleId, setMoveTargetCycleId] = useState("");
+  const [moveBusy, setMoveBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
 
-  async function loadData() {
+  async function loadData(preferredCycleId?: string) {
     setLoading(true);
     setError("");
 
@@ -253,11 +258,29 @@ export default function AdminOrdersPage() {
         .filter((cycle) => cycle.delivery_date < today)
         .sort((a, b) => b.delivery_date.localeCompare(a.delivery_date))
         .slice(0, 4);
-      const visibleCycles = [...operational, ...history];
+      let visibleCycles = [...operational, ...history];
+      const requestedCycle = preferredCycleId
+        ? data.cycles.find((cycle) => cycle.id === preferredCycleId)
+        : null;
+
+      if (requestedCycle && !visibleCycles.some((cycle) => cycle.id === requestedCycle.id)) {
+        visibleCycles = [...visibleCycles, requestedCycle].sort((a, b) =>
+          b.delivery_date.localeCompare(a.delivery_date)
+        );
+      }
+
+      const orderedCycles = [...data.cycles].sort((a, b) =>
+        a.delivery_date.localeCompare(b.delivery_date)
+      );
 
       setCycles(visibleCycles);
+      setAvailableCycles(orderedCycles);
       setLegacyOrders(data.legacyOrders ?? []);
       setSelectedCycleId((current) => {
+        if (preferredCycleId && visibleCycles.some((cycle) => cycle.id === preferredCycleId)) {
+          return preferredCycleId;
+        }
+
         if (visibleCycles.some((cycle) => cycle.id === current)) {
           return current;
         }
@@ -349,6 +372,84 @@ export default function AdminOrdersPage() {
       { orderCount: 0, products: 0, shipping: 0, total: 0 }
     );
   }, [selectedCycle]);
+
+  function startMoveOrder(order: Order) {
+    setMovingOrderId(order.id);
+    setMoveTargetCycleId("");
+  }
+
+  function closeMoveOrder() {
+    if (moveBusy) return;
+    setMovingOrderId(null);
+    setMoveTargetCycleId("");
+  }
+
+  function tabForStatus(status: string): StatusTab {
+    if (status === "pending" || status === "pending_payment") return "pending";
+    if (status === "confirmed") return "confirmed";
+    if (status === "preparing") return "preparing";
+    if (status === "ready") return "ready";
+    if (status === "delivered") return "delivered";
+    return "cancelled";
+  }
+
+  async function moveOrderToCycle(order: Order) {
+    if (!moveTargetCycleId || moveTargetCycleId === order.delivery_cycle_id) {
+      alert("Seleccioná una fecha de entrega diferente.");
+      return;
+    }
+
+    const targetCycle = availableCycles.find(
+      (cycle) => cycle.id === moveTargetCycleId
+    );
+
+    if (!targetCycle) {
+      alert("No se encontró la fecha de entrega seleccionada.");
+      return;
+    }
+
+    const closedWarning =
+      targetCycle.status === "closed"
+        ? "\n\nEl corte de esa entrega ya fue realizado. Como administrador, el pedido se agregará igualmente y tendrás que tomarlo en cuenta para la compra y la ruta."
+        : "";
+
+    const confirmed = window.confirm(
+      `¿Mover el pedido #${order.id.slice(0, 8).toUpperCase()} a ${formatDeliveryDate(targetCycle.delivery_date)}?${closedWarning}`
+    );
+
+    if (!confirmed) return;
+
+    setMoveBusy(true);
+
+    try {
+      const response = await fetch(
+        `/api/admin/orders/${encodeURIComponent(order.id)}/delivery-cycle`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deliveryCycleId: targetCycle.id }),
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo cambiar la fecha de entrega.");
+      }
+
+      setMovingOrderId(null);
+      setMoveTargetCycleId("");
+      setActiveTab(tabForStatus(order.status));
+      await loadData(targetCycle.id);
+    } catch (moveError) {
+      alert(
+        moveError instanceof Error
+          ? moveError.message
+          : "No se pudo cambiar la fecha de entrega."
+      );
+    } finally {
+      setMoveBusy(false);
+    }
+  }
 
   async function updateStatus(order: Order, status: string) {
     const whatsappStatuses = new Set([
@@ -753,6 +854,61 @@ export default function AdminOrdersPage() {
                             </div>
                           </div>
 
+                          {movingOrderId === order.id && (
+                            <div className="order-move-panel">
+                              <div className="order-move-panel-heading">
+                                <div>
+                                  <strong>Cambiar fecha de entrega</strong>
+                                  <p>Podés moverlo incluso a una entrega cuyo corte ya fue realizado.</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="order-move-close"
+                                  onClick={closeMoveOrder}
+                                  disabled={moveBusy}
+                                  aria-label="Cerrar cambio de fecha"
+                                >
+                                  ×
+                                </button>
+                              </div>
+
+                              <label className="order-move-field">
+                                <span>Nueva fecha</span>
+                                <select
+                                  value={moveTargetCycleId}
+                                  onChange={(event) =>
+                                    setMoveTargetCycleId(event.target.value)
+                                  }
+                                  disabled={moveBusy}
+                                >
+                                  <option value="">Seleccionar fecha...</option>
+                                  {availableCycles
+                                    .filter((cycle) => cycle.id !== order.delivery_cycle_id)
+                                    .map((cycle) => (
+                                      <option key={cycle.id} value={cycle.id}>
+                                        {formatDeliveryDate(cycle.delivery_date)} · {cycle.status === "open" ? "Recibiendo pedidos" : "Corte realizado"}
+                                      </option>
+                                    ))}
+                                </select>
+                              </label>
+
+                              {availableCycles.find((cycle) => cycle.id === moveTargetCycleId)?.status === "closed" && (
+                                <div className="order-move-warning">
+                                  El corte de esta fecha ya pasó. El cambio se hará igualmente porque estás en el panel administrativo.
+                                </div>
+                              )}
+
+                              <button
+                                type="button"
+                                className="order-move-confirm"
+                                disabled={!moveTargetCycleId || moveBusy}
+                                onClick={() => moveOrderToCycle(order)}
+                              >
+                                {moveBusy ? "Moviendo..." : "Mover pedido"}
+                              </button>
+                            </div>
+                          )}
+
                           <div className="order-actions">
                             {contactUrl && (
                               <a
@@ -766,6 +922,20 @@ export default function AdminOrdersPage() {
                                   ? "Enviar instrucciones de pago"
                                   : "Contactar al cliente"}
                               </a>
+                            )}
+                            {order.status !== "delivered" && order.status !== "cancelled" && (
+                              <button
+                                type="button"
+                                className="order-move-button"
+                                onClick={() =>
+                                  movingOrderId === order.id
+                                    ? closeMoveOrder()
+                                    : startMoveOrder(order)
+                                }
+                              >
+                                <CalendarDays size={17} aria-hidden="true" />
+                                Cambiar fecha
+                              </button>
                             )}
                             {action && (
                               <button
