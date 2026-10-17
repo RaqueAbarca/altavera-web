@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, ExternalLink, MapPin, MessageCircle, Navigation } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, MapPin, MessageCircle, Navigation, PencilLine } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   buildOrderPaymentInstructionsMessage,
@@ -12,8 +12,15 @@ import {
 } from "@/lib/whatsapp";
 import { playAdminSound } from "@/lib/adminSounds";
 import ShoppingList from "@/components/admin/ShoppingList";
-import { getMaturityLabel } from "@/lib/maturity";
+import { getMaturityLabel, MATURITY_OPTIONS } from "@/lib/maturity";
+import {
+  calculateVariantPrice,
+  getVariantQuantityUnit,
+  normalizeProductSizeVariants,
+  type ProductSizeVariant,
+} from "@/lib/productVariants";
 import { getPaymentMethodLabel } from "@/lib/paymentMethods";
+import { isKilogramUnit } from "@/lib/productUnits";
 import {
   formatCutoffLabel,
   formatDeliveryDate,
@@ -24,6 +31,7 @@ import {
 import "../admin.css";
 import "./money-summary.css";
 import "./move-order.css";
+import "./edit-order.css";
 
 type OrderItem = {
   id: string;
@@ -84,6 +92,24 @@ type DeliveryCycle = {
     finalized_at: string;
     shopping_list_items: ShoppingListItem[];
   } | null;
+};
+
+
+
+type EditableProduct = {
+  id: number;
+  name: string;
+  price: number | null;
+  unit: string;
+  is_active: boolean;
+  maturity_selection_enabled: boolean;
+  variant_selection_enabled: boolean;
+  size_variants: ProductSizeVariant[];
+};
+
+type ProductsResponse = {
+  products?: EditableProduct[];
+  error?: string;
 };
 
 type AdminResponse = {
@@ -226,6 +252,15 @@ export default function AdminOrdersPage() {
   const [movingOrderId, setMovingOrderId] = useState<string | null>(null);
   const [moveTargetCycleId, setMoveTargetCycleId] = useState("");
   const [moveBusy, setMoveBusy] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editProductId, setEditProductId] = useState("");
+  const [editVariantId, setEditVariantId] = useState("");
+  const [editQuantity, setEditQuantity] = useState("");
+  const [editMaturity, setEditMaturity] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [editCatalogLoading, setEditCatalogLoading] = useState(false);
+  const [editableProducts, setEditableProducts] = useState<EditableProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -373,7 +408,144 @@ export default function AdminOrdersPage() {
     );
   }, [selectedCycle]);
 
+  async function ensureEditableProducts() {
+    if (editableProducts.length > 0) return true;
+
+    setEditCatalogLoading(true);
+    try {
+      const response = await fetch("/api/admin/products", { cache: "no-store" });
+      const data = (await response.json()) as ProductsResponse;
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo cargar el catálogo.");
+      }
+      setEditableProducts(data.products ?? []);
+      return true;
+    } catch (catalogError) {
+      alert(
+        catalogError instanceof Error
+          ? catalogError.message
+          : "No se pudo cargar el catálogo."
+      );
+      return false;
+    } finally {
+      setEditCatalogLoading(false);
+    }
+  }
+
+  async function startEditItem(order: Order, item: OrderItem) {
+    const loaded = await ensureEditableProducts();
+    if (!loaded) return;
+
+    setMovingOrderId(null);
+    setEditingOrderId(order.id);
+    setEditingItemId(item.id);
+    setEditProductId(item.product_id === null ? "" : String(item.product_id));
+    setEditVariantId("");
+    setEditQuantity(String(Number(item.quantity)));
+    setEditMaturity(item.maturity_preference ?? "");
+  }
+
+  function closeEditItem() {
+    if (editBusy) return;
+    setEditingOrderId(null);
+    setEditingItemId(null);
+    setEditProductId("");
+    setEditVariantId("");
+    setEditQuantity("");
+    setEditMaturity("");
+  }
+
+  function selectedEditableProduct() {
+    return editableProducts.find((product) => String(product.id) === editProductId) ?? null;
+  }
+
+  function selectedEditableVariant(product: EditableProduct | null) {
+    if (!product || !editVariantId) return null;
+    return normalizeProductSizeVariants(product.size_variants).find(
+      (variant) => variant.id === editVariantId && variant.active !== false
+    ) ?? null;
+  }
+
+  async function saveEditedItem(order: Order) {
+    if (!editingItemId || !editProductId) {
+      alert("Seleccioná un producto.");
+      return;
+    }
+
+    const product = selectedEditableProduct();
+    if (!product) {
+      alert("No se encontró el producto seleccionado.");
+      return;
+    }
+
+    const currentItem = order.order_item.find((item) => item.id === editingItemId);
+    const keepingCurrentPresentation =
+      currentItem?.product_id === product.id && !editVariantId;
+
+    if (product.variant_selection_enabled && !keepingCurrentPresentation && !editVariantId) {
+      alert("Seleccioná la presentación del producto.");
+      return;
+    }
+
+    setEditBusy(true);
+    try {
+      const response = await fetch(
+        `/api/admin/orders/${encodeURIComponent(order.id)}/items/${encodeURIComponent(editingItemId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId: Number(editProductId),
+            variantId: editVariantId || null,
+            quantity: Number(editQuantity),
+            maturityPreference: editMaturity || null,
+          }),
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo editar el pedido.");
+      }
+
+      const difference = Number(data.difference ?? 0);
+      let message = "Pedido actualizado.";
+      if (Math.abs(difference) >= 0.01) {
+        message += `\n\nTotal anterior: ${formatMoney(data.oldTotal)}\nNuevo total: ${formatMoney(data.total)}`;
+        message += difference > 0
+          ? `\nFalta cobrar: ${formatMoney(difference)}`
+          : `\nDiferencia a favor del cliente: ${formatMoney(Math.abs(difference))}`;
+      } else {
+        message += " El total no cambió.";
+      }
+
+      if (data.closureStatus === "closed") {
+        message += "\n\nLa jornada ya estaba cerrada. Dinero detectará el cambio y pedirá revisar el cierre.";
+      } else if (data.closureStatus === "review") {
+        message += "\n\nLa jornada ya estaba en revisión; revisá el cierre antes de finalizarlo.";
+      }
+
+      alert(message);
+      setEditingOrderId(null);
+      setEditingItemId(null);
+      setEditProductId("");
+      setEditVariantId("");
+      setEditQuantity("");
+      setEditMaturity("");
+      await loadData(order.delivery_cycle_id ?? undefined);
+    } catch (editError) {
+      alert(
+        editError instanceof Error
+          ? editError.message
+          : "No se pudo editar el pedido."
+      );
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
   function startMoveOrder(order: Order) {
+    setEditingOrderId(null);
+    setEditingItemId(null);
     setMovingOrderId(order.id);
     setMoveTargetCycleId("");
   }
@@ -808,6 +980,7 @@ export default function AdminOrdersPage() {
                                     <th>Cantidad</th>
                                     <th>Precio</th>
                                     <th>Subtotal</th>
+                                    <th aria-label="Editar"></th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -831,6 +1004,19 @@ export default function AdminOrdersPage() {
                                         </td>
                                         <td>{formatMoney(item.price)}</td>
                                         <td><strong>{formatMoney(itemSubtotal(item))}</strong></td>
+                                        <td className="order-item-edit-cell">
+                                          {order.status !== "delivered" && order.status !== "cancelled" && (
+                                            <button
+                                              type="button"
+                                              className="order-item-edit-button"
+                                              onClick={() => void startEditItem(order, item)}
+                                              disabled={editCatalogLoading || editBusy}
+                                            >
+                                              <PencilLine size={14} aria-hidden="true" />
+                                              Editar
+                                            </button>
+                                          )}
+                                        </td>
                                       </tr>
                                     );
                                   })}
@@ -853,6 +1039,152 @@ export default function AdminOrdersPage() {
                               </div>
                             </div>
                           </div>
+
+                          {editingOrderId === order.id && editingItemId && (() => {
+                            const item = order.order_item.find((candidate) => candidate.id === editingItemId);
+                            const product = selectedEditableProduct();
+                            const variants = product
+                              ? normalizeProductSizeVariants(product.size_variants).filter((variant) => variant.active !== false)
+                              : [];
+                            const variant = selectedEditableVariant(product);
+                            const keepingCurrentPresentation =
+                              Boolean(item && product && item.product_id === product.id && !editVariantId);
+                            const effectiveUnit = keepingCurrentPresentation
+                              ? item?.unit ?? product?.unit ?? ""
+                              : variant
+                                ? getVariantQuantityUnit(variant)
+                                : product?.unit ?? item?.unit ?? "";
+                            const previewPrice = keepingCurrentPresentation
+                              ? Number(item?.price ?? 0)
+                              : product
+                                ? variant
+                                  ? calculateVariantPrice(Number(product.price), variant)
+                                  : Number(product.price)
+                                : null;
+
+                            return (
+                              <div className="order-edit-panel">
+                                <div className="order-edit-panel-heading">
+                                  <div>
+                                    <strong>Editar producto del pedido</strong>
+                                    <p>Corregí el producto o la cantidad. El subtotal y el total se recalculan automáticamente.</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="order-edit-close"
+                                    onClick={closeEditItem}
+                                    disabled={editBusy}
+                                    aria-label="Cerrar edición"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+
+                                <div className="order-edit-grid">
+                                  <label className="order-edit-field order-edit-field--wide">
+                                    <span>Producto</span>
+                                    <select
+                                      value={editProductId}
+                                      onChange={(event) => {
+                                        setEditProductId(event.target.value);
+                                        setEditVariantId("");
+                                        setEditMaturity("");
+                                      }}
+                                      disabled={editBusy}
+                                    >
+                                      <option value="">Seleccionar producto...</option>
+                                      {editableProducts.map((catalogProduct) => (
+                                        <option
+                                          key={catalogProduct.id}
+                                          value={catalogProduct.id}
+                                          disabled={!catalogProduct.is_active}
+                                        >
+                                          {catalogProduct.name}{catalogProduct.is_active ? "" : " · Inactivo"}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  {product?.variant_selection_enabled && (
+                                    <label className="order-edit-field">
+                                      <span>Presentación</span>
+                                      <select
+                                        value={editVariantId}
+                                        onChange={(event) => setEditVariantId(event.target.value)}
+                                        disabled={editBusy}
+                                      >
+                                        <option value="">{item?.product_id === product.id ? "Mantener presentación actual" : "Seleccionar..."}</option>
+                                        {variants.map((option) => (
+                                          <option key={option.id} value={option.id}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  )}
+
+                                  <label className="order-edit-field">
+                                    <span>Cantidad{effectiveUnit ? ` (${effectiveUnit})` : ""}</span>
+                                    <input
+                                      type="number"
+                                      min={isKilogramUnit(effectiveUnit) ? "0.5" : "1"}
+                                      step={isKilogramUnit(effectiveUnit) ? "0.5" : "1"}
+                                      value={editQuantity}
+                                      onChange={(event) => setEditQuantity(event.target.value)}
+                                      disabled={editBusy}
+                                    />
+                                  </label>
+
+                                  {product?.maturity_selection_enabled && (
+                                    <label className="order-edit-field">
+                                      <span>Maduración</span>
+                                      <select
+                                        value={editMaturity}
+                                        onChange={(event) => setEditMaturity(event.target.value)}
+                                        disabled={editBusy}
+                                      >
+                                        <option value="">Sin preferencia</option>
+                                        {MATURITY_OPTIONS.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  )}
+                                </div>
+
+                                {product && Number.isFinite(Number(previewPrice)) && (
+                                  <div className="order-edit-preview">
+                                    <span>Precio que se guardará</span>
+                                    <strong>{formatMoney(Number(previewPrice))}{effectiveUnit ? ` / ${effectiveUnit}` : ""}</strong>
+                                  </div>
+                                )}
+
+                                {order.status !== "pending" && order.status !== "pending_payment" && (
+                                  <div className="order-edit-warning">
+                                    Este pedido ya tiene el pago confirmado. Si el total cambia, Altavera te mostrará cuánto falta cobrar o cuánto queda a favor del cliente.
+                                  </div>
+                                )}
+
+                                <button
+                                  type="button"
+                                  className="order-edit-save"
+                                  onClick={() => void saveEditedItem(order)}
+                                  disabled={
+                                    editBusy ||
+                                    !editProductId ||
+                                    !editQuantity ||
+                                    (product?.variant_selection_enabled === true &&
+                                      item?.product_id !== product.id &&
+                                      !editVariantId)
+                                  }
+                                >
+                                  {editBusy ? "Guardando..." : "Guardar corrección"}
+                                </button>
+                              </div>
+                            );
+                          })()}
 
                           {movingOrderId === order.id && (
                             <div className="order-move-panel">
