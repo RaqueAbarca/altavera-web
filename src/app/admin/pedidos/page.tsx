@@ -1244,39 +1244,40 @@ export default function AdminOrdersPage() {
                           <div className="order-actions">
                             {contactUrl && (
                               <a
-                                className="order-contact-button"
+                                className="order-contact-button order-icon-action"
                                 href={contactUrl}
                                 target="_blank"
                                 rel="noreferrer"
+                                aria-label={isPaymentPending ? "Enviar instrucciones de pago" : "Contactar al cliente"}
+                                title={isPaymentPending ? "Enviar instrucciones de pago" : "Contactar al cliente"}
                               >
-                                <MessageCircle size={17} aria-hidden="true" />
-                                {isPaymentPending
-                                  ? "Enviar instrucciones de pago"
-                                  : "Contactar al cliente"}
+                                <MessageCircle size={19} aria-hidden="true" />
                               </a>
                             )}
                             {!["pending", "pending_payment", "cancelled"].includes(order.status) && (
                               <Link
-                                className="order-receipt-button"
+                                className="order-receipt-button order-icon-action"
                                 href={`/admin/pedidos/${order.id}/comprobante`}
                                 target="_blank"
+                                aria-label="Imprimir comprobante"
+                                title="Imprimir comprobante"
                               >
-                                <Printer size={17} aria-hidden="true" />
-                                Imprimir comprobante
+                                <Printer size={19} aria-hidden="true" />
                               </Link>
                             )}
                             {order.status !== "delivered" && order.status !== "cancelled" && (
                               <button
                                 type="button"
-                                className="order-move-button"
+                                className="order-move-button order-icon-action"
+                                aria-label="Cambiar fecha de entrega"
+                                title="Cambiar fecha de entrega"
                                 onClick={() =>
                                   movingOrderId === order.id
                                     ? closeMoveOrder()
                                     : startMoveOrder(order)
                                 }
                               >
-                                <CalendarDays size={17} aria-hidden="true" />
-                                Cambiar fecha
+                                <CalendarDays size={19} aria-hidden="true" />
                               </button>
                             )}
                             {action && (

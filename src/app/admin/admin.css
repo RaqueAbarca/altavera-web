@@ -1045,3 +1045,40 @@
     width: 100%;
   }
 }
+
+
+/* Compact utility actions inside order cards. Primary status and cancel actions keep text. */
+.order-actions .order-icon-action {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.order-actions .order-icon-action svg {
+  width: 19px;
+  height: 19px;
+}
+.order-actions .order-move-button.order-icon-action {
+  border: 1px solid #d8dfd9;
+  background: #f8faf8;
+  color: #46554a;
+}
+.order-actions .order-move-button.order-icon-action:hover {
+  background: #eef3ef;
+  color: #263a2d;
+}
+@media (max-width: 640px) {
+  .order-actions .order-icon-action,
+  .order-actions .order-contact-button.order-icon-action,
+  .order-actions .order-receipt-button.order-icon-action {
+    width: 44px;
+    min-width: 44px;
+    flex: 0 0 44px;
+  }
+}
