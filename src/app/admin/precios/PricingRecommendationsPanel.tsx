@@ -1309,8 +1309,10 @@ export default function PricingRecommendationsPanel(){
                     );
 
                   const minimumAllowed=
-                    item.minimumAllowedPrice??
-                    item.minimumPrice;
+                    item.competitiveException
+                      ?item.competitiveMinimumPrice??
+                        item.minimumPrice
+                      :item.minimumPrice;
 
                   const canKeepCurrent=
                     minimumAllowed===null||

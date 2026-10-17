@@ -185,14 +185,27 @@ export async function POST(
         recommendation.recommended_price
       );
 
-    const minimumAllowedPrice=
-      recommendation.minimum_allowed_price===null
-        ?Number(
-            recommendation.minimum_price
-          )
+    const standardMinimumPrice=
+      recommendation.minimum_price===null
+        ?null
         :Number(
-            recommendation.minimum_allowed_price
+            recommendation.minimum_price
           );
+
+    const competitiveMinimumPrice=
+      recommendation.competitive_minimum_price===null
+        ?null
+        :Number(
+            recommendation.competitive_minimum_price
+          );
+
+    const minimumAllowedPrice=
+      Boolean(
+        recommendation.competitive_exception
+      )
+        ?competitiveMinimumPrice??
+          standardMinimumPrice
+        :standardMinimumPrice;
 
     let approvedPrice:
       number|null=
@@ -218,6 +231,7 @@ export async function POST(
 
     if(decision==="keep_current"){
       if(
+        minimumAllowedPrice!==null&&
         currentPrice<
         minimumAllowedPrice
       ){
@@ -273,6 +287,7 @@ export async function POST(
       }
 
       if(
+        minimumAllowedPrice!==null&&
         customPrice<
         minimumAllowedPrice
       ){
