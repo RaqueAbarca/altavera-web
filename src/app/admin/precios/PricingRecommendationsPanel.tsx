@@ -476,6 +476,11 @@ export default function PricingRecommendationsPanel(){
     setPublishing
   ]=useState(false);
 
+  const [
+    recalculating,
+    setRecalculating
+  ]=useState(false);
+
   async function loadData(
     showLoading=true
   ){
@@ -770,6 +775,71 @@ export default function PricingRecommendationsPanel(){
     }
   }
 
+  async function recalculateRecommendations(){
+    const currentRun=
+      data?.run;
+
+    if(!currentRun){
+      return;
+    }
+
+    setRecalculating(true);
+    setMessage(
+      "Recalculando con las correcciones actuales de Walmart..."
+    );
+
+    try{
+      const response=
+        await fetch(
+          "/api/pricing/run",
+          {
+            method:"POST",
+            headers:{
+              "Content-Type":
+                "application/json"
+            },
+            body:JSON.stringify({
+              cycleId:
+                currentRun.cycleId,
+              reuseRecent:false
+            })
+          }
+        );
+
+      const result=
+        await response.json();
+
+      if(!response.ok){
+        throw new Error(
+          result.error??
+          "No se pudieron recalcular las recomendaciones"
+        );
+      }
+
+      setMessage(
+        `Recomendaciones recalculadas. Ahora se muestra el Run #${result.runId??"nuevo"} con las correcciones aprobadas de Walmart.`
+      );
+
+      setFilter("pending");
+      await loadData(false);
+
+    }catch(error){
+      console.error(
+        "Error recalculando recomendaciones:",
+        error
+      );
+
+      setMessage(
+        error instanceof Error
+          ?error.message
+          :"No se pudieron recalcular las recomendaciones"
+      );
+
+    }finally{
+      setRecalculating(false);
+    }
+  }
+
   const visibleRecommendations=
     useMemo(
       ()=>{
@@ -969,15 +1039,31 @@ export default function PricingRecommendationsPanel(){
 
         </div>
 
-        <button
-          type="button"
-          className="pricing-refresh-button"
-          onClick={()=>
-            loadData()
-          }
-        >
-          Actualizar panel
-        </button>
+        <div className="pricing-panel-actions">
+          <button
+            type="button"
+            className="pricing-recalculate-button"
+            onClick={recalculateRecommendations}
+            disabled={recalculating}
+          >
+            {
+              recalculating
+                ?"Recalculando..."
+                :"Recalcular con correcciones"
+            }
+          </button>
+
+          <button
+            type="button"
+            className="pricing-refresh-button"
+            onClick={()=>
+              loadData()
+            }
+            disabled={recalculating}
+          >
+            Actualizar panel
+          </button>
+        </div>
 
       </div>
 

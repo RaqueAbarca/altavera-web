@@ -524,6 +524,34 @@
   font-size:14px;
 }
 
+.pricing-panel-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.pricing-recalculate-button{
+  border:1px solid #1f402a;
+  background:#1f402a;
+  color:white;
+  padding:10px 15px;
+  border-radius:9px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+.pricing-recalculate-button:hover:not(:disabled){
+  background:#173420;
+}
+
+.pricing-recalculate-button:disabled,
+.pricing-refresh-button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
 .pricing-refresh-button{
   border:1px solid #1f402a;
   background:white;
@@ -1047,6 +1075,11 @@
     flex-direction:column;
   }
 
+  .pricing-panel-actions{
+    width:100%;
+  }
+
+  .pricing-recalculate-button,
   .pricing-refresh-button{
     width:100%;
   }
