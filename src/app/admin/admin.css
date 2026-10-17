@@ -1022,3 +1022,26 @@
   .order-total-highlight { width: 100%; text-align: left; }
   .order-actions .order-contact-button { width: 100%; }
 }
+
+.order-actions .order-receipt-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 9px 14px;
+  border: 1px solid #d7cbb8;
+  border-radius: 10px;
+  background: #fffaf2;
+  color: #6a4c2b;
+  font-weight: 700;
+  text-decoration: none;
+}
+.order-actions .order-receipt-button:hover {
+  background: #f8efe2;
+}
+@media (max-width: 640px) {
+  .order-actions .order-receipt-button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,346 @@
+.receipt-screen {
+  min-height: 100vh;
+  padding: 28px 18px 48px;
+  background: #f7f2e8;
+  color: #20231f;
+  font-family: var(--font-montserrat), Montserrat, Arial, sans-serif;
+}
+.receipt-toolbar {
+  width: min(720px, 100%);
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.receipt-toolbar-link,
+.receipt-toolbar button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.receipt-toolbar-link {
+  color: #1f402a;
+}
+.receipt-toolbar button {
+  border: 0;
+  background: #1f402a;
+  color: #fff;
+  cursor: pointer;
+}
+.delivery-receipt {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 30px;
+  border: 1px solid #dfe4dc;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(51, 55, 46, 0.08);
+}
+.delivery-receipt__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e8e2;
+}
+.delivery-receipt__logo {
+  width: 158px;
+  height: auto;
+}
+.delivery-receipt__header > div {
+  text-align: right;
+}
+.delivery-receipt__header span,
+.delivery-receipt__customer span,
+.delivery-receipt__item small,
+.delivery-receipt__totals span {
+  color: #737c74;
+}
+.delivery-receipt__header span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.delivery-receipt__header strong {
+  color: #1f402a;
+  font-size: 20px;
+}
+.delivery-receipt__customer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e8e2;
+}
+.delivery-receipt__customer > div {
+  display: grid;
+  gap: 4px;
+}
+.delivery-receipt__customer span {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.delivery-receipt__customer strong {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.delivery-receipt__customer-wide {
+  grid-column: 1 / -1;
+}
+.capitalize::first-letter {
+  text-transform: uppercase;
+}
+.delivery-receipt__items {
+  padding: 22px 0 10px;
+}
+.delivery-receipt__items h1 {
+  margin: 0 0 10px;
+  color: #1f402a;
+  font-size: 21px;
+}
+.delivery-receipt__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 0;
+  border-bottom: 1px dashed #d8ddd6;
+}
+.delivery-receipt__item--unavailable {
+  opacity: 0.78;
+}
+.delivery-receipt__item-copy,
+.delivery-receipt__item-price {
+  display: grid;
+  gap: 4px;
+}
+.delivery-receipt__item-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.delivery-receipt__item-name strong {
+  font-size: 14px;
+}
+.delivery-receipt__item-name span {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f7e8dd;
+  color: #a85b24;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.delivery-receipt__item small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.delivery-receipt__refund-status {
+  color: #a85b24 !important;
+  font-weight: 700;
+}
+.delivery-receipt__item-price {
+  min-width: 110px;
+  text-align: right;
+}
+.delivery-receipt__item-price strong {
+  color: #1f402a;
+  font-size: 14px;
+}
+.delivery-receipt__totals {
+  width: min(350px, 100%);
+  margin-left: auto;
+  padding: 18px 0 22px;
+}
+.delivery-receipt__totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+.delivery-receipt__totals strong {
+  color: #1f402a;
+}
+.delivery-receipt__refund-total strong {
+  color: #a85b24;
+}
+.delivery-receipt__grand-total {
+  margin-top: 6px;
+  padding-top: 10px !important;
+  border-top: 1px solid #cfd6cd;
+  font-size: 15px !important;
+}
+.delivery-receipt__thanks {
+  padding: 20px;
+  border-radius: 17px;
+  background: #f1f6f0;
+  text-align: center;
+}
+.delivery-receipt__thanks h2 {
+  margin: 0 0 6px;
+  color: #1f402a;
+  font-size: 20px;
+}
+.delivery-receipt__thanks > p {
+  margin: 0;
+  color: #687168;
+  font-size: 13px;
+}
+.delivery-receipt__review {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: left;
+}
+.delivery-receipt__review img {
+  width: 108px;
+  height: 108px;
+  padding: 5px;
+  border-radius: 10px;
+  background: #fff;
+}
+.delivery-receipt__review > div {
+  max-width: 315px;
+}
+.delivery-receipt__review strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #1f402a;
+  font-size: 14px;
+}
+.delivery-receipt__review p {
+  margin: 0;
+  color: #606960;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.delivery-receipt__footer {
+  display: grid;
+  gap: 5px;
+  padding-top: 17px;
+  text-align: center;
+}
+.delivery-receipt__footer span {
+  color: #1f402a;
+  font-size: 12px;
+  font-weight: 800;
+}
+.delivery-receipt__footer small {
+  color: #8a918a;
+  font-size: 9px;
+}
+.receipt-page-state {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  padding: 30px;
+  background: #f7f2e8;
+  color: #1f402a;
+  text-align: center;
+}
+.receipt-page-state a {
+  color: #1f402a;
+  font-weight: 800;
+}
+.receipt-page-state--error strong {
+  font-size: 20px;
+}
+@media (max-width: 640px) {
+  .delivery-receipt {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+  .delivery-receipt__header {
+    align-items: flex-start;
+  }
+  .delivery-receipt__logo {
+    width: 130px;
+  }
+  .delivery-receipt__customer {
+    grid-template-columns: 1fr;
+  }
+  .delivery-receipt__customer-wide {
+    grid-column: auto;
+  }
+  .delivery-receipt__review {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 8mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .receipt-screen {
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+  .receipt-toolbar {
+    display: none !important;
+  }
+  .delivery-receipt {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .delivery-receipt__logo {
+    width: 42mm;
+  }
+  .delivery-receipt__customer {
+    gap: 8px;
+    padding: 12px 0;
+  }
+  .delivery-receipt__items {
+    padding-top: 14px;
+  }
+  .delivery-receipt__item {
+    padding: 8px 0;
+    break-inside: avoid;
+  }
+  .delivery-receipt__totals {
+    padding: 10px 0 14px;
+  }
+  .delivery-receipt__thanks {
+    padding: 12px;
+    break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .delivery-receipt__review {
+    margin-top: 10px;
+  }
+  .delivery-receipt__review img {
+    width: 26mm;
+    height: 26mm;
+  }
+  .delivery-receipt__footer {
+    padding-top: 10px;
+  }
+}

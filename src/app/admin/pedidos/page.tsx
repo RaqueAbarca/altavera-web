@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, ExternalLink, MapPin, MessageCircle, Navigation, PencilLine } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, MapPin, MessageCircle, Navigation, PencilLine, Printer } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   buildOrderPaymentInstructionsMessage,
@@ -1254,6 +1254,16 @@ export default function AdminOrdersPage() {
                                   ? "Enviar instrucciones de pago"
                                   : "Contactar al cliente"}
                               </a>
+                            )}
+                            {!["pending", "pending_payment", "cancelled"].includes(order.status) && (
+                              <Link
+                                className="order-receipt-button"
+                                href={`/admin/pedidos/${order.id}/comprobante`}
+                                target="_blank"
+                              >
+                                <Printer size={17} aria-hidden="true" />
+                                Imprimir comprobante
+                              </Link>
                             )}
                             {order.status !== "delivered" && order.status !== "cancelled" && (
                               <button
