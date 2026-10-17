@@ -507,6 +507,49 @@ export default function DeliverySettingsTab() {
           <div className="admin-business-subsection">
             <div className="settings-section-heading">
               <div>
+                <h3>Ruta fija a CENADA</h3>
+                <p>Dinero usa este punto para calcular automáticamente la ida y vuelta desde el punto de salida.</p>
+              </div>
+            </div>
+            <div className="admin-business-fields">
+              <label className="admin-business-field">
+                <span>Latitud CENADA</span>
+                <input
+                  type="number"
+                  step="0.0000001"
+                  value={settings.deliveryDistance.cenadaLatitude ?? ""}
+                  onChange={(event) => updateDistance("cenadaLatitude", numberOrNull(event.target.value))}
+                />
+              </label>
+              <label className="admin-business-field">
+                <span>Longitud CENADA</span>
+                <input
+                  type="number"
+                  step="0.0000001"
+                  value={settings.deliveryDistance.cenadaLongitude ?? ""}
+                  onChange={(event) => updateDistance("cenadaLongitude", numberOrNull(event.target.value))}
+                />
+              </label>
+              <label className="admin-business-field">
+                <span>Recorrido dentro de CENADA</span>
+                <div className="admin-unit-input">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={settings.deliveryDistance.cenadaInternalKm}
+                    onChange={(event) => updateDistance("cenadaInternalKm", Math.max(0, Number(event.target.value) || 0))}
+                  />
+                  <span>km</span>
+                </div>
+                <small>Se suma una sola vez a la ida y vuelta. Actualmente: 2,8 km.</small>
+              </label>
+            </div>
+          </div>
+
+          <div className="admin-business-subsection">
+            <div className="settings-section-heading">
+              <div>
                 <h3>Vehículos</h3>
                 <p>El vehículo marcado como activo es el que se usa para los pedidos nuevos.</p>
               </div>

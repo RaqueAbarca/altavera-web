@@ -234,6 +234,19 @@ export function parseDeliveryDistanceSettings(value: unknown): DeliveryDistanceS
       -180,
       180
     ),
+    cenadaLatitude: nullableCoordinate(
+      source.cenada_latitude ?? source.cenadaLatitude,
+      -90,
+      90
+    ) ?? EMPTY_DELIVERY_DISTANCE_SETTINGS.cenadaLatitude,
+    cenadaLongitude: nullableCoordinate(
+      source.cenada_longitude ?? source.cenadaLongitude,
+      -180,
+      180
+    ) ?? EMPTY_DELIVERY_DISTANCE_SETTINGS.cenadaLongitude,
+    cenadaInternalKm: nullableNonNegativeNumber(
+      source.cenada_internal_km ?? source.cenadaInternalKm
+    ) ?? EMPTY_DELIVERY_DISTANCE_SETTINGS.cenadaInternalKm,
     fuelPricesCrcPerLiter: parseFuelPrices(
       source.fuel_prices_crc_per_liter ?? source.fuelPricesCrcPerLiter
     ),

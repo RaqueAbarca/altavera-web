@@ -47,6 +47,9 @@ export type DeliveryVehicleSettings = {
 export type DeliveryDistanceSettings = {
   originLatitude: number | null;
   originLongitude: number | null;
+  cenadaLatitude: number | null;
+  cenadaLongitude: number | null;
+  cenadaInternalKm: number;
   fuelPricesCrcPerLiter: FuelPriceSettings;
   laborRateCrcPerHour: number | null;
   stopMinutes: number | null;
@@ -59,6 +62,9 @@ export type DeliveryDistanceSettings = {
 export const EMPTY_DELIVERY_DISTANCE_SETTINGS: DeliveryDistanceSettings = {
   originLatitude: null,
   originLongitude: null,
+  cenadaLatitude: 9.98031,
+  cenadaLongitude: -84.15128,
+  cenadaInternalKm: 2.8,
   fuelPricesCrcPerLiter: {
     super: 764,
     regular: null,

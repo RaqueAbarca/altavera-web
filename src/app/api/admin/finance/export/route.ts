@@ -43,17 +43,18 @@ export async function GET(request: NextRequest) {
     if (closureError) throw closureError;
     const ids = (closures ?? []).map((row) => row.id);
 
-    const [productsResult, expensesResult, laborResult, vehicleResult, usageResult] = await Promise.all([
+    const [productsResult, expensesResult, laborResult, vehicleResult, usageResult, refundsResult] = await Promise.all([
       ids.length ? supabaseAdmin.from("money_product_costs").select("closure_id,opening_stock_quantity,opening_stock_value,purchased_quantity,purchase_total,used_quantity,loss_quantity").in("closure_id", ids) : Promise.resolve({ data: [], error: null }),
       ids.length ? supabaseAdmin.from("money_expenses").select("closure_id,amount").in("closure_id", ids) : Promise.resolve({ data: [], error: null }),
       ids.length ? supabaseAdmin.from("money_labor").select("closure_id,hourly_rate,purchase_hours,packing_hours,delivery_hours").in("closure_id", ids) : Promise.resolve({ data: [], error: null }),
       ids.length ? supabaseAdmin.from("money_vehicle").select("closure_id,cenada_km,delivery_km,fuel_per_km,maintenance_per_km").in("closure_id", ids) : Promise.resolve({ data: [], error: null }),
       ids.length ? supabaseAdmin.from("money_material_usage").select("closure_id,total_cost_snapshot").in("closure_id", ids) : Promise.resolve({ data: [], error: null }),
+      ids.length ? supabaseAdmin.from("money_refunds").select("closure_id,amount").in("closure_id", ids) : Promise.resolve({ data: [], error: null }),
     ]);
-    for (const result of [productsResult, expensesResult, laborResult, vehicleResult, usageResult]) if (result.error) throw result.error;
+    for (const result of [productsResult, expensesResult, laborResult, vehicleResult, usageResult, refundsResult]) if (result.error) throw result.error;
 
     const header = [
-      "Fecha", "Productos cobrados", "Envíos cobrados", "Total cobrado", "Costo productos utilizado/pérdida",
+      "Fecha", "Productos cobrados", "Envíos cobrados", "Total cobrado", "Reembolsos", "Ingreso neto", "Costo productos utilizado/pérdida",
       "Compras de productos (salida de efectivo)", "Materiales consumidos", "Otros gastos", "Trabajo", "Gasolina", "Reserva mantenimiento", "Resultado Altavera"
     ];
     const lines = [header.map(csvCell).join(";")];
@@ -84,12 +85,16 @@ export async function GET(request: NextRequest) {
       const fuel = vehicleRow ? km * num(vehicleRow.fuel_per_km) : 0;
       const maintenance = vehicleRow ? km * num(vehicleRow.maintenance_per_km) : 0;
       const totalRevenue = num(closure.total_revenue_snapshot);
-      const profit = totalRevenue - recognized - materials - expenses - labor - fuel - maintenance;
+      const refunds = (refundsResult.data ?? []).filter((row) => row.closure_id === closure.id).reduce((sum, row) => sum + num(row.amount), 0);
+      const netRevenue = totalRevenue - refunds;
+      const profit = netRevenue - recognized - materials - expenses - labor - fuel - maintenance;
       lines.push([
         closure.delivery_date,
         num(closure.product_revenue_snapshot),
         num(closure.shipping_revenue_snapshot),
         totalRevenue,
+        refunds,
+        netRevenue,
         recognized,
         purchaseCash,
         materials,

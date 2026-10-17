@@ -1,4 +1,10 @@
 import { createHash } from "crypto";
+import { getAdminAppSettings } from "@/lib/appSettings.server";
+import {
+  getOpenRouteServiceRoundTrip,
+  isOpenRouteServiceConfigured,
+  optimizeOpenRouteServiceDeliveries,
+} from "@/lib/routing/openRouteService.server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const PAID_ORDER_STATUSES = new Set([
@@ -19,6 +25,19 @@ export type MoneyProductSource = {
   cenadaReferenceDate: string | null;
 };
 
+export type MoneyRefundCandidate = {
+  orderId: string;
+  orderItemId: string;
+  itemKey: string;
+  productName: string;
+  quantity: number;
+  unit: string | null;
+  unitPrice: number;
+  amount: number;
+  customerName: string;
+  customerPhone: string;
+};
+
 export type MoneyCycleSource = {
   cycleId: string;
   deliveryDate: string;
@@ -28,8 +47,26 @@ export type MoneyCycleSource = {
   orderCount: number;
   pendingPaymentCount: number;
   products: MoneyProductSource[];
+  refundCandidates: MoneyRefundCandidate[];
   snapshot: Record<string, unknown>;
   snapshotHash: string;
+};
+
+export type MoneyVehicleSuggestion = {
+  ready: boolean;
+  error: string | null;
+  vehicleName: string | null;
+  cenadaRoadKm: number;
+  cenadaInternalKm: number;
+  cenadaKm: number;
+  deliveryKm: number;
+  totalKm: number;
+  fuelPerKm: number;
+  maintenancePerKm: number;
+  fuelCost: number;
+  maintenanceCost: number;
+  deliveryStops: number;
+  missingLocationCount: number;
 };
 
 type RawOrderItem = {
@@ -44,6 +81,8 @@ type RawOrderItem = {
 
 type RawOrder = {
   id: string;
+  guest_name: string | null;
+  guest_phone: string | null;
   subtotal: number | string | null;
   shipping: number | string | null;
   total: number | string | null;
@@ -72,6 +111,19 @@ function normalizeUnit(value: string | null | undefined) {
   return normalized ? normalized : null;
 }
 
+export function buildMoneyItemKey(input: {
+  productId: number | null;
+  productName: string;
+  unit: string | null;
+  maturityPreference: string | null;
+}) {
+  return [
+    input.productId ?? input.productName.trim().toLowerCase(),
+    input.unit?.toLowerCase() ?? "none",
+    input.maturityPreference?.trim().toLowerCase() || "none",
+  ].join("::");
+}
+
 export async function getMoneyCycleSource(cycleId: string): Promise<MoneyCycleSource> {
   const { data: cycle, error: cycleError } = await supabaseAdmin
     .from("delivery_cycles")
@@ -85,6 +137,8 @@ export async function getMoneyCycleSource(cycleId: string): Promise<MoneyCycleSo
     .from("orders")
     .select(`
       id,
+      guest_name,
+      guest_phone,
       subtotal,
       shipping,
       total,
@@ -185,11 +239,12 @@ export async function getMoneyCycleSource(cycleId: string): Promise<MoneyCycleSo
       const unit = normalizeUnit(item.unit) ??
         (item.product_id === null ? null : productUnitById.get(Number(item.product_id)) ?? null);
       const maturityPreference = item.maturity_preference?.trim() || null;
-      const itemKey = [
-        item.product_id ?? item.product_name.trim().toLowerCase(),
-        unit?.toLowerCase() ?? "none",
-        maturityPreference?.toLowerCase() ?? "none",
-      ].join("::");
+      const itemKey = buildMoneyItemKey({
+        productId: item.product_id,
+        productName: item.product_name,
+        unit,
+        maturityPreference,
+      });
       const current = productMap.get(itemKey);
       const baseProductUnit = item.product_id === null
         ? null
@@ -212,6 +267,33 @@ export async function getMoneyCycleSource(cycleId: string): Promise<MoneyCycleSo
       });
     }
   }
+
+  const refundCandidates: MoneyRefundCandidate[] = paidOrders.flatMap((order) =>
+    (order.order_item ?? []).map((item) => {
+      const unit = normalizeUnit(item.unit) ??
+        (item.product_id === null ? null : productUnitById.get(Number(item.product_id)) ?? null);
+      const maturityPreference = item.maturity_preference?.trim() || null;
+      const quantity = toNumber(item.quantity);
+      const unitPrice = toNumber(item.price);
+      return {
+        orderId: order.id,
+        orderItemId: item.id,
+        itemKey: buildMoneyItemKey({
+          productId: item.product_id,
+          productName: item.product_name,
+          unit,
+          maturityPreference,
+        }),
+        productName: item.product_name,
+        quantity: round(quantity, 3),
+        unit,
+        unitPrice: round(unitPrice),
+        amount: round(unitPrice * quantity),
+        customerName: order.guest_name?.trim() || "Cliente",
+        customerPhone: order.guest_phone?.trim() || "",
+      };
+    })
+  );
 
   const snapshot = {
     cycleId,
@@ -245,9 +327,114 @@ export async function getMoneyCycleSource(cycleId: string): Promise<MoneyCycleSo
     products: [...productMap.values()].sort((a, b) =>
       a.productName.localeCompare(b.productName, "es")
     ),
+    refundCandidates,
     snapshot,
     snapshotHash: stableHash(snapshot),
   };
+}
+
+export async function getMoneyVehicleSuggestion(cycleId: string): Promise<MoneyVehicleSuggestion> {
+  const empty = (error: string | null): MoneyVehicleSuggestion => ({
+    ready: false,
+    error,
+    vehicleName: null,
+    cenadaRoadKm: 0,
+    cenadaInternalKm: 0,
+    cenadaKm: 0,
+    deliveryKm: 0,
+    totalKm: 0,
+    fuelPerKm: 0,
+    maintenancePerKm: 0,
+    fuelCost: 0,
+    maintenanceCost: 0,
+    deliveryStops: 0,
+    missingLocationCount: 0,
+  });
+
+  try {
+    const settings = await getAdminAppSettings();
+    const distance = settings.deliveryDistance;
+    const vehicle = distance.vehicles.find((item) => item.active) ?? null;
+    const fuelPrice = vehicle ? distance.fuelPricesCrcPerLiter[vehicle.fuelType] : null;
+    if (
+      distance.originLatitude === null || distance.originLongitude === null ||
+      distance.cenadaLatitude === null || distance.cenadaLongitude === null ||
+      !vehicle || vehicle.consumptionLPer100Km === null ||
+      vehicle.maintenanceCrcPerKm === null || fuelPrice === null || fuelPrice <= 0
+    ) {
+      return empty("Completa el punto de salida y los datos del jeep en Configuración → Entregas.");
+    }
+    if (!isOpenRouteServiceConfigured()) {
+      return empty("OpenRouteService no está configurado en el servidor.");
+    }
+
+    const { data: orders, error } = await supabaseAdmin
+      .from("orders")
+      .select("id,status,latitude,longitude")
+      .eq("delivery_cycle_id", cycleId);
+    if (error) throw error;
+
+    const paidOrders = (orders ?? []).filter((order) => PAID_ORDER_STATUSES.has(String(order.status)));
+    const validStops = paidOrders.flatMap((order) => {
+      const latitude = Number(order.latitude);
+      const longitude = Number(order.longitude);
+      if (
+        !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+        latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 ||
+        (latitude === 0 && longitude === 0)
+      ) return [];
+      return [{ orderId: String(order.id), latitude, longitude }];
+    });
+
+    const missingLocationCount = Math.max(0, paidOrders.length - validStops.length);
+    if (missingLocationCount > 0) {
+      const result = empty(`${missingLocationCount} pedido(s) pagado(s) no tienen una ubicación válida. Corrige su ubicación antes de cerrar la jornada.`);
+      result.vehicleName = vehicle.name;
+      result.missingLocationCount = missingLocationCount;
+      result.deliveryStops = validStops.length;
+      return result;
+    }
+
+    const origin = { latitude: distance.originLatitude, longitude: distance.originLongitude };
+    const [cenadaRoute, deliveryRoute] = await Promise.all([
+      getOpenRouteServiceRoundTrip(origin, {
+        latitude: distance.cenadaLatitude,
+        longitude: distance.cenadaLongitude,
+      }),
+      optimizeOpenRouteServiceDeliveries({
+        origin,
+        stops: validStops,
+        serviceMinutesPerStop: 0,
+      }),
+    ]);
+
+    const cenadaRoadKm = round(cenadaRoute.roundTripDistanceKm);
+    const cenadaInternalKm = round(distance.cenadaInternalKm);
+    const cenadaKm = round(cenadaRoadKm + cenadaInternalKm);
+    const deliveryKm = round(deliveryRoute.distanceKm);
+    const totalKm = round(cenadaKm + deliveryKm);
+    const fuelPerKm = round((vehicle.consumptionLPer100Km / 100) * fuelPrice, 4);
+    const maintenancePerKm = round(vehicle.maintenanceCrcPerKm, 4);
+
+    return {
+      ready: true,
+      error: null,
+      vehicleName: vehicle.name,
+      cenadaRoadKm,
+      cenadaInternalKm,
+      cenadaKm,
+      deliveryKm,
+      totalKm,
+      fuelPerKm,
+      maintenancePerKm,
+      fuelCost: round(totalKm * fuelPerKm),
+      maintenanceCost: round(totalKm * maintenancePerKm),
+      deliveryStops: validStops.length,
+      missingLocationCount,
+    };
+  } catch (error) {
+    return empty(error instanceof Error ? error.message : "No se pudo calcular el recorrido del jeep.");
+  }
 }
 
 export function calculateProductAccounting(row: {

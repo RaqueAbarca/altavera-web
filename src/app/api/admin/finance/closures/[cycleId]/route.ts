@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   calculateProductAccounting,
   getMoneyCycleSource,
+  getMoneyVehicleSuggestion,
   isMissingTableError,
   type MoneyProductSource,
 } from "@/lib/money.server";
@@ -27,6 +28,7 @@ type RouteContext = { params: Promise<{ cycleId: string }> };
 
 type ProductInput = {
   itemKey: string;
+  unavailable?: boolean;
   purchasedQuantity: number | null;
   purchaseTotal: number | null;
   usedQuantity: number | null;
@@ -36,10 +38,11 @@ type ProductInput = {
 type ExpenseInput = { concept: string; amount: number; notes?: string };
 type SplitInput = { personName: string; percentage: number; paid: boolean };
 type MaterialUsageInput = { materialId: string; quantity: number };
+type RefundInput = { orderItemId: string; paid: boolean };
 
 type SaveBody = {
   expectedVersion?: number;
-  action?: "save" | "close" | "reopen";
+  action?: "save" | "close" | "reopen" | "refunds";
   notes?: string;
   products?: ProductInput[];
   expenses?: ExpenseInput[];
@@ -58,6 +61,7 @@ type SaveBody = {
     fuelPaid: boolean;
   };
   materialUsages?: MaterialUsageInput[];
+  refunds?: RefundInput[];
 };
 
 async function ensureDraftClosure(cycleId: string, userId: string) {
@@ -199,7 +203,7 @@ async function ensureDraftClosure(cycleId: string, userId: string) {
 
 async function loadClosureDetail(cycleId: string, userId: string) {
   const { closure, source } = await ensureDraftClosure(cycleId, userId);
-  const [productsResult, expensesResult, laborResult, splitsResult, vehicleResult, materialsResult, usageResult, purchasesResult, historyResult] =
+  const [productsResult, expensesResult, laborResult, splitsResult, vehicleResult, materialsResult, usageResult, purchasesResult, historyResult, refundsResult] =
     await Promise.all([
       supabaseAdmin.from("money_product_costs").select("*").eq("closure_id", closure.id).order("product_name_snapshot"),
       supabaseAdmin.from("money_expenses").select("*").eq("closure_id", closure.id).order("created_at"),
@@ -210,15 +214,27 @@ async function loadClosureDetail(cycleId: string, userId: string) {
       supabaseAdmin.from("money_material_usage").select("*").eq("closure_id", closure.id),
       supabaseAdmin.from("money_material_purchases").select("material_id,quantity,total_cost"),
       supabaseAdmin.from("money_closure_history").select("id,version,action,changed_at").eq("closure_id", closure.id).order("changed_at", { ascending: false }).limit(12),
+      supabaseAdmin.from("money_refunds").select("*").eq("closure_id", closure.id).order("customer_name_snapshot"),
     ]);
-  for (const result of [productsResult, expensesResult, laborResult, splitsResult, vehicleResult, materialsResult, usageResult, purchasesResult, historyResult]) {
+  for (const result of [productsResult, expensesResult, laborResult, splitsResult, vehicleResult, materialsResult, usageResult, purchasesResult, historyResult, refundsResult]) {
     if (result.error) throw result.error;
   }
 
-  const products = (productsResult.data ?? []).map((row) => ({
-    ...row,
-    accounting: calculateProductAccounting(row),
-  }));
+  const products = (productsResult.data ?? []).map((row) => {
+    const accounting = calculateProductAccounting(row);
+    if (!row.unavailable) return { ...row, accounting };
+    return {
+      ...row,
+      accounting: {
+        ...accounting,
+        usedCost: 0,
+        lossCost: 0,
+        leftoverValue: accounting.leftoverValue ?? num(row.opening_stock_value),
+        reconciles: true,
+        complete: true,
+      },
+    };
+  });
   const materialUsageById = new Map((usageResult.data ?? []).map((row) => [row.material_id, row]));
   const materials = (materialsResult.data ?? []).map((material) => {
     const purchasedQuantity = (purchasesResult.data ?? [])
@@ -279,26 +295,24 @@ async function loadClosureDetail(cycleId: string, userId: string) {
     };
   }
 
+  const vehicleAuto = closure.status === "closed"
+    ? null
+    : await getMoneyVehicleSuggestion(cycleId);
   let vehicle = vehicleResult.data;
-  if (!vehicle) {
-    let fuelPerKm = 0;
-    let maintenancePerKm = 0;
-    if (closure.status !== "closed") {
-      const { data: latestVehicle, error: latestVehicleError } = await supabaseAdmin
-        .from("money_vehicle")
-        .select("fuel_per_km,maintenance_per_km")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (latestVehicleError) throw latestVehicleError;
-      fuelPerKm = num(latestVehicle?.fuel_per_km);
-      maintenancePerKm = num(latestVehicle?.maintenance_per_km);
-    }
+  if (vehicleAuto?.ready) {
+    vehicle = {
+      cenada_km: vehicleAuto.cenadaKm,
+      delivery_km: vehicleAuto.deliveryKm,
+      fuel_per_km: vehicleAuto.fuelPerKm,
+      maintenance_per_km: vehicleAuto.maintenancePerKm,
+      fuel_paid: Boolean(vehicleResult.data?.fuel_paid),
+    };
+  } else if (!vehicle) {
     vehicle = {
       cenada_km: 0,
       delivery_km: 0,
-      fuel_per_km: fuelPerKm,
-      maintenance_per_km: maintenancePerKm,
+      fuel_per_km: 0,
+      maintenance_per_km: 0,
       fuel_paid: false,
     };
   }
@@ -311,7 +325,11 @@ async function loadClosureDetail(cycleId: string, userId: string) {
   const productCash = products.reduce((sum, product) => sum + num(product.purchase_total), 0);
   const materialsUsed = (usageResult.data ?? []).reduce((sum, row) => sum + num(row.total_cost_snapshot), 0);
   const otherExpenses = (expensesResult.data ?? []).reduce((sum, row) => sum + num(row.amount), 0);
-  const revenue = closure.status === "closed" ? num(closure.total_revenue_snapshot) : source.totalRevenue;
+  const refunds = refundsResult.data ?? [];
+  const refundTotal = refunds.reduce((sum, row) => sum + num(row.amount), 0);
+  const refundPending = refunds.filter((row) => !row.paid).reduce((sum, row) => sum + num(row.amount), 0);
+  const grossRevenue = closure.status === "closed" ? num(closure.total_revenue_snapshot) : source.totalRevenue;
+  const revenue = grossRevenue - refundTotal;
   const completeProducts = products.length > 0 && products.every((product) => product.accounting.complete && product.accounting.reconciles);
   const splitTotal = (splitsResult.data ?? []).reduce((sum, split) => sum + num(split.percentage), 0);
   const splitsValid = laborTotal === 0 || Math.abs(splitTotal - 100) <= 0.01;
@@ -327,10 +345,15 @@ async function loadClosureDetail(cycleId: string, userId: string) {
     labor,
     splits: splitsResult.data ?? [],
     vehicle,
+    vehicleAuto,
+    refunds,
     materials: normalizedMaterials,
     materialUsages: usageResult.data ?? [],
     history: historyResult.data ?? [],
     totals: {
+      grossRevenue: round(grossRevenue),
+      refundTotal: round(refundTotal),
+      refundPending: round(refundPending),
       revenue: round(revenue),
       productRecognizedCost: round(productRecognized),
       productPurchaseCash: round(productCash),
@@ -355,7 +378,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json(await loadClosureDetail(cycleId, auth.user.id));
   } catch (error) {
     if (isMissingTableError(error)) {
-      return NextResponse.json({ error: "Primero aplica APLICAR_CONTROL_DINERO_20261016.sql en Supabase." }, { status: 409 });
+      return NextResponse.json({ error: "Falta aplicar la migración de Dinero. Ejecuta APLICAR_CONTROL_DINERO_20261016.sql y APLICAR_JEEP_REEMBOLSOS_20261016.sql en Supabase." }, { status: 409 });
     }
     console.error("ERROR DETALLE CIERRE:", error);
     return NextResponse.json({ error: "No se pudo cargar la jornada" }, { status: 500 });
@@ -373,6 +396,53 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const expectedVersion = Number(body.expectedVersion);
     if (!Number.isInteger(expectedVersion) || expectedVersion !== Number(closure.version)) {
       return NextResponse.json({ error: "Esta jornada cambió mientras la tenías abierta. Recarga antes de guardar.", conflict: true }, { status: 409 });
+    }
+
+    if (body.action === "refunds") {
+      const refundState = new Map(
+        (body.refunds ?? []).map((refund) => [cleanText(refund.orderItemId), Boolean(refund.paid)])
+      );
+      const { data: existingRefunds, error: refundsError } = await supabaseAdmin
+        .from("money_refunds")
+        .select("id,order_item_id,paid,paid_at")
+        .eq("closure_id", closure.id);
+      if (refundsError) throw refundsError;
+
+      const newVersion = expectedVersion + 1;
+      const { data: claimedClosure, error: claimError } = await supabaseAdmin
+        .from("money_closures")
+        .update({ version: newVersion, updated_by: auth.user.id, updated_at: new Date().toISOString() })
+        .eq("id", closure.id)
+        .eq("version", expectedVersion)
+        .select("id,version")
+        .maybeSingle();
+      if (claimError) throw claimError;
+      if (!claimedClosure) {
+        return NextResponse.json({ error: "Esta jornada cambió mientras la tenías abierta. Recarga antes de guardar.", conflict: true }, { status: 409 });
+      }
+
+      for (const refund of existingRefunds ?? []) {
+        if (!refundState.has(String(refund.order_item_id))) continue;
+        const paid = refundState.get(String(refund.order_item_id)) ?? false;
+        const { error } = await supabaseAdmin
+          .from("money_refunds")
+          .update({
+            paid,
+            paid_at: paid ? refund.paid_at ?? new Date().toISOString() : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", refund.id);
+        if (error) throw error;
+      }
+
+      await supabaseAdmin.from("money_closure_history").insert({
+        closure_id: closure.id,
+        version: newVersion,
+        action: "refunds_updated",
+        snapshot: { refunds: body.refunds ?? [] },
+        changed_by: auth.user.id,
+      });
+      return NextResponse.json(await loadClosureDetail(cycleId, auth.user.id));
     }
 
     if (body.action === "reopen") {
@@ -425,6 +495,46 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
     }
 
+    const unavailableKeys = new Set(
+      productInputs.filter((input) => Boolean(input.unavailable)).map((input) => input.itemKey)
+    );
+    const refundState = new Map(
+      (body.refunds ?? []).map((refund) => [cleanText(refund.orderItemId), Boolean(refund.paid)])
+    );
+    const [{ data: existingRefundRows, error: existingRefundError }, { data: productStateRows, error: productStateError }] =
+      await Promise.all([
+        supabaseAdmin.from("money_refunds").select("*").eq("closure_id", closure.id),
+        supabaseAdmin
+          .from("money_product_costs")
+          .select("item_key,opening_stock_quantity,opening_stock_value")
+          .eq("closure_id", closure.id),
+      ]);
+    if (existingRefundError) throw existingRefundError;
+    if (productStateError) throw productStateError;
+    const productStateByKey = new Map<
+      string,
+      { opening_stock_quantity: number | string | null; opening_stock_value: number | string | null }
+    >(
+      (productStateRows ?? []).map(
+        (row): [string, { opening_stock_quantity: number | string | null; opening_stock_value: number | string | null }] => [
+          String(row.item_key),
+          row,
+        ]
+      )
+    );
+    for (const refund of existingRefundRows ?? []) {
+      if (refund.paid && !unavailableKeys.has(String(refund.item_key))) {
+        return NextResponse.json(
+          { error: `No puedes quitar “No se consiguió” de ${refund.product_name_snapshot} porque ya hay un reembolso marcado como realizado.` },
+          { status: 400 }
+        );
+      }
+    }
+    const desiredRefundCandidates = source.refundCandidates.filter((candidate) =>
+      unavailableKeys.has(candidate.itemKey)
+    );
+    const desiredRefundTotal = desiredRefundCandidates.reduce((sum, candidate) => sum + candidate.amount, 0);
+
     const expenses = (body.expenses ?? [])
       .map((expense) => ({
         closure_id: closure.id,
@@ -464,20 +574,44 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .filter((split) => split.person_name);
     const splitTotal = splits.reduce((sum, split) => sum + num(split.percentage), 0);
 
-    const vehicle = body.vehicle ?? {
+    const vehicleInput = body.vehicle ?? {
       cenadaKm: 0,
       deliveryKm: 0,
       fuelPerKm: 0,
       maintenancePerKm: 0,
       fuelPaid: false,
     };
-    if (
-      [vehicle.cenadaKm, vehicle.deliveryKm, vehicle.fuelPerKm, vehicle.maintenancePerKm].some(
-        (value) => num(value) < 0
-      )
-    ) {
+    const vehicleAuto = await getMoneyVehicleSuggestion(cycleId);
+    let vehicle = { ...vehicleInput };
+    if (vehicleAuto.ready) {
+      vehicle = {
+        cenadaKm: vehicleAuto.cenadaKm,
+        deliveryKm: vehicleAuto.deliveryKm,
+        fuelPerKm: vehicleAuto.fuelPerKm,
+        maintenancePerKm: vehicleAuto.maintenancePerKm,
+        fuelPaid: Boolean(vehicleInput.fuelPaid),
+      };
+    } else {
+      const { data: savedVehicle, error: savedVehicleError } = await supabaseAdmin
+        .from("money_vehicle")
+        .select("cenada_km,delivery_km,fuel_per_km,maintenance_per_km,fuel_paid")
+        .eq("closure_id", closure.id)
+        .maybeSingle();
+      if (savedVehicleError) throw savedVehicleError;
+      if (savedVehicle) {
+        vehicle = {
+          cenadaKm: num(savedVehicle.cenada_km),
+          deliveryKm: num(savedVehicle.delivery_km),
+          fuelPerKm: num(savedVehicle.fuel_per_km),
+          maintenancePerKm: num(savedVehicle.maintenance_per_km),
+          fuelPaid: Boolean(vehicleInput.fuelPaid),
+        };
+      }
+    }
+
+    if (body.action === "close" && !vehicleAuto.ready) {
       return NextResponse.json(
-        { error: "Los datos del jeep no pueden ser negativos." },
+        { error: vehicleAuto.error ?? "No se pudo calcular automáticamente el recorrido del jeep." },
         { status: 400 }
       );
     }
@@ -495,6 +629,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
       for (const sourceProduct of source.products) {
         const input = productInputByKey.get(sourceProduct.itemKey);
+        if (input?.unavailable) continue;
         const purchased = input?.purchasedQuantity ?? null;
         const purchaseTotal = input?.purchaseTotal ?? null;
         if (purchased === null || purchaseTotal === null || num(purchased) < 0) {
@@ -645,18 +780,68 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     for (const input of productInputs) {
       if (!sourceByKey.has(input.itemKey)) continue;
+      const state = productStateByKey.get(input.itemKey);
+      const unavailable = Boolean(input.unavailable);
       const { error } = await supabaseAdmin
         .from("money_product_costs")
         .update({
-          purchased_quantity: input.purchasedQuantity,
-          purchase_total: input.purchaseTotal,
-          used_quantity: input.usedQuantity,
-          leftover_quantity: input.leftoverQuantity,
-          loss_quantity: input.lossQuantity,
+          unavailable,
+          purchased_quantity: unavailable ? 0 : input.purchasedQuantity,
+          purchase_total: unavailable ? 0 : input.purchaseTotal,
+          used_quantity: unavailable ? 0 : input.usedQuantity,
+          leftover_quantity: unavailable ? num(state?.opening_stock_quantity) : input.leftoverQuantity,
+          loss_quantity: unavailable ? 0 : input.lossQuantity,
           updated_at: new Date().toISOString(),
         })
         .eq("closure_id", closure.id)
         .eq("item_key", input.itemKey);
+      if (error) throw error;
+    }
+
+    const desiredOrderItemIds = new Set(desiredRefundCandidates.map((candidate) => candidate.orderItemId));
+    for (const existingRefund of existingRefundRows ?? []) {
+      if (desiredOrderItemIds.has(String(existingRefund.order_item_id))) continue;
+      const { error } = await supabaseAdmin
+        .from("money_refunds")
+        .delete()
+        .eq("id", existingRefund.id);
+      if (error) throw error;
+    }
+    const existingRefundByItem = new Map<
+      string,
+      { paid: boolean; paid_at: string | null }
+    >(
+      (existingRefundRows ?? []).map(
+        (row): [string, { paid: boolean; paid_at: string | null }] => [
+          String(row.order_item_id),
+          { paid: Boolean(row.paid), paid_at: row.paid_at ?? null },
+        ]
+      )
+    );
+    for (const candidate of desiredRefundCandidates) {
+      const existingRefund = existingRefundByItem.get(candidate.orderItemId);
+      const requestedPaid = refundState.has(candidate.orderItemId)
+        ? refundState.get(candidate.orderItemId) ?? false
+        : Boolean(existingRefund?.paid);
+      const { error } = await supabaseAdmin.from("money_refunds").upsert(
+        {
+          closure_id: closure.id,
+          order_id: candidate.orderId,
+          order_item_id: candidate.orderItemId,
+          item_key: candidate.itemKey,
+          product_name_snapshot: candidate.productName,
+          customer_name_snapshot: candidate.customerName,
+          customer_phone_snapshot: candidate.customerPhone || null,
+          quantity: candidate.quantity,
+          unit_snapshot: candidate.unit,
+          unit_price_snapshot: candidate.unitPrice,
+          amount: candidate.amount,
+          paid: requestedPaid,
+          paid_at: requestedPaid ? existingRefund?.paid_at ?? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "closure_id,order_item_id" }
+      );
       if (error) throw error;
     }
 
@@ -722,7 +907,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
     }
 
-    const refreshed = await loadClosureDetail(cycleId, auth.user.id);
     if (body.action === "close") {
       const { error: closeError } = await supabaseAdmin
         .from("money_closures")
@@ -731,6 +915,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           product_revenue_snapshot: source.productRevenue,
           shipping_revenue_snapshot: source.shippingRevenue,
           total_revenue_snapshot: source.totalRevenue,
+          refund_total_snapshot: round(desiredRefundTotal),
           order_snapshot: source.snapshot,
           order_snapshot_hash: source.snapshotHash,
           closed_at: new Date().toISOString(),
@@ -741,6 +926,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         .eq("version", newVersion);
       if (closeError) throw closeError;
     }
+
+    const refreshed = await loadClosureDetail(cycleId, auth.user.id);
 
     await supabaseAdmin.from("money_closure_history").insert({
       closure_id: closure.id,
@@ -755,15 +942,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         labor,
         splits,
         vehicle,
+        refunds: desiredRefundCandidates.map((candidate) => ({
+          orderItemId: candidate.orderItemId,
+          amount: candidate.amount,
+          paid: refundState.get(candidate.orderItemId) ?? false,
+        })),
         materialUsages: usageInputs,
       },
       changed_by: auth.user.id,
     });
 
-    return NextResponse.json(await loadClosureDetail(cycleId, auth.user.id));
+    return NextResponse.json(refreshed);
   } catch (error) {
     if (isMissingTableError(error)) {
-      return NextResponse.json({ error: "Primero aplica APLICAR_CONTROL_DINERO_20261016.sql en Supabase." }, { status: 409 });
+      return NextResponse.json({ error: "Falta aplicar la migración de Dinero. Ejecuta APLICAR_CONTROL_DINERO_20261016.sql y APLICAR_JEEP_REEMBOLSOS_20261016.sql en Supabase." }, { status: 409 });
     }
     console.error("ERROR GUARDAR CIERRE:", error);
     return NextResponse.json({ error: "No se pudo guardar la jornada" }, { status: 500 });

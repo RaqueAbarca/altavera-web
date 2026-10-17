@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, ChevronLeft, CircleDollarSign, LockKeyhole, Plus, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, ChevronLeft, CircleDollarSign, LockKeyhole, PackageX, Plus, Save, Trash2 } from "lucide-react";
 
 type ProductRow = {
   item_key: string;
@@ -18,9 +18,36 @@ type ProductRow = {
   loss_quantity: number | string | null;
   cenada_reference_price: number | string | null;
   cenada_reference_date: string | null;
+  unavailable: boolean;
 };
 type ExpenseRow = { concept: string; amount: number | string; notes: string | null };
 type SplitRow = { person_name: string; percentage: number | string; paid: boolean };
+type RefundCandidate = {
+  orderId: string;
+  orderItemId: string;
+  itemKey: string;
+  productName: string;
+  quantity: number;
+  unit: string | null;
+  unitPrice: number;
+  amount: number;
+  customerName: string;
+  customerPhone: string;
+};
+type RefundRow = {
+  id: string;
+  order_id: string;
+  order_item_id: string;
+  item_key: string;
+  product_name_snapshot: string;
+  customer_name_snapshot: string;
+  customer_phone_snapshot: string | null;
+  quantity: number | string;
+  unit_snapshot: string | null;
+  unit_price_snapshot: number | string;
+  amount: number | string;
+  paid: boolean;
+};
 type Material = {
   id: string;
   name: string;
@@ -30,17 +57,19 @@ type Material = {
   currentUsage: { quantity: number | string; total_cost_snapshot: number | string } | null;
 };
 type Detail = {
-  closure: { id: string; status: "draft" | "review" | "closed"; version: number; notes: string | null; closed_at: string | null; product_revenue_snapshot: number | string | null; shipping_revenue_snapshot: number | string | null; total_revenue_snapshot: number | string | null };
-  source: { deliveryDate: string; totalRevenue: number; productRevenue: number; shippingRevenue: number; orderCount: number; pendingPaymentCount: number };
+  closure: { id: string; status: "draft" | "review" | "closed"; version: number; notes: string | null; closed_at: string | null; product_revenue_snapshot: number | string | null; shipping_revenue_snapshot: number | string | null; total_revenue_snapshot: number | string | null; refund_total_snapshot: number | string | null };
+  source: { deliveryDate: string; totalRevenue: number; productRevenue: number; shippingRevenue: number; orderCount: number; pendingPaymentCount: number; refundCandidates: RefundCandidate[] };
   changedAfterClose: boolean;
   products: ProductRow[];
   expenses: ExpenseRow[];
   labor: { hourly_rate: number | string; purchase_hours: number | string; packing_hours: number | string; delivery_hours: number | string };
   splits: SplitRow[];
   vehicle: { cenada_km: number | string; delivery_km: number | string; fuel_per_km: number | string; maintenance_per_km: number | string; fuel_paid: boolean };
+  vehicleAuto: null | { ready: boolean; error: string | null; vehicleName: string | null; cenadaRoadKm: number; cenadaInternalKm: number; cenadaKm: number; deliveryKm: number; totalKm: number; fuelPerKm: number; maintenancePerKm: number; fuelCost: number; maintenanceCost: number; deliveryStops: number; missingLocationCount: number };
+  refunds: RefundRow[];
   materials: Material[];
   materialUsages: Array<{ material_id: string; quantity: number | string; total_cost_snapshot: number | string }>;
-  totals: { revenue: number; productRecognizedCost: number; productPurchaseCash: number; materialUsageCost: number; otherExpenses: number; labor: number; fuel: number; maintenance: number; profit: number | null; completeProducts: boolean; splitsValid: boolean; nonDeliveredCount: number };
+  totals: { grossRevenue: number; refundTotal: number; refundPending: number; revenue: number; productRecognizedCost: number; productPurchaseCash: number; materialUsageCost: number; otherExpenses: number; labor: number; fuel: number; maintenance: number; profit: number | null; completeProducts: boolean; splitsValid: boolean; nonDeliveredCount: number };
   history: Array<{ id: string; version: number; action: string; changed_at: string }>;
 };
 
@@ -57,11 +86,13 @@ type ProductDraft = {
   leftover: string;
   loss: string;
   cenada: number | null;
+  unavailable: boolean;
 };
 type ExpenseDraft = { concept: string; amount: string; notes: string };
 type LaborDraft = { hourlyRate: string; purchaseHours: string; packingHours: string; deliveryHours: string };
 type SplitDraft = { personName: string; percentage: string; paid: boolean; active: boolean };
 type VehicleDraft = { cenadaKm: string; deliveryKm: string; fuelPerKm: string; maintenancePerKm: string; fuelPaid: boolean };
+type RefundView = { orderItemId: string; itemKey: string; productName: string; customerName: string; customerPhone: string; quantity: number; unit: string | null; amount: number; paid: boolean };
 
 type Props = { cycleId: string; onBack: () => void; onChanged: () => void };
 type Step = "products" | "expenses" | "labor" | "vehicle" | "summary";
@@ -94,6 +125,7 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
   ]);
   const [vehicle, setVehicle] = useState<VehicleDraft>({ cenadaKm: "", deliveryKm: "", fuelPerKm: "", maintenancePerKm: "", fuelPaid: false });
   const [materialUsages, setMaterialUsages] = useState<Record<string, string>>({});
+  const [refundPaid, setRefundPaid] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -115,6 +147,7 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
       leftover: row.leftover_quantity === null ? "0" : String(row.leftover_quantity),
       loss: row.loss_quantity === null ? "0" : String(row.loss_quantity),
       cenada: row.cenada_reference_price === null ? null : n(row.cenada_reference_price),
+      unavailable: Boolean(row.unavailable),
     })));
     setExpenses(data.expenses.map((row) => ({ concept: row.concept, amount: String(row.amount), notes: row.notes ?? "" })));
     setLabor({ hourlyRate: String(data.labor.hourly_rate ?? ""), purchaseHours: String(data.labor.purchase_hours ?? ""), packingHours: String(data.labor.packing_hours ?? ""), deliveryHours: String(data.labor.delivery_hours ?? "") });
@@ -127,6 +160,9 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
     const usageMap: Record<string, string> = {};
     for (const row of data.materialUsages) usageMap[row.material_id] = String(row.quantity);
     setMaterialUsages(usageMap);
+    const paidMap: Record<string, boolean> = {};
+    for (const row of data.refunds) paidMap[row.order_item_id] = Boolean(row.paid);
+    setRefundPaid(paidMap);
     setNotes(data.closure.notes ?? "");
   }
 
@@ -151,6 +187,7 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
     let purchaseCash = 0;
     let productsComplete = products.length > 0;
     for (const product of products) {
+      if (product.unavailable) continue;
       const purchased = nullable(product.purchased);
       const total = nullable(product.total);
       const used = n(product.used);
@@ -189,12 +226,41 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
       const unitCost = availableWithCurrent > 0 ? valueWithCurrent / availableWithCurrent : 0;
       return sum + quantity * unitCost;
     }, 0) ?? 0;
-    const revenue = detail?.closure.status === "closed" ? detail.totals.revenue : detail?.source.totalRevenue ?? 0;
-    const profit = productsComplete ? revenue - productCost - expenseTotal - laborTotal - fuel - maintenance - materialCost : null;
-    return { productCost, purchaseCash, productsComplete, expenseTotal, hours, laborTotal, activeSplits, splitTotal, km, fuel, maintenance, materialCost, revenue, profit };
-  }, [products, expenses, labor, splits, vehicle, detail, materialUsages]);
 
-  function updateProduct(index: number, field: keyof ProductDraft, value: string) {
+    const refunds: RefundView[] = detail?.closure.status === "closed"
+      ? detail.refunds.map((refund) => ({
+          orderItemId: refund.order_item_id,
+          itemKey: refund.item_key,
+          productName: refund.product_name_snapshot,
+          customerName: refund.customer_name_snapshot,
+          customerPhone: refund.customer_phone_snapshot ?? "",
+          quantity: n(refund.quantity),
+          unit: refund.unit_snapshot,
+          amount: n(refund.amount),
+          paid: refundPaid[refund.order_item_id] ?? Boolean(refund.paid),
+        }))
+      : (detail?.source.refundCandidates ?? [])
+          .filter((candidate) => products.some((product) => product.itemKey === candidate.itemKey && product.unavailable))
+          .map((candidate) => ({
+            orderItemId: candidate.orderItemId,
+            itemKey: candidate.itemKey,
+            productName: candidate.productName,
+            customerName: candidate.customerName,
+            customerPhone: candidate.customerPhone,
+            quantity: candidate.quantity,
+            unit: candidate.unit,
+            amount: candidate.amount,
+            paid: refundPaid[candidate.orderItemId] ?? false,
+          }));
+    const refundTotal = refunds.reduce((sum, refund) => sum + refund.amount, 0);
+    const refundPending = refunds.filter((refund) => !refund.paid).reduce((sum, refund) => sum + refund.amount, 0);
+    const grossRevenue = detail?.closure.status === "closed" ? detail.totals.grossRevenue : detail?.source.totalRevenue ?? 0;
+    const revenue = grossRevenue - refundTotal;
+    const profit = productsComplete ? revenue - productCost - expenseTotal - laborTotal - fuel - maintenance - materialCost : null;
+    return { productCost, purchaseCash, productsComplete, expenseTotal, hours, laborTotal, activeSplits, splitTotal, km, fuel, maintenance, materialCost, grossRevenue, revenue, refunds, refundTotal, refundPending, profit };
+  }, [products, expenses, labor, splits, vehicle, detail, materialUsages, refundPaid]);
+
+  function updateProduct(index: number, field: "purchased" | "total" | "used" | "leftover" | "loss", value: string) {
     setProducts((current) => current.map((product, i) => {
       if (i !== index) return product;
       const next = { ...product, [field]: value };
@@ -218,6 +284,35 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
     }));
   }
 
+
+
+  function toggleUnavailable(index: number) {
+    setProducts((current) => current.map((product, i) => {
+      if (i !== index) return product;
+      if (!product.unavailable) {
+        return {
+          ...product,
+          unavailable: true,
+          purchased: "0",
+          total: "0",
+          used: "0",
+          leftover: String(product.openingQuantity),
+          loss: "0",
+        };
+      }
+      return {
+        ...product,
+        unavailable: false,
+        purchased: "",
+        total: "",
+        used: String(product.needed),
+        leftover: String(Math.max(0, product.openingQuantity - product.needed)),
+        loss: "0",
+      };
+    }));
+    setSaved(false);
+  }
+
   function togglePerson(index: number) {
     setSplits((current) => {
       const next = current.map((split, i) => i === index ? { ...split, active: !split.active } : split);
@@ -231,7 +326,7 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
     });
   }
 
-  async function save(action: "save" | "close" | "reopen") {
+  async function save(action: "save" | "close" | "reopen" | "refunds") {
     if (!detail) return;
     setSaving(true);
     setError("");
@@ -244,12 +339,13 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
           expectedVersion: detail.closure.version,
           action,
           notes,
-          products: products.map((product) => ({ itemKey: product.itemKey, purchasedQuantity: nullable(product.purchased), purchaseTotal: nullable(product.total), usedQuantity: nullable(product.used), leftoverQuantity: nullable(product.leftover), lossQuantity: nullable(product.loss) })),
+          products: products.map((product) => ({ itemKey: product.itemKey, unavailable: product.unavailable, purchasedQuantity: nullable(product.purchased), purchaseTotal: nullable(product.total), usedQuantity: nullable(product.used), leftoverQuantity: nullable(product.leftover), lossQuantity: nullable(product.loss) })),
           expenses: expenses.map((row) => ({ concept: row.concept, amount: n(row.amount), notes: row.notes })),
           labor: { hourlyRate: n(labor.hourlyRate), purchaseHours: n(labor.purchaseHours), packingHours: n(labor.packingHours), deliveryHours: n(labor.deliveryHours) },
           splits: splits.filter((split) => split.active).map((split) => ({ personName: split.personName, percentage: n(split.percentage), paid: split.paid })),
           vehicle: { cenadaKm: n(vehicle.cenadaKm), deliveryKm: n(vehicle.deliveryKm), fuelPerKm: n(vehicle.fuelPerKm), maintenancePerKm: n(vehicle.maintenancePerKm), fuelPaid: vehicle.fuelPaid },
           materialUsages: detail.materials.map((material) => ({ materialId: material.id, quantity: n(materialUsages[material.id]) })),
+          refunds: local.refunds.map((refund) => ({ orderItemId: refund.orderItemId, paid: refundPaid[refund.orderItemId] ?? refund.paid })),
         }),
       });
       const data = await response.json();
@@ -281,7 +377,7 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
       <div>
         <button className="money-link" type="button" onClick={onBack}><ChevronLeft size={16}/> Volver a jornadas</button>
         <div className="money-title-row"><h2>{dateLabel(detail.source.deliveryDate)}</h2><span className={`money-status ${locked ? "closed" : "draft"}`}>{locked ? <><LockKeyhole size={14}/> Cerrada</> : "Borrador"}</span></div>
-        <p>{detail.source.orderCount} pedidos pagados · {money(locked ? detail.totals.revenue : detail.source.totalRevenue)} cobrados</p>
+        <p>{detail.source.orderCount} pedidos pagados · {money(locked ? detail.totals.grossRevenue : detail.source.totalRevenue)} cobrados</p>
       </div>
       <div className="money-save-state">{saved ? <><Check size={16}/> Guardado</> : null}</div>
     </div>
@@ -293,7 +389,7 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
     <nav className="money-stepper" aria-label="Pasos del cierre">{steps.map((item) => <button type="button" key={item.key} className={step === item.key ? "active" : ""} onClick={() => setStep(item.key)}>{item.label}</button>)}</nav>
 
     {step === "products" ? <div className="money-panel">
-      <div className="money-section-title"><div><h3>Costos reales de los productos</h3><p>Solo escribe cuánto compraste y cuánto pagaste. Si usaste sobrante anterior y no compraste más, escribe 0 y ₡0.</p></div></div>
+      <div className="money-section-title"><div><h3>Costos reales de los productos</h3><p>Registra lo que compraste. Si un producto no se consiguió, márcalo y Altavera prepara los reembolsos por cliente.</p></div></div>
       <div className="money-product-list">{products.map((product, index) => {
         const purchased = nullable(product.purchased);
         const total = nullable(product.total);
@@ -304,24 +400,50 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
             ? availableValue / availableQuantity
             : null;
         const reconciles =
-          purchased !== null &&
-          total !== null &&
-          Math.abs(
-            availableQuantity - n(product.used) - n(product.leftover) - n(product.loss)
-          ) <= 0.011;
-        return <article className="money-product-card" key={product.itemKey}>
-          <div className="money-product-name"><div><strong>{product.name}</strong><span>Necesitamos {product.needed} {product.unit ?? "un."}</span>{product.openingQuantity > 0 ? <span className="money-opening-stock">Sobrante anterior: {product.openingQuantity} {product.unit ?? "un."} · {money(product.openingValue)}</span> : null}</div>{product.cenada !== null ? <small>Referencia CENADA: {money(product.cenada)} / {product.unit ?? "unidad"}</small> : <small>Sin referencia CENADA comparable</small>}</div>
-          <div className="money-fields product-fields">
-            <label>Compramos hoy<input disabled={locked} inputMode="decimal" value={product.purchased} onChange={(e) => updateProduct(index, "purchased", e.target.value)} placeholder="0"/><span>{product.unit ?? "un."}</span></label>
-            <label>Pagamos hoy<input disabled={locked} inputMode="decimal" value={product.total} onChange={(e) => updateProduct(index, "total", e.target.value)} placeholder="₡0"/></label>
-            <label>Costo real<input disabled value={unitCost === null ? "Pendiente" : money(unitCost)}/></label>
-            <label>Utilizado<input disabled={locked} inputMode="decimal" value={product.used} onChange={(e) => updateProduct(index, "used", e.target.value)}/></label>
-            <label>Sobrante<input disabled={locked} inputMode="decimal" value={product.leftover} onChange={(e) => updateProduct(index, "leftover", e.target.value)}/></label>
-            <label>Se dañó<input disabled={locked} inputMode="decimal" value={product.loss} onChange={(e) => updateProduct(index, "loss", e.target.value)}/></label>
+          product.unavailable ||
+          (
+            purchased !== null &&
+            total !== null &&
+            Math.abs(
+              availableQuantity - n(product.used) - n(product.leftover) - n(product.loss)
+            ) <= 0.011
+          );
+        const productRefunds = local.refunds.filter((refund) => refund.itemKey === product.itemKey);
+        const productRefundTotal = productRefunds.reduce((sum, refund) => sum + refund.amount, 0);
+        const hasPaidRefund = productRefunds.some((refund) => refundPaid[refund.orderItemId] ?? refund.paid);
+        return <article className={`money-product-card ${product.unavailable ? "is-unavailable" : ""}`} key={product.itemKey}>
+          <div className="money-product-name">
+            <div><strong>{product.name}</strong><span>Necesitamos {product.needed} {product.unit ?? "un."}</span>{product.openingQuantity > 0 ? <span className="money-opening-stock">Sobrante anterior: {product.openingQuantity} {product.unit ?? "un."} · {money(product.openingValue)}</span> : null}</div>
+            <div className="money-product-side">
+              {product.cenada !== null ? <small>Referencia CENADA: {money(product.cenada)} / {product.unit ?? "unidad"}</small> : <small>Sin referencia CENADA comparable</small>}
+              <button type="button" className={`money-unavailable-toggle ${product.unavailable ? "active" : ""}`} disabled={locked || (product.unavailable && hasPaidRefund)} onClick={() => toggleUnavailable(index)}><PackageX size={15}/>{product.unavailable ? "No se consiguió" : "Marcar no conseguido"}</button>
+            </div>
           </div>
-          {purchased !== null && total !== null && !reconciles ? <div className="money-inline-error">Disponible (sobrante anterior + compra de hoy) debe ser igual a utilizado + sobrante + dañado.</div> : null}
+          {product.unavailable ? <div className="money-unavailable-note"><PackageX size={17}/><div><strong>Este producto no se consiguió.</strong><span>No se carga costo a la jornada y se generan {productRefunds.length} reembolso(s) por {money(productRefundTotal)}. Cualquier sobrante anterior permanece en inventario.</span></div></div> : <>
+            <div className="money-fields product-fields">
+              <label>Compramos hoy<input disabled={locked} inputMode="decimal" value={product.purchased} onChange={(e) => updateProduct(index, "purchased", e.target.value)} placeholder="0"/><span>{product.unit ?? "un."}</span></label>
+              <label>Pagamos hoy<input disabled={locked} inputMode="decimal" value={product.total} onChange={(e) => updateProduct(index, "total", e.target.value)} placeholder="₡0"/></label>
+              <label>Costo real<input disabled value={unitCost === null ? "Pendiente" : money(unitCost)}/></label>
+              <label>Utilizado<input disabled={locked} inputMode="decimal" value={product.used} onChange={(e) => updateProduct(index, "used", e.target.value)}/></label>
+              <label>Sobrante<input disabled={locked} inputMode="decimal" value={product.leftover} onChange={(e) => updateProduct(index, "leftover", e.target.value)}/></label>
+              <label>Se dañó<input disabled={locked} inputMode="decimal" value={product.loss} onChange={(e) => updateProduct(index, "loss", e.target.value)}/></label>
+            </div>
+            {purchased !== null && total !== null && !reconciles ? <div className="money-inline-error">Disponible (sobrante anterior + compra de hoy) debe ser igual a utilizado + sobrante + dañado.</div> : null}
+          </>}
         </article>;
       })}</div>
+      {local.refunds.length > 0 ? <div className="money-refunds">
+        <div className="money-refund-head">
+          <div><h4>Reembolsos por productos no conseguidos</h4><p>Altavera usa el precio que pagó cada cliente en su pedido.</p></div>
+          <div className="money-refund-total"><span>Total a devolver</span><strong>{money(local.refundTotal)}</strong>{local.refundPending > 0 ? <small>Pendiente: {money(local.refundPending)}</small> : <small>Todos realizados</small>}</div>
+        </div>
+        <div className="money-refund-list">{local.refunds.map((refund) => <article className="money-refund-row" key={refund.orderItemId}>
+          <div className="money-refund-customer"><strong>{refund.customerName}</strong>{refund.customerPhone ? <span>{refund.customerPhone}</span> : <span>Sin teléfono guardado</span>}</div>
+          <div className="money-refund-product"><strong>{refund.productName}</strong><span>{refund.quantity} {refund.unit ?? "un."}</span></div>
+          <strong className="money-refund-amount">{money(refund.amount)}</strong>
+          <label className="money-refund-paid"><input type="checkbox" checked={refundPaid[refund.orderItemId] ?? refund.paid} onChange={(e) => { setRefundPaid((current) => ({ ...current, [refund.orderItemId]: e.target.checked })); setSaved(false); }}/><span>Reembolso realizado</span></label>
+        </article>)}</div>
+      </div> : null}
     </div> : null}
 
     {step === "expenses" ? <div className="money-panel">
@@ -341,25 +463,44 @@ export default function MoneyJourneyEditor({ cycleId, onBack, onChanged }: Props
     </div> : null}
 
     {step === "vehicle" ? <div className="money-panel">
-      <div className="money-section-title"><div><h3>Gasolina y mantenimiento del jeep</h3><p>Registra los kilómetros. Altavera calcula cuánto reservar para combustible y mantenimiento.</p></div></div>
-      <div className="money-fields vehicle-fields"><label>Ida y vuelta a CENADA<input disabled={locked} inputMode="decimal" value={vehicle.cenadaKm} onChange={(e) => setVehicle({ ...vehicle, cenadaKm: e.target.value })} placeholder="0 km"/></label><label>Ruta de entregas<input disabled={locked} inputMode="decimal" value={vehicle.deliveryKm} onChange={(e) => setVehicle({ ...vehicle, deliveryKm: e.target.value })} placeholder="0 km"/></label><label>Gasolina por km<input disabled={locked} inputMode="decimal" value={vehicle.fuelPerKm} onChange={(e) => setVehicle({ ...vehicle, fuelPerKm: e.target.value })} placeholder="₡0"/></label><label>Mantenimiento por km<input disabled={locked} inputMode="decimal" value={vehicle.maintenancePerKm} onChange={(e) => setVehicle({ ...vehicle, maintenancePerKm: e.target.value })} placeholder="₡0"/></label></div>
-      <div className="money-mini-summary"><div><span>Kilómetros</span><strong>{local.km} km</strong></div><div><span>Gasolina</span><strong>{money(local.fuel)}</strong></div><div><span>Reserva mantenimiento</span><strong>{money(local.maintenance)}</strong></div></div>
+      <div className="money-section-title"><div><h3>Gasolina y mantenimiento del jeep</h3><p>Altavera calcula automáticamente el viaje a CENADA, la ruta de entregas y el costo del vehículo.</p></div></div>
+      {!locked && detail.vehicleAuto && !detail.vehicleAuto.ready ? <div className="money-warning"><AlertTriangle size={18}/><div><strong>No se pudo calcular el recorrido automáticamente.</strong><span>{detail.vehicleAuto.error ?? "Revisa la configuración del jeep y las ubicaciones de los pedidos."}</span></div></div> : null}
+      <div className="money-vehicle-auto-grid">
+        <article>
+          <span>Viaje a CENADA</span>
+          <strong>{n(vehicle.cenadaKm).toFixed(1)} km</strong>
+          <small>{locked ? "Recorrido guardado al cerrar esta jornada." : detail.vehicleAuto?.ready ? `${detail.vehicleAuto.cenadaRoadKm.toFixed(1)} km por carretera + ${detail.vehicleAuto.cenadaInternalKm.toFixed(1)} km dentro de CENADA` : "Pendiente de cálculo"}</small>
+        </article>
+        <article>
+          <span>Ruta de entregas</span>
+          <strong>{n(vehicle.deliveryKm).toFixed(1)} km</strong>
+          <small>{locked ? "Recorrido guardado al cerrar esta jornada." : detail.vehicleAuto?.ready ? `${detail.vehicleAuto.deliveryStops} parada(s), inicio y regreso al punto configurado` : "Pendiente de cálculo"}</small>
+        </article>
+        <article className="total">
+          <span>Recorrido total</span>
+          <strong>{local.km.toFixed(1)} km</strong>
+          <small>CENADA + entregas</small>
+        </article>
+      </div>
+      <div className="money-mini-summary"><div><span>Gasolina</span><strong>{money(local.fuel)}</strong></div><div><span>Reserva mantenimiento</span><strong>{money(local.maintenance)}</strong></div><div><span>Costo total del jeep</span><strong>{money(local.fuel + local.maintenance)}</strong></div></div>
+      <p className="money-vehicle-note">{locked ? "Estos valores quedaron guardados con el cierre y no cambian aunque después cambie el precio del combustible o la configuración del vehículo." : detail.vehicleAuto?.ready ? `${detail.vehicleAuto.vehicleName ?? "Vehículo activo"} · gasolina ${money(detail.vehicleAuto.fuelPerKm)}/km · mantenimiento ${money(detail.vehicleAuto.maintenancePerKm)}/km. La ruta se vuelve a calcular al guardar.` : "Completa Configuración → Entregas para poder calcular el jeep automáticamente."}</p>
       <label className="money-check standalone"><input disabled={locked} type="checkbox" checked={vehicle.fuelPaid} onChange={(e) => setVehicle({ ...vehicle, fuelPaid: e.target.checked })}/><span>La gasolina ya fue pagada/reembolsada</span></label>
     </div> : null}
 
     {step === "summary" ? <div className="money-panel">
       <div className="money-section-title"><div><h3>Resumen de la jornada</h3><p>Resultado del negocio y costos que deben quedar separados.</p></div></div>
       {!local.productsComplete ? <div className="money-warning"><AlertTriangle size={18}/><div><strong>El resultado todavía no es definitivo.</strong><span>Falta un costo real o alguna cantidad de producto no cuadra.</span></div></div> : null}
-      <div className="money-summary-columns"><div><h4>Ingresos</h4><p><span>Productos cobrados</span><strong>{money(locked ? n(detail.closure.product_revenue_snapshot) : detail.source.productRevenue)}</strong></p><p><span>Envíos cobrados</span><strong>{money(locked ? n(detail.closure.shipping_revenue_snapshot) : detail.source.shippingRevenue)}</strong></p><p className="total"><span>Total cobrado</span><strong>{money(local.revenue)}</strong></p></div><div><h4>Costos de la jornada</h4><p><span>Productos utilizados + pérdida</span><strong>{money(local.productCost)}</strong></p><p><span>Materiales utilizados</span><strong>{money(local.materialCost)}</strong></p><p><span>Otros gastos</span><strong>{money(local.expenseTotal)}</strong></p><p><span>Trabajo</span><strong>{money(local.laborTotal)}</strong></p><p><span>Gasolina</span><strong>{money(local.fuel)}</strong></p><p><span>Reserva mantenimiento</span><strong>{money(local.maintenance)}</strong></p></div></div>
+      <div className="money-summary-columns"><div><h4>Ingresos</h4><p><span>Productos cobrados</span><strong>{money(locked ? n(detail.closure.product_revenue_snapshot) : detail.source.productRevenue)}</strong></p><p><span>Envíos cobrados</span><strong>{money(locked ? n(detail.closure.shipping_revenue_snapshot) : detail.source.shippingRevenue)}</strong></p><p><span>Total cobrado</span><strong>{money(local.grossRevenue)}</strong></p>{local.refundTotal > 0 ? <p className="refund"><span>Reembolsos</span><strong>− {money(local.refundTotal)}</strong></p> : null}<p className="total"><span>Ingreso neto</span><strong>{money(local.revenue)}</strong></p></div><div><h4>Costos de la jornada</h4><p><span>Productos utilizados + pérdida</span><strong>{money(local.productCost)}</strong></p><p><span>Materiales utilizados</span><strong>{money(local.materialCost)}</strong></p><p><span>Otros gastos</span><strong>{money(local.expenseTotal)}</strong></p><p><span>Trabajo</span><strong>{money(local.laborTotal)}</strong></p><p><span>Gasolina</span><strong>{money(local.fuel)}</strong></p><p><span>Reserva mantenimiento</span><strong>{money(local.maintenance)}</strong></p></div></div>
+      {local.refundPending > 0 ? <div className="money-warning"><AlertTriangle size={18}/><div><strong>Hay {money(local.refundPending)} pendientes de reembolsar.</strong><span>Ese dinero no se considera disponible para Altavera. Puedes marcar cada reembolso como realizado en Productos.</span></div></div> : null}
       <div className={`money-result ${local.profit === null ? "pending" : local.profit >= 0 ? "positive" : "negative"}`}><span>Resultado de Altavera</span><strong>{local.profit === null ? "Pendiente" : money(local.profit)}</strong><small>{local.profit === null ? "No mostramos una ganancia hasta tener todos los costos reales." : "Este resultado no es lo mismo que el dinero disponible en caja."}</small></div>
       <div className="money-cash-note"><CircleDollarSign size={20}/><div><strong>Salida real por compra de productos: {money(local.purchaseCash)}</strong><span>El resultado usa solo lo utilizado y lo perdido. El valor de sobrantes queda como inventario para otra venta.</span></div></div>
       <label className="money-notes">Nota de la jornada<textarea disabled={locked} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional"/></label>
-      {detail.history.length > 0 ? <div className="money-history"><h4>Historial del cierre</h4><div className="money-history-list">{detail.history.map((item) => <span key={item.id}>v{item.version} · {item.action === "closed" ? "Cerrada" : item.action === "reopened" ? "Reabierta" : "Guardada"} · {new Intl.DateTimeFormat("es-CR", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(item.changed_at))}</span>)}</div></div> : null}
+      {detail.history.length > 0 ? <div className="money-history"><h4>Historial del cierre</h4><div className="money-history-list">{detail.history.map((item) => <span key={item.id}>v{item.version} · {item.action === "closed" ? "Cerrada" : item.action === "reopened" ? "Reabierta" : item.action === "refunds_updated" ? "Reembolsos actualizados" : "Guardada"} · {new Intl.DateTimeFormat("es-CR", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(item.changed_at))}</span>)}</div></div> : null}
       {detail.totals.nonDeliveredCount > 0 ? <div className="money-inline-error">Aún hay {detail.totals.nonDeliveredCount} pedido(s) pagado(s) sin marcar como entregados. No se puede cerrar todavía.</div> : null}
     </div> : null}
 
     <div className="money-actions">
-      {locked ? <button type="button" className="money-secondary" disabled={saving} onClick={() => void save("reopen")}>Corregir cierre</button> : <><button type="button" className="money-secondary" disabled={saving} onClick={() => void save("save")}><Save size={16}/>{saving ? "Guardando…" : "Guardar avance"}</button><button type="button" className="money-primary" disabled={saving || !local.productsComplete || detail.totals.nonDeliveredCount > 0 || (local.laborTotal > 0 && Math.abs(local.splitTotal - 100) > 0.01)} onClick={() => void save("close")}><LockKeyhole size={16}/> Cerrar jornada</button></>}
+      {locked ? <>{local.refunds.length > 0 ? <button type="button" className="money-primary" disabled={saving} onClick={() => void save("refunds")}><Save size={16}/>{saving ? "Guardando…" : "Guardar reembolsos"}</button> : null}<button type="button" className="money-secondary" disabled={saving} onClick={() => void save("reopen")}>Corregir cierre</button></> : <><button type="button" className="money-secondary" disabled={saving} onClick={() => void save("save")}><Save size={16}/>{saving ? "Guardando…" : "Guardar avance"}</button><button type="button" className="money-primary" disabled={saving || !local.productsComplete || detail.totals.nonDeliveredCount > 0 || (local.laborTotal > 0 && Math.abs(local.splitTotal - 100) > 0.01) || Boolean(detail.vehicleAuto && !detail.vehicleAuto.ready)} onClick={() => void save("close")}><LockKeyhole size={16}/> Cerrar jornada</button></>}
     </div>
   </section>;
 }

@@ -27,6 +27,8 @@ type Overview = {
     productRevenue: number;
     shippingRevenue: number;
     totalRevenue: number;
+    refunds: number;
+    netRevenue: number;
     productCost: number;
     productPurchaseCash: number;
     materialUsage: number;
@@ -43,6 +45,7 @@ type Overview = {
     unpaidLabor: number;
     unpaidFuel: number;
     maintenanceReserve: number;
+    pendingRefunds: number;
     lockedFutureOrders: number;
   };
   error?: string;
@@ -105,7 +108,7 @@ export default function MoneyPage() {
     <nav className="money-main-tabs"><button className={view === "journeys" ? "active" : ""} onClick={() => setView("journeys")}><CalendarDays size={17}/> Jornadas</button><button className={view === "materials" ? "active" : ""} onClick={() => setView("materials")}><PackageOpen size={17}/> Materiales</button><button className={view === "reports" ? "active" : ""} onClick={() => setView("reports")}><CircleDollarSign size={17}/> Reportes</button></nav>
 
     {error ? <div className="money-error">{error}</div> : null}
-    {data?.setupRequired ? <section className="money-panel money-setup"><AlertTriangle size={22}/><div><h2>Falta preparar Supabase</h2><p>Ejecuta una sola vez el archivo <code>APLICAR_CONTROL_DINERO_20261016.sql</code> en el SQL Editor de Supabase y vuelve a cargar esta página.</p></div></section> : null}
+    {data?.setupRequired ? <section className="money-panel money-setup"><AlertTriangle size={22}/><div><h2>Falta preparar Supabase</h2><p>Verifica que estén aplicados <code>APLICAR_CONTROL_DINERO_20261016.sql</code> y <code>APLICAR_JEEP_REEMBOLSOS_20261016.sql</code>.</p></div></section> : null}
 
     {!data?.setupRequired && view === "journeys" ? <>
       <section className="money-current-grid">
@@ -113,6 +116,7 @@ export default function MoneyPage() {
         <article className="money-kpi"><span>Por pagar trabajo</span><strong>{data?.current ? money(data.current.unpaidLabor) : "—"}</strong><small>Pagos a personas marcados como pendientes.</small></article>
         <article className="money-kpi"><span>Dinero apartado para pedidos</span><strong>{data?.current ? money(data.current.lockedFutureOrders) : "—"}</strong><small>Pedidos pagados que todavía no se han entregado.</small></article>
         <article className="money-kpi"><span>Reserva jeep</span><strong>{data?.current ? money(data.current.maintenanceReserve) : "—"}</strong><small>Mantenimiento acumulado según kilómetros registrados.</small></article>
+        <article className="money-kpi"><span>Reembolsos pendientes</span><strong>{data?.current ? money(data.current.pendingRefunds) : "—"}</strong><small>Dinero que todavía debe devolverse a clientes.</small></article>
       </section>
       <div className="money-help-note"><strong>Disponible calculado</strong> usa únicamente lo registrado en Altavera. No sustituye el saldo real de una cuenta bancaria si hubo retiros, aportes o movimientos fuera del sistema.</div>
       <section className="money-panel">
@@ -130,7 +134,7 @@ export default function MoneyPage() {
       <section className="money-panel report-controls"><div><h2>Reporte por mes o quincena</h2><p>Solo incluye jornadas cerradas, para no presentar ganancias incompletas como definitivas.</p></div><div className="money-report-filters"><input type="month" value={month} onChange={(e) => setMonth(e.target.value)}/><div className="money-half"><button className={half === "month" ? "active" : ""} onClick={() => setHalf("month")}>Mes completo</button><button className={half === "first" ? "active" : ""} onClick={() => setHalf("first")}>1–15</button><button className={half === "second" ? "active" : ""} onClick={() => setHalf("second")}>16–fin</button></div><button type="button" className="money-secondary" onClick={() => { window.location.href = `/api/admin/finance/export?month=${encodeURIComponent(month)}&half=${half}`; }}><Download size={16}/> Abrir en Excel</button></div></section>
       {loading ? <section className="money-panel money-loading">Calculando reporte…</section> : data?.summary ? <>
         <section className="money-report-top"><article><span>Total cobrado</span><strong>{money(data.summary.totalRevenue)}</strong><small>{data.summary.closedJourneys} jornadas cerradas</small></article><article><span>Resultado Altavera</span><strong className={data.summary.profit >= 0 ? "good" : "bad"}>{money(data.summary.profit)}</strong><small>Después de todos los costos registrados.</small></article><article><span>Disponible generado</span><strong>{money(data.summary.availableGenerated)}</strong><small>Flujo del periodo después de salidas y reservas.</small></article></section>
-        <section className="money-panel"><div className="money-section-title"><div><h3>Detalle del periodo</h3><p>{data.period.from} a {data.period.to}</p></div></div><div className="money-report-lines"><p><span>Productos cobrados</span><strong>{money(data.summary.productRevenue)}</strong></p><p><span>Envíos cobrados</span><strong>{money(data.summary.shippingRevenue)}</strong></p><p><span>Costo real de producto utilizado + perdido</span><strong>− {money(data.summary.productCost)}</strong></p><p><span>Materiales utilizados</span><strong>− {money(data.summary.materialUsage)}</strong></p><p><span>Otros gastos</span><strong>− {money(data.summary.otherExpenses)}</strong></p><p><span>Trabajo</span><strong>− {money(data.summary.labor)}</strong></p><p><span>Gasolina</span><strong>− {money(data.summary.fuel)}</strong></p><p><span>Reserva mantenimiento</span><strong>− {money(data.summary.maintenance)}</strong></p><p className="total"><span>Resultado</span><strong>{money(data.summary.profit)}</strong></p></div><div className="money-report-note"><strong>Compras de inventario durante el periodo:</strong> productos {money(data.summary.productPurchaseCash)} · materiales {money(data.summary.materialPurchases)}. Estas salidas afectan el dinero disponible, aunque una parte del inventario todavía conserve valor.</div></section>
+        <section className="money-panel"><div className="money-section-title"><div><h3>Detalle del periodo</h3><p>{data.period.from} a {data.period.to}</p></div></div><div className="money-report-lines"><p><span>Productos cobrados</span><strong>{money(data.summary.productRevenue)}</strong></p><p><span>Envíos cobrados</span><strong>{money(data.summary.shippingRevenue)}</strong></p><p><span>Reembolsos por producto no conseguido</span><strong>− {money(data.summary.refunds)}</strong></p><p><span>Ingreso neto</span><strong>{money(data.summary.netRevenue)}</strong></p><p><span>Costo real de producto utilizado + perdido</span><strong>− {money(data.summary.productCost)}</strong></p><p><span>Materiales utilizados</span><strong>− {money(data.summary.materialUsage)}</strong></p><p><span>Otros gastos</span><strong>− {money(data.summary.otherExpenses)}</strong></p><p><span>Trabajo</span><strong>− {money(data.summary.labor)}</strong></p><p><span>Gasolina</span><strong>− {money(data.summary.fuel)}</strong></p><p><span>Reserva mantenimiento</span><strong>− {money(data.summary.maintenance)}</strong></p><p className="total"><span>Resultado</span><strong>{money(data.summary.profit)}</strong></p></div><div className="money-report-note"><strong>Compras de inventario durante el periodo:</strong> productos {money(data.summary.productPurchaseCash)} · materiales {money(data.summary.materialPurchases)}. Estas salidas afectan el dinero disponible, aunque una parte del inventario todavía conserve valor.</div></section>
       </> : null}
     </div> : null}
   </main>;

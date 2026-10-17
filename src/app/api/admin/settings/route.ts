@@ -207,6 +207,9 @@ function parseDistanceSettings(value: unknown): DeliveryDistanceSettings {
   return {
     originLatitude: parseNullableNumber(source.originLatitude, "La latitud del punto de salida", { min: -90, max: 90 }),
     originLongitude: parseNullableNumber(source.originLongitude, "La longitud del punto de salida", { min: -180, max: 180 }),
+    cenadaLatitude: parseNullableNumber(source.cenadaLatitude, "La latitud de CENADA", { min: -90, max: 90 }),
+    cenadaLongitude: parseNullableNumber(source.cenadaLongitude, "La longitud de CENADA", { min: -180, max: 180 }),
+    cenadaInternalKm: parseNullableNumber(source.cenadaInternalKm, "El recorrido interno de CENADA", { min: 0, max: 100 }) ?? 2.8,
     fuelPricesCrcPerLiter: parseFuelPrices(source.fuelPricesCrcPerLiter),
     laborRateCrcPerHour: parseNullableNumber(source.laborRateCrcPerHour, "El pago por hora", { min: 0, max: 1_000_000 }),
     stopMinutes: parseNullableNumber(source.stopMinutes, "Los minutos por parada", { min: 0, max: 240 }),
@@ -221,6 +224,9 @@ function serializeDistanceSettings(settings: DeliveryDistanceSettings) {
   return {
     origin_latitude: settings.originLatitude,
     origin_longitude: settings.originLongitude,
+    cenada_latitude: settings.cenadaLatitude,
+    cenada_longitude: settings.cenadaLongitude,
+    cenada_internal_km: settings.cenadaInternalKm,
     fuel_prices_crc_per_liter: settings.fuelPricesCrcPerLiter,
     labor_rate_crc_per_hour: settings.laborRateCrcPerHour,
     stop_minutes: settings.stopMinutes,

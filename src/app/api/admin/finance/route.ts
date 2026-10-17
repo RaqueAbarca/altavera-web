@@ -38,6 +38,7 @@ type ClosureRow = {
   product_revenue_snapshot: number | string | null;
   shipping_revenue_snapshot: number | string | null;
   total_revenue_snapshot: number | string | null;
+  refund_total_snapshot: number | string | null;
   closed_at: string | null;
   updated_at: string;
 };
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
           .not("delivery_cycle_id", "is", null),
         supabaseAdmin
           .from("money_closures")
-          .select("id,delivery_cycle_id,delivery_date,status,version,product_revenue_snapshot,shipping_revenue_snapshot,total_revenue_snapshot,closed_at,updated_at")
+          .select("id,delivery_cycle_id,delivery_date,status,version,product_revenue_snapshot,shipping_revenue_snapshot,total_revenue_snapshot,refund_total_snapshot,closed_at,updated_at")
           .order("delivery_date", { ascending: false }),
       ]);
 
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
     const allClosed = closures.filter((closure) => closure.status === "closed");
     const allClosureIds = closures.map((closure) => closure.id);
 
-    const [productResult, expenseResult, laborResult, splitResult, vehicleResult, usageResult, materialPurchasesResult] =
+    const [productResult, expenseResult, laborResult, splitResult, vehicleResult, usageResult, materialPurchasesResult, refundResult] =
       await Promise.all([
         allClosureIds.length
           ? supabaseAdmin.from("money_product_costs").select("closure_id,opening_stock_quantity,opening_stock_value,purchased_quantity,purchase_total,used_quantity,loss_quantity").in("closure_id", allClosureIds)
@@ -162,9 +163,12 @@ export async function GET(request: NextRequest) {
           ? supabaseAdmin.from("money_material_usage").select("closure_id,total_cost_snapshot").in("closure_id", allClosureIds)
           : Promise.resolve({ data: [], error: null }),
         supabaseAdmin.from("money_material_purchases").select("purchased_at,total_cost"),
+        allClosureIds.length
+          ? supabaseAdmin.from("money_refunds").select("closure_id,amount,paid").in("closure_id", allClosureIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
-    for (const result of [productResult, expenseResult, laborResult, splitResult, vehicleResult, usageResult, materialPurchasesResult]) {
+    for (const result of [productResult, expenseResult, laborResult, splitResult, vehicleResult, usageResult, materialPurchasesResult, refundResult]) {
       if (result.error) throw result.error;
     }
 
@@ -175,6 +179,7 @@ export async function GET(request: NextRequest) {
     const vehicles = vehicleResult.data ?? [];
     const usages = usageResult.data ?? [];
     const materialPurchases = materialPurchasesResult.data ?? [];
+    const refunds = refundResult.data ?? [];
     const inPeriod = (closureId: string) => periodIds.includes(closureId);
 
     function productMetrics(filter: (closureId: string) => boolean) {
@@ -205,7 +210,9 @@ export async function GET(request: NextRequest) {
     }
 
     const periodProducts = productMetrics(inPeriod);
-    const periodRevenue = periodClosures.reduce((sum, closure) => sum + num(closure.total_revenue_snapshot), 0);
+    const periodGrossRevenue = periodClosures.reduce((sum, closure) => sum + num(closure.total_revenue_snapshot), 0);
+    const periodRefunds = refunds.filter((row) => inPeriod(row.closure_id)).reduce((sum, row) => sum + num(row.amount), 0);
+    const periodRevenue = periodGrossRevenue - periodRefunds;
     const periodProductRevenue = periodClosures.reduce((sum, closure) => sum + num(closure.product_revenue_snapshot), 0);
     const periodShippingRevenue = periodClosures.reduce((sum, closure) => sum + num(closure.shipping_revenue_snapshot), 0);
     const periodExpenses = expenses.filter((row) => inPeriod(row.closure_id)).reduce((sum, row) => sum + num(row.amount), 0);
@@ -227,7 +234,12 @@ export async function GET(request: NextRequest) {
     const periodAvailableGenerated = periodRevenue - periodProducts.purchaseCash - periodExpenses - periodLabor - periodMaterialPurchases - periodVehicle.fuel - periodVehicle.maintenance;
 
     const allProducts = productMetrics(() => true);
-    const allRevenue = allClosed.reduce((sum, closure) => sum + num(closure.total_revenue_snapshot), 0);
+    const allGrossRevenue = allClosed.reduce((sum, closure) => sum + num(closure.total_revenue_snapshot), 0);
+    const allClosedIds = new Set(allClosed.map((closure) => closure.id));
+    const allRefunds = refunds
+      .filter((row) => allClosedIds.has(row.closure_id))
+      .reduce((sum, row) => sum + num(row.amount), 0);
+    const allRevenue = allGrossRevenue - allRefunds;
     const allExpenses = expenses.reduce((sum, row) => sum + num(row.amount), 0);
     const allLabor = labor.reduce((sum, row) => sum + laborCost(row), 0);
     const allMaterialPurchases = materialPurchases.reduce((sum, row) => sum + num(row.total_cost), 0);
@@ -261,6 +273,9 @@ export async function GET(request: NextRequest) {
     }
     const unpaidFuel = vehicles.filter((row) => !row.fuel_paid).reduce((sum, row) => sum + vehicleCost(row).fuel, 0);
     const maintenanceReserve = vehicles.reduce((sum, row) => sum + vehicleCost(row).maintenance, 0);
+    const pendingRefunds = refunds
+      .filter((row) => !row.paid)
+      .reduce((sum, row) => sum + num(row.amount), 0);
 
     const lockedFutureOrders = orders
       .filter((order) => order.status === "confirmed" || order.status === "preparing" || order.status === "ready")
@@ -274,7 +289,9 @@ export async function GET(request: NextRequest) {
         closedJourneys: periodClosures.length,
         productRevenue: round(periodProductRevenue),
         shippingRevenue: round(periodShippingRevenue),
-        totalRevenue: round(periodRevenue),
+        totalRevenue: round(periodGrossRevenue),
+        refunds: round(periodRefunds),
+        netRevenue: round(periodRevenue),
         productCost: periodProducts.recognizedCost,
         productPurchaseCash: periodProducts.purchaseCash,
         materialUsage: round(periodMaterialsUsed),
@@ -291,6 +308,7 @@ export async function GET(request: NextRequest) {
         unpaidLabor: round(unpaidLabor),
         unpaidFuel: round(unpaidFuel),
         maintenanceReserve: round(maintenanceReserve),
+        pendingRefunds: round(pendingRefunds),
         lockedFutureOrders: round(lockedFutureOrders),
       },
     });
