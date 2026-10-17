@@ -245,24 +245,33 @@ export async function GET() {
     const enrichedOrders = orders.map(enrichOrder);
     const enrichedLists = lists.map(enrichList);
 
-    const responseCycles = cycles.map((cycle) => {
+    const responseCycles = cycles.flatMap((cycle) => {
       const weekday = getDeliveryWeekday(cycle.delivery_date);
       const deliveryRule = settings.deliverySchedule.find(
         (rule) => rule.deliveryWeekday === weekday
       );
+      const cycleOrders = enrichedOrders.filter(
+        (order) => order.delivery_cycle_id === cycle.id
+      );
+      const shoppingList =
+        enrichedLists.find(
+          (list) => list.delivery_cycle_id === cycle.id
+        ) ?? null;
 
-      return {
+      // Los cambios de calendario no borran ciclos ya creados para proteger el
+      // historial. En el panel ocultamos los ciclos obsoletos que quedaron
+      // vacíos y mostramos siempre los días configurados actualmente o los
+      // ciclos que sí tienen actividad real asociada.
+      const hasActivity = cycleOrders.length > 0 || shoppingList !== null;
+      if (!deliveryRule && !hasActivity) return [];
+
+      return [{
         ...cycle,
         window_start_time: deliveryRule?.windowStartTime ?? "12:00",
         window_end_time: deliveryRule?.windowEndTime ?? "16:00",
-        orders: enrichedOrders.filter(
-          (order) => order.delivery_cycle_id === cycle.id
-        ),
-        shoppingList:
-          enrichedLists.find(
-            (list) => list.delivery_cycle_id === cycle.id
-          ) ?? null,
-      };
+        orders: cycleOrders,
+        shoppingList,
+      }];
     });
 
     return NextResponse.json(
