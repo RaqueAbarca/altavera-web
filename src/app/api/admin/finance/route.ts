@@ -62,30 +62,46 @@ export async function GET(request: NextRequest) {
   );
 
   try {
-    const { data: cycleRows, error: cycleError } = await supabaseAdmin
-      .from("delivery_cycles")
-      .select("id,delivery_date,status")
-      .order("delivery_date", { ascending: false })
-      .limit(24);
-    if (cycleError) throw cycleError;
-    const cycles = cycleRows ?? [];
-    const cycleIds = cycles.map((cycle) => cycle.id);
-
-    const { data: orderRows, error: orderError } = cycleIds.length
-      ? await supabaseAdmin
+    // Primero buscamos los pedidos que realmente pueden formar una jornada.
+    // No partimos de los últimos ciclos creados porque Altavera puede tener
+    // muchos ciclos futuros vacíos y eso dejaría fuera la jornada actual.
+    const [{ data: orderRows, error: orderError }, { data: closureRows, error: closureError }] =
+      await Promise.all([
+        supabaseAdmin
           .from("orders")
           .select("id,delivery_cycle_id,status,subtotal,shipping,total")
-          .in("delivery_cycle_id", cycleIds)
-      : { data: [], error: null };
-    if (orderError) throw orderError;
-    const orders = (orderRows ?? []) as OrderRow[];
+          .in("status", Array.from(PAID_ORDER_STATUSES))
+          .not("delivery_cycle_id", "is", null),
+        supabaseAdmin
+          .from("money_closures")
+          .select("id,delivery_cycle_id,delivery_date,status,version,product_revenue_snapshot,shipping_revenue_snapshot,total_revenue_snapshot,closed_at,updated_at")
+          .order("delivery_date", { ascending: false }),
+      ]);
 
-    const { data: closureRows, error: closureError } = await supabaseAdmin
-      .from("money_closures")
-      .select("id,delivery_cycle_id,delivery_date,status,version,product_revenue_snapshot,shipping_revenue_snapshot,total_revenue_snapshot,closed_at,updated_at")
-      .order("delivery_date", { ascending: false });
+    if (orderError) throw orderError;
     if (closureError) throw closureError;
+
+    const orders = (orderRows ?? []) as OrderRow[];
     const closures = (closureRows ?? []) as ClosureRow[];
+    const cycleIds = Array.from(
+      new Set([
+        ...orders
+          .map((order) => order.delivery_cycle_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
+        ...closures.map((closure) => closure.delivery_cycle_id),
+      ])
+    );
+
+    const { data: cycleRows, error: cycleError } = cycleIds.length
+      ? await supabaseAdmin
+          .from("delivery_cycles")
+          .select("id,delivery_date,status")
+          .in("id", cycleIds)
+          .order("delivery_date", { ascending: false })
+      : { data: [], error: null };
+
+    if (cycleError) throw cycleError;
+    const cycles = cycleRows ?? [];
     const closureByCycle = new Map(closures.map((closure) => [closure.delivery_cycle_id, closure]));
 
     const cycleCards = cycles.map((cycle) => {
