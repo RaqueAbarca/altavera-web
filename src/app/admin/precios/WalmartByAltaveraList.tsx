@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeSearchText } from "@/lib/searchText";
+
 import {
   useEffect,
   useMemo,
@@ -125,7 +127,7 @@ export default function WalmartByAltaveraList(){
   const visibleProducts=
     useMemo(()=>{
       const value=
-        search.trim().toLowerCase();
+        normalizeSearchText(search);
 
       if(!value){
         return products;
@@ -133,8 +135,7 @@ export default function WalmartByAltaveraList(){
 
       return products.filter(
         product=>
-          product.name
-            .toLowerCase()
+          normalizeSearchText(product.name)
             .includes(value)
       );
     },[

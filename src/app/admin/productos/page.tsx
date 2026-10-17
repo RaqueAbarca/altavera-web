@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import "./productos-admin.css";
 import { formatProductEquivalence, isKilogramUnit } from "@/lib/productUnits";
+import { normalizeSearchText } from "@/lib/searchText";
 import {
   calculateVariantPrice,
   formatVariantCalculationSummary,
@@ -163,7 +164,7 @@ export default function AdminProductosPage() {
   }, [products]);
 
   const visibleProducts = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch = normalizeSearchText(search);
 
     return products.filter((product) => {
       if (filter === "active" && !product.is_active) {
@@ -185,7 +186,7 @@ export default function AdminProductosPage() {
       return [product.name, product.category, product.unit]
         .filter(Boolean)
         .some((value) =>
-          String(value).toLowerCase().includes(normalizedSearch)
+          normalizeSearchText(String(value)).includes(normalizedSearch)
         );
     });
   }, [products, filter, search]);

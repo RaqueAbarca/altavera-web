@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeSearchText } from "@/lib/searchText";
+
 import { useEffect, useMemo, useState } from "react";
 import { suggestWalmartMatches } from "@/lib/pricing/walmart/suggestWalmartMatches";
 
@@ -171,7 +173,7 @@ export default function WalmartMatchingList(){
 
   const visibleProducts=useMemo(()=>{
     const normalizedSearch=
-      search.trim().toLowerCase();
+      normalizeSearchText(search);
 
     return walmartProducts.filter(item=>{
       if(
@@ -184,8 +186,7 @@ export default function WalmartMatchingList(){
         return true;
       }
 
-      return item.name
-        .toLowerCase()
+      return normalizeSearchText(item.name)
         .includes(normalizedSearch);
     });
   },[

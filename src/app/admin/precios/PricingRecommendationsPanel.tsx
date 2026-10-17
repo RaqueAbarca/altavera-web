@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeSearchText } from "@/lib/searchText";
+
 import {
   useEffect,
   useMemo,
@@ -776,9 +778,7 @@ export default function PricingRecommendationsPanel(){
         }
 
         const normalizedSearch=
-          search
-            .trim()
-            .toLowerCase();
+          normalizeSearchText(search);
 
         return data
           .recommendations
@@ -786,8 +786,7 @@ export default function PricingRecommendationsPanel(){
             item=>{
               if(
                 normalizedSearch&&
-                !item.productName
-                  .toLowerCase()
+                !normalizeSearchText(item.productName)
                   .includes(
                     normalizedSearch
                   )
@@ -855,17 +854,14 @@ export default function PricingRecommendationsPanel(){
         }
 
         const normalizedSearch=
-          search
-            .trim()
-            .toLowerCase();
+          normalizeSearchText(search);
 
         return data
           .missingProducts
           .filter(
             item=>
               !normalizedSearch||
-              item.productName
-                .toLowerCase()
+              normalizeSearchText(item.productName)
                 .includes(
                   normalizedSearch
                 )

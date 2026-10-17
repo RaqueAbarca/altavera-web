@@ -11,6 +11,7 @@ import { useCart } from "@/hooks/useCart";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEASONAL_CATEGORY } from "./productFilters";
 import type { MaturityPreference } from "@/lib/maturity";
+import { normalizeSearchText } from "@/lib/searchText";
 import {
   calculateVariantPrice,
   formatVariantDescriptor,
@@ -41,14 +42,6 @@ type Props = {
   search: string;
   favoritesOnly?: boolean;
 };
-
-function normalizeSearchText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
 
 export default function ProductsSection({
   products,
