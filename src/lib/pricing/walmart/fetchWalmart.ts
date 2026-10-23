@@ -233,110 +233,134 @@ function buildProductSearchUrl(
   );
 }
 
-export async function fetchWalmartProducts():Promise<WalmartFetchResult>{
-  const products:WalmartRawProduct[]=[];
-  const pageSize=50;
-  const reference=await resolveWalmartReference();
+type WalmartPageDownload={
+  products:WalmartRawProduct[];
+  reportedTotal:number|null;
+  pagesFetched:number;
+  rawCount:number;
+  repeatedIds:number;
+};
+
+async function downloadWalmartPageSet(
+  reference:WalmartReference,
+  pageSize:number
+):Promise<WalmartPageDownload>{
+  const received:WalmartRawProduct[]=[];
   let reportedTotal:number|null=null;
   let pagesFetched=0;
 
   for(let page=1;page<=20;page++){
-    const url=buildProductSearchUrl(
-      reference,
-      page,
-      pageSize
+    const response=await fetch(
+      buildProductSearchUrl(reference,page,pageSize),
+      {
+        headers:{
+          accept:"application/json",
+          "user-agent":"Mozilla/5.0"
+        },
+        cache:"no-store"
+      }
     );
 
-    const response=await fetch(url,{
-      headers:{
-        accept:"application/json",
-        "user-agent":"Mozilla/5.0"
-      },
-      cache:"no-store"
-    });
-
     if(!response.ok){
-      const detail=await response.text()
-        .catch(()=>"");
-
+      const detail=await readResponseDetail(response);
       throw new Error(
-        `Walmart respondió HTTP ${response.status}`+
-        (detail?` (${detail.slice(0,180)})`:"")
+        `Walmart respondió HTTP ${response.status} `+
+        `en la página ${page} de ${pageSize} (${detail})`
       );
     }
 
     const data=await response.json() as ProductSearchResponse;
     pagesFetched=page;
 
-    const responseTotal=Number(data.recordsFiltered);
-    if(Number.isFinite(responseTotal)&&responseTotal>=0){
+    const total=Number(data.recordsFiltered);
+    if(Number.isFinite(total)&&total>=0){
+      const currentTotal=Math.floor(total);
       if(reportedTotal===null){
-        reportedTotal=Math.floor(responseTotal);
-      }else if(reportedTotal!==Math.floor(responseTotal)){
+        reportedTotal=currentTotal;
+      }else if(reportedTotal!==currentTotal){
         throw new Error(
-          `Walmart cambió el total reportado durante la descarga (${reportedTotal} → ${Math.floor(responseTotal)}). Se detuvo la actualización para evitar una lectura inconsistente.`
+          `Walmart cambió el total reportado durante la descarga `+
+          `(${reportedTotal} → ${currentTotal}). No se guardaron datos.`
         );
       }
     }
 
-    const batch=
-      Array.isArray(data?.products)
-        ?data.products
-        :[];
-
+    const batch=Array.isArray(data.products)?data.products:[];
     if(page===1&&batch.length===0){
       throw new Error(
-        `Walmart devolvió 0 productos para ${reference.label}. Se detuvo la actualización para evitar usar precios antiguos.`
+        `Walmart devolvió 0 productos para ${reference.label}.`
       );
     }
 
-    products.push(...batch);
-
+    received.push(...batch);
     console.log(
-      `Walmart ${reference.label} página ${page}: ${batch.length}`
+      `Walmart ${reference.label}, ${pageSize}/página, página ${page}: ${batch.length}`
     );
 
     if(batch.length<pageSize){
       break;
     }
 
-    if(
-      Number.isFinite(Number(data.recordsFiltered))&&
-      products.length>=Number(data.recordsFiltered)
-    ){
+    if(reportedTotal!==null&&received.length>=reportedTotal){
       break;
     }
   }
 
-  if(products.length===0){
-    throw new Error(
-      `Walmart no devolvió productos para ${reference.label}. No se modificaron precios.`
-    );
-  }
-
   const uniqueProducts=[...new Map(
-    products.map(product=>[String(product.productId),product])
+    received.map(product=>[String(product.productId),product])
   ).values()];
-
-  /*
-   * recordsFiltered es el total que VTEX declara para ESTA búsqueda ya
-   * regionalizada. Es una señal de completitud mucho más fiable que
-   * comparar contra el catálogo genérico que Altavera tenía antes de fijar
-   * una tienda/zona de referencia.
-   */
-  if(
-    reportedTotal!==null&&
-    uniqueProducts.length<reportedTotal
-  ){
-    throw new Error(
-      `Walmart reportó ${reportedTotal} productos para ${reference.label}, pero solo se recopilaron ${uniqueProducts.length}. Se detuvo la actualización porque la descarga quedó incompleta.`
-    );
-  }
 
   return{
     products:uniqueProducts,
-    reference,
     reportedTotal,
-    pagesFetched
+    pagesFetched,
+    rawCount:received.length,
+    repeatedIds:received.length-uniqueProducts.length
   };
+}
+
+export async function fetchWalmartProducts():Promise<WalmartFetchResult>{
+  const reference=await resolveWalmartReference();
+  const attempts:number[]=[50,25,20];
+  const details:string[]=[];
+
+  for(const pageSize of attempts){
+    const result=await downloadWalmartPageSet(reference,pageSize);
+    const received=result.products.length;
+    const expected=result.reportedTotal;
+
+    if(received===0){
+      throw new Error(
+        `Walmart no devolvió productos para ${reference.label}. `+
+        `No se modificaron precios.`
+      );
+    }
+
+    console.log(
+      `Walmart ${reference.label}: ${received} únicos, `+
+      `${result.rawCount} registros, ${result.repeatedIds} repetidos, `+
+      `${expected??"sin total"} reportados (${pageSize}/página).`
+    );
+
+    if(expected===null||received===expected){
+      return{
+        products:result.products,
+        reference,
+        reportedTotal:expected,
+        pagesFetched:result.pagesFetched
+      };
+    }
+
+    details.push(
+      `${pageSize}/página: ${received}/${expected} únicos, `+
+      `${result.repeatedIds} repetidos en ${result.pagesFetched} páginas`
+    );
+  }
+
+  // Conservamos la protección: ninguna descarga incompleta se guarda.
+  throw new Error(
+    `Walmart presentó un conteo inconsistente para ${reference.label}. `+
+    `Se reintentó con diferentes tamaños de página sin publicar datos `+
+    `parciales: ${details.join("; ")}.`
+  );
 }
