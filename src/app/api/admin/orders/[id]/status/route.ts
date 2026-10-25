@@ -6,7 +6,8 @@ import {
   isOrderStatusEmailStatus,
   sendOrderStatusEmail,
 } from "@/lib/orderStatusEmail.server";
-import { ALTAVERA_REVIEW_URL } from "@/lib/whatsapp";
+import { ALTAVERA_FEEDBACK_FORM_URL } from "@/lib/whatsapp";
+import { formatDeliveryDate } from "@/lib/deliverySchedule";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -124,7 +125,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         requestOrigin: new URL(request.url).origin,
         deliveryWindowLabel: timing.deliveryWindowLabel,
         estimatedArrivalLabel: timing.estimatedArrivalLabel,
-        reviewUrl: status === "delivered" ? ALTAVERA_REVIEW_URL : null,
+        reviewUrl: status === "delivered" ? ALTAVERA_FEEDBACK_FORM_URL : null,
       });
     } catch (emailError) {
       const reason =
@@ -140,10 +141,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       ok: true,
       status,
       email,
+      deliveryDateLabel: deliveryDate ? formatDeliveryDate(deliveryDate) : null,
       deliveryWindowLabel: timing.deliveryWindowLabel,
       estimatedArrivalLabel: timing.estimatedArrivalLabel,
       estimatedArrivalIso: timing.estimatedArrivalIso,
-      reviewUrl: status === "delivered" ? ALTAVERA_REVIEW_URL : null,
+      reviewUrl: status === "delivered" ? ALTAVERA_FEEDBACK_FORM_URL : null,
     });
   } catch (error) {
     console.error("ERROR ACTUALIZANDO ESTADO DEL PEDIDO:", error);

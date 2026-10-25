@@ -45,7 +45,7 @@ const STATUS_COPY: Record<OrderStatusEmailStatus, StatusCopy> = {
     eyebrow: "Pago confirmado",
     title: "Tu pedido ya está confirmado",
     description:
-      "Ya verificamos tu pago. Tu pedido quedó confirmado para la fecha de entrega seleccionada.",
+      "Ya verificamos tu pago. Tu pedido quedó confirmado para la fecha de entrega seleccionada. La noche anterior te compartiremos una hora aproximada de llegada, que podría variar por tráfico o logística. Cuando el pedido vaya en camino, te comunicaremos una estimación actualizada.",
     subject: (shortOrderId) =>
       `Pago confirmado · Pedido #${shortOrderId} | Altavera`,
     preheader: (shortOrderId) =>
@@ -75,7 +75,7 @@ const STATUS_COPY: Record<OrderStatusEmailStatus, StatusCopy> = {
     eyebrow: "Entregado",
     title: "Tu pedido fue entregado",
     description:
-      "Marcamos tu pedido como entregado. Gracias por comprar en Altavera y esperamos que disfrutes tus productos.",
+      "Tu pedido ya fue entregado. Muchas gracias por confiar en Altavera. Esperamos que disfrutés tus frutas y verduras frescas.",
     subject: (shortOrderId) =>
       `Pedido #${shortOrderId} entregado | Altavera`,
     preheader: (shortOrderId) =>
@@ -185,7 +185,7 @@ export async function sendOrderStatusEmail(
     : "";
 
   const reviewHtml = input.status === "delivered" && reviewUrl
-    ? `<p style="margin:22px auto 10px;max-width:430px;color:#606862;font-size:13px;line-height:1.6;">Si querés contarnos cómo fue tu experiencia, podés dejarnos una reseña en Google.</p><a href="${escapeHtml(reviewUrl)}" style="display:inline-block;padding:12px 20px;border-radius:999px;border:1px solid #1f402a;color:#1f402a;text-decoration:none;font-size:13px;font-weight:800;">Dejar una reseña</a>`
+    ? `<p style="margin:22px auto 10px;max-width:430px;color:#606862;font-size:13px;line-height:1.6;">Nos encantaría conocer tu experiencia. Contanos qué te pareció el servicio, la calidad de los productos y la entrega en nuestro formulario.</p><a href="${escapeHtml(reviewUrl)}" style="display:inline-block;padding:12px 20px;border-radius:999px;border:1px solid #1f402a;color:#1f402a;text-decoration:none;font-size:13px;font-weight:800;">Completar formulario</a>`
     : "";
 
   const html = `<!doctype html>
@@ -242,7 +242,7 @@ export async function sendOrderStatusEmail(
 
   const timingTextLine = timingTitle && timingText ? `${timingTitle}: ${timingText}` : "";
   const reviewTextLine = input.status === "delivered" && reviewUrl
-    ? `Dejar una reseña: ${reviewUrl}`
+    ? `Contanos tu experiencia (formulario): ${reviewUrl}`
     : "";
 
   const text = [

@@ -675,6 +675,7 @@ export default function AdminOrdersPage() {
             customerName: order.guest_name,
             orderId: order.id,
             status: status as "confirmed" | "preparing" | "ready" | "delivered" | "cancelled",
+            deliveryDateLabel: data.deliveryDateLabel ?? null,
             deliveryWindowLabel: data.deliveryWindowLabel ?? null,
             estimatedArrivalLabel: data.estimatedArrivalLabel ?? null,
             reviewUrl: data.reviewUrl ?? null,
