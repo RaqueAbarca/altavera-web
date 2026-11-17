@@ -1251,6 +1251,78 @@ export default function PricingRecommendationsPanel(){
         )
       }
 
+      {/* ALTAVERA_PATCH_MINIMOS_LISTA_V1: detalle de avisos, solo lectura */}
+      {(()=>{
+        const flagged=data.recommendations.filter(item=>{
+          if(item.status!=="approved"){
+            return false;
+          }
+          const approved=item.approvedPrice??item.recommendedPrice;
+          const actualFloor=item.competitiveException
+            ?item.competitiveMinimumPrice??item.minimumPrice
+            :item.minimumPrice;
+          const runMinimum=item.minimumAllowedPrice??actualFloor;
+          return runMinimum!==null&&
+            Number.isFinite(approved)&&
+            Number.isFinite(runMinimum)&&
+            approved<runMinimum-0.005;
+        });
+
+        if(flagged.length===0){
+          return null;
+        }
+
+        return(
+          <details className="pricing-minimum-details">
+            <summary>
+              <span aria-hidden="true">⚠</span>
+              Ver los {flagged.length} precios aprobados bajo el mínimo registrado
+            </summary>
+            <p className="pricing-minimum-explanation">
+              Haz clic en un producto para localizar su recomendación.
+              El mínimo registrado en el run puede incluir el objetivo competitivo
+              frente a Walmart y ser distinto del piso de margen usado al aprobar.
+            </p>
+            <ul className="pricing-minimum-items">
+              {flagged.map(item=>{
+                const approved=item.approvedPrice??item.recommendedPrice;
+                const realFloor=item.competitiveException
+                  ?item.competitiveMinimumPrice??item.minimumPrice
+                  :item.minimumPrice;
+                const runMinimum=item.minimumAllowedPrice??realFloor;
+                return(
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className="pricing-minimum-product"
+                      onClick={()=>{
+                        setFilter("all");
+                        setSearch(item.productName);
+                      }}
+                    >
+                      {item.productName}
+                    </button>
+                    <div className="pricing-minimum-numbers">
+                      <span>Aprobado: <strong>{formatPrice(approved)}</strong></span>
+                      <span>Mínimo del run: <strong>{formatPrice(runMinimum)}</strong></span>
+                      <span>Diferencia: <strong>{formatSignedPrice(approved-(runMinimum??approved))}</strong></span>
+                    </div>
+                    {realFloor!==null&&(
+                      <small>
+                        Piso de margen permitido para decisiones: {formatPrice(realFloor)}
+                        {approved<realFloor-0.005
+                          ?" · ATENCIÓN: por debajo del piso real de margen"
+                          :" · Respeta el piso de margen"}
+                      </small>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        );
+      })()}
+
       <div className="pricing-toolbar">
 
         <div className="pricing-filter-tabs">
