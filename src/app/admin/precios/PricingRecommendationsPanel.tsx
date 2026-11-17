@@ -736,10 +736,22 @@ export default function PricingRecommendationsPanel(){
         await response.json();
 
       if(!response.ok){
-        throw new Error(
-          result.error??
-          "No se pudieron publicar los precios"
+        const serverError=String(
+          result.error??"No se pudieron publicar los precios"
         );
+
+        if(/precios aprobados.*(?:debajo|bajo).*m[ií]nimo permitido/i.test(serverError)){
+          throw new Error(
+            "Supabase detuvo la publicación: su función publish_pricing_run " +
+            "reporta precios bajo el mínimo. Ese control pertenece a la base de datos " +
+            "y podría seguir comparando contra el objetivo comercial del run. " +
+            "El listado de esta pantalla usa únicamente el piso real de margen. " +
+            "No se publicaron precios; hay que revisar la función SQL antes de continuar. " +
+            "Detalle original: " +serverError
+          );
+        }
+
+        throw new Error(serverError);
       }
 
       const publication=
@@ -1251,21 +1263,35 @@ export default function PricingRecommendationsPanel(){
         )
       }
 
-      {/* ALTAVERA_PATCH_MINIMOS_LISTA_V1: detalle de avisos, solo lectura */}
+      {/* ALTAVERA_PATCH_PISO_REAL_MARGEN_V2: solo advertir si se vulnera el piso de margen */}
       {(()=>{
-        const flagged=data.recommendations.filter(item=>{
-          if(item.status!=="approved"){
-            return false;
+        const flagged=data.recommendations.flatMap(item=>{
+          if(item.status!=="approved"&&item.status!=="kept_current"){
+            return [];
           }
-          const approved=item.approvedPrice??item.recommendedPrice;
-          const actualFloor=item.competitiveException
+
+          // Misma regla que /api/pricing/decision: margen normal o excepción del 20%.
+          // minimumAllowedPrice también incluye el objetivo comercial de Walmart;
+          // NO se utiliza como límite absoluto para decisiones manuales.
+          const floor=item.competitiveException
             ?item.competitiveMinimumPrice??item.minimumPrice
             :item.minimumPrice;
-          const runMinimum=item.minimumAllowedPrice??actualFloor;
-          return runMinimum!==null&&
-            Number.isFinite(approved)&&
-            Number.isFinite(runMinimum)&&
-            approved<runMinimum-0.005;
+          const selectedPrice=item.approvedPrice??(
+            item.status==="kept_current"
+              ?item.currentPrice
+              :item.recommendedPrice
+          );
+
+          if(
+            floor===null||
+            !Number.isFinite(floor)||
+            !Number.isFinite(selectedPrice)||
+            selectedPrice>=floor-0.005
+          ){
+            return [];
+          }
+
+          return [{item,selectedPrice,floor}];
         });
 
         if(flagged.length===0){
@@ -1276,48 +1302,38 @@ export default function PricingRecommendationsPanel(){
           <details className="pricing-minimum-details">
             <summary>
               <span aria-hidden="true">⚠</span>
-              Ver los {flagged.length} precios aprobados bajo el mínimo registrado
+              Revisar {flagged.length} precio{flagged.length===1?"":"s"} por debajo del piso de margen permitido
             </summary>
             <p className="pricing-minimum-explanation">
-              Haz clic en un producto para localizar su recomendación.
-              El mínimo registrado en el run puede incluir el objetivo competitivo
-              frente a Walmart y ser distinto del piso de margen usado al aprobar.
+              Estos precios están por debajo del piso real de rentabilidad
+              establecido para su producto. El objetivo comercial del run
+              frente a Walmart no se considera un mínimo obligatorio para
+              mantener un precio o introducir uno personalizado.
             </p>
             <ul className="pricing-minimum-items">
-              {flagged.map(item=>{
-                const approved=item.approvedPrice??item.recommendedPrice;
-                const realFloor=item.competitiveException
-                  ?item.competitiveMinimumPrice??item.minimumPrice
-                  :item.minimumPrice;
-                const runMinimum=item.minimumAllowedPrice??realFloor;
-                return(
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className="pricing-minimum-product"
-                      onClick={()=>{
-                        setFilter("all");
-                        setSearch(item.productName);
-                      }}
-                    >
-                      {item.productName}
-                    </button>
-                    <div className="pricing-minimum-numbers">
-                      <span>Aprobado: <strong>{formatPrice(approved)}</strong></span>
-                      <span>Mínimo del run: <strong>{formatPrice(runMinimum)}</strong></span>
-                      <span>Diferencia: <strong>{formatSignedPrice(approved-(runMinimum??approved))}</strong></span>
-                    </div>
-                    {realFloor!==null&&(
-                      <small>
-                        Piso de margen permitido para decisiones: {formatPrice(realFloor)}
-                        {approved<realFloor-0.005
-                          ?" · ATENCIÓN: por debajo del piso real de margen"
-                          :" · Respeta el piso de margen"}
-                      </small>
-                    )}
-                  </li>
-                );
-              })}
+              {flagged.map(({item,selectedPrice,floor})=>(
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="pricing-minimum-product"
+                    onClick={()=>{
+                      setFilter("all");
+                      setSearch(item.productName);
+                    }}
+                  >
+                    {item.productName}
+                  </button>
+                  <div className="pricing-minimum-numbers">
+                    <span>Precio decidido: <strong>{formatPrice(selectedPrice)}</strong></span>
+                    <span>
+                      Piso de margen ({formatPercent(item.competitiveException
+                        ?item.competitiveMinimumMargin
+                        :item.standardMinimumMargin)}): <strong>{formatPrice(floor)}</strong>
+                    </span>
+                    <span>Diferencia: <strong>{formatSignedPrice(selectedPrice-floor)}</strong></span>
+                  </div>
+                </li>
+              ))}
             </ul>
           </details>
         );
