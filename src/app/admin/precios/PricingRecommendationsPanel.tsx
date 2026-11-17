@@ -12,7 +12,8 @@ import {
   ArrowDown,
   ArrowUp,
   Info,
-  Minus
+  Minus,
+  AlertTriangle
 } from "lucide-react";
 
 type PriceTrend={
@@ -260,36 +261,40 @@ function PriceTrendIndicator({
   sourceDetail?:string|null;
   fallback?:boolean;
 }){
-  if(!trend){
+  if(!trend&&!fallback){
     return null;
   }
 
   const label=
-    trend.direction==="up"
+    trend?.direction==="up"
       ?"Subió"
-      :trend.direction==="down"
+      :trend?.direction==="down"
         ?"Bajó"
-        :trend.direction==="same"
+        :trend?.direction==="same"
           ?"Sin cambio"
           :"Sin comparación anterior";
 
   const Icon=
-    trend.direction==="up"
-      ?ArrowUp
-      :trend.direction==="down"
-        ?ArrowDown
-        :trend.direction==="same"
-          ?Minus
-          :Info;
+    fallback
+      ?AlertTriangle
+      :trend?.direction==="up"
+        ?ArrowUp
+        :trend?.direction==="down"
+          ?ArrowDown
+          :trend?.direction==="same"
+            ?Minus
+            :Info;
 
   const ariaLabel=
-    trend.percentChange===null
-      ?`${source}: ${label}`
-      :`${source}: ${label} ${Math.abs(trend.percentChange*100).toFixed(1)} por ciento`;
+    fallback
+      ?`${source}: referencia anterior reutilizada, no observada en la última actualización${sourceDate?`, del ${formatDate(sourceDate)}`:""}`
+      :trend?.percentChange===null||!trend
+        ?`${source}: ${label}`
+        :`${source}: ${label} ${Math.abs(trend.percentChange*100).toFixed(1)} por ciento`;
 
   return(
     <span
-      className={`pricing-source-trend ${trend.direction}`}
+      className={`pricing-source-trend ${fallback?"fallback":trend?.direction??"new"}`}
       tabIndex={0}
       aria-label={ariaLabel}
     >
@@ -300,16 +305,13 @@ function PriceTrendIndicator({
         role="tooltip"
       >
         <strong>
-          {source}: {label}
-          {
-            trend.percentChange!==null
-              ?` ${Math.abs(trend.percentChange*100).toFixed(1)}%`
-              :""
-          }
+          {fallback
+            ?`${source}: referencia anterior (no actualizada)`
+            :`${source}: ${label}${trend?.percentChange!==null&&trend?` ${Math.abs(trend.percentChange*100).toFixed(1)}%`:""}`}
         </strong>
 
         {
-          trend.previousPrice!==null&&(
+          !fallback&&trend?.previousPrice!==null&&trend&&(
             <span>
               {formatPrice(trend.previousPrice)} → {formatPrice(trend.currentPrice)}
             </span>
@@ -317,25 +319,27 @@ function PriceTrendIndicator({
         }
 
         {
-          trend.difference!==null&&(
+          !fallback&&trend?.difference!==null&&trend&&(
             <span>
               Diferencia: {formatSignedPrice(trend.difference)}
             </span>
           )
         }
 
-        <span>
-          {
-            trend.previousRunId!==null
-              ?`Run #${trend.previousRunId} → Run #${trend.currentRunId}`
-              :`Run actual #${trend.currentRunId}`
-          }
-        </span>
+        {
+          !fallback&&trend&&(
+            <span>
+              {trend.previousRunId!==null
+                ?`Run #${trend.previousRunId} → Run #${trend.currentRunId}`
+                :`Run actual #${trend.currentRunId}`}
+            </span>
+          )
+        }
 
         {
           sourceDate&&(
             <span>
-              Fuente actual: {formatDate(sourceDate)}
+              {fallback?"Fecha del precio anterior":"Fuente actual"}: {formatDate(sourceDate)}
             </span>
           )
         }
@@ -351,7 +355,7 @@ function PriceTrendIndicator({
         {
           fallback&&(
             <span className="pricing-source-tooltip-warning">
-              Walmart no observó esta referencia en la última actualización. Se usó un precio válido reciente de una corrida anterior.
+              Walmart no devolvió un precio válido para esta referencia en la actualización actual. Se reutiliza el último precio válido de una corrida anterior (máximo 14 días). No representa un precio confirmado hoy.
             </span>
           )
         }
@@ -1639,7 +1643,7 @@ export default function PricingRecommendationsPanel(){
                           {
                             item.competitorIsFallback&&(
                               <small className="pricing-source-fallback-note">
-                                Precio reciente anterior
+                                Referencia anterior · {formatDate(item.competitorSourceDate)}
                               </small>
                             )
                           }

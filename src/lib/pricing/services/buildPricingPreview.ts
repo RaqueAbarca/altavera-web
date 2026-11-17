@@ -110,7 +110,6 @@ export async function buildPricingPreview(
     cenadaResult,
     mappingsResult,
     competitorsResult,
-    competitorPricesResult,
     competitorMatchesResult,
     rulesResult,
     walmartRunsResult
@@ -172,24 +171,6 @@ export async function buildPricingPreview(
       `),
 
     supabaseAdmin
-      .from("competitor_prices")
-      .select(`
-        product_id,
-        competitor_id,
-        date,
-        price,
-        update_run_id,
-        observed_at,
-        source_competitor_product_id
-      `)
-      .order(
-        "date",
-        {
-          ascending:false
-        }
-      ),
-
-    supabaseAdmin
       .from("competitor_product_matches")
       .select(`
         product_id,
@@ -197,7 +178,8 @@ export async function buildPricingPreview(
         action,
         verified
       `)
-      .eq("action","use"),
+      .eq("action","use")
+      .eq("verified",true),
 
     supabaseAdmin
       .from("pricing_rules")
@@ -247,10 +229,6 @@ export async function buildPricingPreview(
 
   if(competitorsResult.error){
     throw competitorsResult.error;
-  }
-
-  if(competitorPricesResult.error){
-    throw competitorPricesResult.error;
   }
 
   if(competitorMatchesResult.error){
@@ -307,9 +285,6 @@ export async function buildPricingPreview(
 
   const mappings=
     (mappingsResult.data??[]) as CenadaMapping[];
-
-  const competitorPrices=
-    (competitorPricesResult.data??[]) as CompetitorPrice[];
 
   const competitorMatches=
     (competitorMatchesResult.data??[]) as CompetitorProductMatch[];
@@ -403,6 +378,48 @@ export async function buildPricingPreview(
     Number(
       walmart.id
     );
+
+  /*
+   * Consultar el historial válido durante las dos últimas semanas.
+   * Supabase limita el número de filas por respuesta; una única consulta
+   * podía ocultar precios de la semana anterior cuando había muchos datos.
+   * Paginamos y filtramos por Walmart para no perder referencias.
+   */
+  const walmartFallbackMaxAgeDays=14;
+  const oldestWalmartDate=new Date(
+    Date.now()-walmartFallbackMaxAgeDays*24*60*60*1000
+  ).toISOString().slice(0,10);
+  const competitorPrices:CompetitorPrice[]=[];
+  const pageSize=1000;
+
+  for(let offset=0;;offset+=pageSize){
+    const {data,error}=await supabaseAdmin
+      .from("competitor_prices")
+      .select(`
+        product_id,
+        competitor_id,
+        date,
+        price,
+        update_run_id,
+        observed_at,
+        source_competitor_product_id
+      `)
+      .eq("competitor_id",walmartId)
+      .gte("date",oldestWalmartDate)
+      .order("date",{ascending:false})
+      .range(offset,offset+pageSize-1);
+
+    if(error){
+      throw error;
+    }
+
+    const page=(data??[]) as CompetitorPrice[];
+    competitorPrices.push(...page);
+
+    if(page.length<pageSize){
+      break;
+    }
+  }
 
   const latestWalmartRun=
     walmartRuns.find(
@@ -811,9 +828,17 @@ export async function buildPricingPreview(
       return null;
     }
 
-    const maxAgeMs=
-      Math.max(0,maxAgeDays)*
-      24*60*60*1000;
+    /*
+     * La regla original admite típicamente 7 días. Una corrida semanal
+     * puede pasar ese umbral por horas, o necesitar un precio de la semana
+     * calendario anterior. Se permite una semana extra, hasta 14 días
+     * en total; nunca se reutilizan precios indefinidamente.
+     */
+    const allowedAgeDays=Math.min(
+      walmartFallbackMaxAgeDays,
+      Math.max(0,maxAgeDays)+7
+    );
+    const maxAgeMs=allowedAgeDays*24*60*60*1000;
 
     const now=Date.now();
 
@@ -823,6 +848,8 @@ export async function buildPricingPreview(
           row=>
             row.product_id===productId&&
             row.competitor_id===walmartId&&
+            Number.isFinite(Number(row.price))&&
+            Number(row.price)>0&&
             row.update_run_id!==null&&
             row.update_run_id!==latestWalmartRunId&&
             successfulWalmartRunIds.has(

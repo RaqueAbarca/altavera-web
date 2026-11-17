@@ -783,6 +783,12 @@
   color:#52606d;
 }
 
+.pricing-source-trend.fallback{
+  background:#fff2c7;
+  color:#946000;
+  border:1px solid #ebca72;
+}
+
 .pricing-source-trend:focus-visible{
   box-shadow:0 0 0 3px rgba(31,64,42,.16);
 }
